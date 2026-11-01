@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f6f5f1;
+  --color-brand: #1e3a5f;
+  --color-ochre: #d9a441;
+  --color-moss: #4a7856;
+  --color-ink: #24262b;
+  --color-rule: #d8d5cb;
+
+  --font-sans: var(--font-plex), var(--font-plex-deva), system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
+}
+
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Devanagari needs more line height than Latin */
+:lang(ne) {
+  line-height: 1.8;
+}
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 1.25rem;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: none;
+  }
+  .btn-primary {
+    background: var(--color-brand);
+    color: var(--color-paper);
+  }
+  .btn-proof {
+    background: var(--color-ochre);
+    color: var(--color-ink);
+  }
+  .btn-quiet {
+    border: 1.5px solid var(--color-brand);
+    color: var(--color-brand);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .btn:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 3px solid var(--color-ochre);
+    outline-offset: 2px;
+  }
+  .field {
+    width: 100%;
+    min-height: 48px;
+    padding: 0.625rem 0.75rem;
+    background: #fff;
+    border: 1.5px solid var(--color-rule);
+    border-radius: 4px;
+  }
+  .ledger-row {
+    border-top: 1px solid var(--color-rule);
+    padding: 1rem 0;
+  }
+}
