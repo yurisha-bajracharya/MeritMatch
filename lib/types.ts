@@ -76,7 +76,7 @@ export type Submission = {
   /** One line shown to the employer */
   reason: string;
   tags: string[];
-  scoredBy: "gemini" | "openai" | "fallback";
+  scoredBy: "gemini" | "openai" | "fallback" | "demo";
   /** Candidate agreed to share contact details with the employer */
   consent: boolean;
   createdAt: string;
