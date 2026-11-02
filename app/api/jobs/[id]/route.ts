@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { readDb } from "@/lib/store";
-import { getTemplate } from "@/lib/templates";
+import { getTemplate, toPublicTemplate } from "@/lib/templates";
 
 export async function GET(
   _req: Request,
@@ -11,11 +11,8 @@ export async function GET(
   const job = db.jobs.find((j) => j.id === id);
   if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // The template's `signals` are scorer internals; don't expose them to candidates.
-  const template = getTemplate(job.category);
-  const publicTemplate = {
-    ...template,
-    rubric: template.rubric.map(({ id, label, max }) => ({ id, label, max })),
-  };
-  return NextResponse.json({ job, template: publicTemplate });
+  return NextResponse.json({
+    job,
+    template: toPublicTemplate(getTemplate(job.category)),
+  });
 }

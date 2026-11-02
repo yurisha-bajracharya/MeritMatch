@@ -323,6 +323,18 @@ export function getTemplate(category: Category): TaskTemplate {
   return TEMPLATES[category];
 }
 
+/** What candidates may see: no rubric or scorer internals. */
+export function toPublicTemplate({
+  category,
+  name,
+  durationMin,
+  scenarios,
+}: TaskTemplate) {
+  return { category, name, durationMin, scenarios };
+}
+
+export type PublicTemplate = ReturnType<typeof toPublicTemplate>;
+
 export function templateTags(category: Category): string[] {
   return [...new Set(TEMPLATES[category].rubric.flatMap((c) => c.tags))];
 }
