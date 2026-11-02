@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Stamp from "@/components/Stamp";
 import Segmented from "@/components/Segmented";
+import SharedDeviceToggle from "@/components/SharedDeviceToggle";
 import VoiceRecorder from "@/components/VoiceRecorder";
+import { clearDraft, isShared, loadDraft, saveDraft, setShared, wipeAll } from "@/lib/device";
 import { localizeDigits, t } from "@/lib/i18n";
 import type { PublicTemplate } from "@/lib/templates";
 import type { Gender, InputMode, Job, Lang, Region } from "@/lib/types";
@@ -40,24 +42,63 @@ export default function TaskFlow({
   const [sending, setSending] = useState(false);
   const [submissionId, setSubmissionId] = useState("");
 
+  const [shared, setSharedState] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [restored, setRestored] = useState(false);
+  const [endAt, setEndAt] = useState<number | null>(null);
+
   const total = template.scenarios.length;
   const scenario = template.scenarios[index];
 
+  // Restore an earlier attempt unless this is a shared phone.
   useEffect(() => {
-    if (stage !== "task") return;
-    const endAt = Date.now() + remaining * 1000;
-    const timer = setInterval(() => {
-      const left = Math.max(0, Math.round((endAt - Date.now()) / 1000));
+    const sharedNow = isShared();
+    setSharedState(sharedNow);
+    const draft = loadDraft(job.id);
+    if (draft) {
+      setLang(draft.lang);
+      setMode(draft.mode);
+      setAnswers(draft.answers);
+      setIndex(Math.min(draft.index, total - 1));
+      setRestored(true);
+      if (draft.endAt) {
+        setEndAt(draft.endAt);
+        setStage("task");
+      }
+    }
+    setReady(true);
+  }, [job.id, total]);
+
+  useEffect(() => {
+    if (!ready || shared || stage === "done") return;
+    saveDraft(job.id, { lang, mode, answers, index, endAt });
+  }, [ready, shared, stage, job.id, lang, mode, answers, index, endAt]);
+
+  useEffect(() => {
+    if (stage !== "task" || endAt === null) return;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
       setRemaining(left);
       if (left === 0) {
         setTimeUp(true);
         setStage("details");
       }
-    }, 1000);
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-    // Only restart the countdown when entering/leaving the task stage.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage]);
+  }, [stage, endAt]);
+
+  function changeShared(on: boolean) {
+    setShared(on);
+    setSharedState(on);
+    if (on) setRestored(false);
+  }
+
+  function endSession() {
+    wipeAll();
+    window.location.assign("/");
+  }
 
   function appendVoice(text: string) {
     setAnswers((a) => ({
@@ -96,6 +137,7 @@ export default function TaskFlow({
       });
       if (res.status === 201) {
         setSubmissionId((await res.json()).id);
+        clearDraft(job.id);
         setStage("done");
       } else if (res.status === 409) setError(t(lang, "errorDuplicate"));
       else if (res.status === 400) setError(t(lang, "errorFields"));
@@ -162,13 +204,22 @@ export default function TaskFlow({
                 { value: "voice", label: t(lang, "voice") },
               ]}
             />
+            <SharedDeviceToggle lang={lang} shared={shared} onChange={changeShared} />
+            {restored && !shared && (
+              <p className="border-l-4 border-ochre pl-3" role="status">
+                {t(lang, "restored")}
+              </p>
+            )}
           </section>
 
           <div className="border-t border-rule mt-8 pt-6">
             <button
               type="button"
               className="btn btn-proof w-full"
-              onClick={() => setStage("task")}
+              onClick={() => {
+                setEndAt(Date.now() + template.durationMin * 60_000);
+                setStage("task");
+              }}
             >
               {t(lang, "start")}
             </button>
@@ -281,7 +332,7 @@ export default function TaskFlow({
               <input
                 id="name"
                 className="field"
-                autoComplete="name"
+                autoComplete={shared ? "off" : "name"}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={80}
@@ -296,7 +347,7 @@ export default function TaskFlow({
                 className="field"
                 type="tel"
                 inputMode="tel"
-                autoComplete="tel"
+                autoComplete={shared ? "off" : "tel"}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 maxLength={20}
@@ -368,12 +419,20 @@ export default function TaskFlow({
                 </li>
               ))}
             </ol>
-            {submissionId && (
+            {submissionId && !shared && (
               <div className="mt-6">
                 <Link href={`/outcome/${submissionId}`} className="btn btn-quiet w-full">
                   {t(lang, "viewResult")}
                 </Link>
                 <p className="mt-2 text-sm">{t(lang, "resultNote")}</p>
+              </div>
+            )}
+            {shared && (
+              <div className="mt-6">
+                <p className="border-l-4 border-ochre pl-3">{t(lang, "sharedDone")}</p>
+                <button type="button" className="btn btn-primary w-full mt-4" onClick={endSession}>
+                  {t(lang, "endSession")}
+                </button>
               </div>
             )}
           </section>

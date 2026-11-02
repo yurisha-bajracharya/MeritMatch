@@ -132,6 +132,21 @@ const strings = {
   trJobsCta: { en: "See jobs that match these skills", ne: "यी सीपसँग मिल्ने काम हेर्नुहोस्" },
   trAgain: { en: "Describe more work", ne: "अरू काम थप्नुहोस्" },
   trNote: { en: "We do not store what you write.", ne: "तपाईंले लेखेको हामी सुरक्षित राख्दैनौँ।" },
+  sharedLabel: { en: "This is a shared phone", ne: "यो साझा फोन हो" },
+  sharedOn: {
+    en: "Nothing is saved on this phone. Your answers disappear if you close this page.",
+    ne: "यो फोनमा केही सुरक्षित हुँदैन। पेज बन्द गर्दा तपाईंका उत्तर हराउँछन्।",
+  },
+  sharedOff: {
+    en: "Your answers are kept on this phone so you can continue if the connection drops.",
+    ne: "इन्टरनेट गए पनि जारी राख्न सकियोस् भनेर तपाईंका उत्तर यही फोनमा राखिन्छन्।",
+  },
+  sharedDone: {
+    en: "Shared phone: nothing from this session was kept. Use the link in your text message to see your result.",
+    ne: "साझा फोन: यो सत्रको केही पनि राखिएको छैन। नतिजा हेर्न तपाईंको सन्देशमा आएको लिङ्क प्रयोग गर्नुहोस्।",
+  },
+  endSession: { en: "End session and clear this phone", ne: "सत्र सक्नुहोस् र यो फोन सफा गर्नुहोस्" },
+  restored: { en: "We restored your earlier answers.", ne: "तपाईंका अघिल्ला उत्तर फर्काइएको छ।" },
 } as const;
 
 export type StringKey = keyof typeof strings;
