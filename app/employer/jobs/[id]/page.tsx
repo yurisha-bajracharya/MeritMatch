@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import Stamp from "@/components/Stamp";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import { getRanking } from "@/lib/shortlist";
 import { getTemplate } from "@/lib/templates";
 
@@ -22,16 +22,23 @@ export default async function ShortlistPage({
 
   return (
     <main>
-      <header className="py-5 flex items-center justify-between">
+      <header className="py-5">
         <Link href="/" className="font-semibold text-brand">
           MeritMatch
         </Link>
-        {job.verified && (
-          <Stamp size={56} center="OK" label="VERIFIED EMPLOYER" tilt={6} />
-        )}
       </header>
 
       <section className="border-t border-rule pt-8">
+        <div className="mb-6">
+          {job.verified ? (
+            <VerifiedBadge />
+          ) : (
+            <p className="border-l-4 border-ochre pl-3 text-sm">
+              Not verified yet. Candidates can still take the task; MeritMatch
+              will review your business.
+            </p>
+          )}
+        </div>
         <p className="text-sm text-ink/75">
           {job.employer}
           {job.location ? `, ${job.location}` : ""}

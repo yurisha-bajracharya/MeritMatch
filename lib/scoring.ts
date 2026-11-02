@@ -138,10 +138,16 @@ export async function askLLM(
   user: string,
 ): Promise<{ text: string; by: "gemini" | "openai" } | null> {
   if (process.env.GEMINI_API_KEY) {
-    return { text: await callGemini(system, user, process.env.GEMINI_API_KEY), by: "gemini" };
+    return {
+      text: await callGemini(system, user, process.env.GEMINI_API_KEY),
+      by: "gemini",
+    };
   }
   if (process.env.OPENAI_API_KEY) {
-    return { text: await callOpenAI(system, user, process.env.OPENAI_API_KEY), by: "openai" };
+    return {
+      text: await callOpenAI(system, user, process.env.OPENAI_API_KEY),
+      by: "openai",
+    };
   }
   return null;
 }

@@ -20,7 +20,16 @@ type Props = {
   tags: string[];
 };
 
-export default function OutcomeView({ submissionId, initialLang, name, title, employer, shortlisted, initialConsent, tags }: Props) {
+export default function OutcomeView({
+  submissionId,
+  initialLang,
+  name,
+  title,
+  employer,
+  shortlisted,
+  initialConsent,
+  tags,
+}: Props) {
   const [lang, setLang] = useState<Lang>(initialLang);
   const [consent, setConsent] = useState(initialConsent);
   const [saving, setSaving] = useState(false);
@@ -51,16 +60,30 @@ export default function OutcomeView({ submissionId, initialLang, name, title, em
     <main lang={lang}>
       <header className="py-5 flex items-center justify-between">
         <span className="font-semibold text-brand">MeritMatch</span>
-        {shortlisted && <Stamp size={64} center={t(lang, "shortStamp")} label="SHORTLISTED" tone="moss" tilt={6} />}
+        {shortlisted && (
+          <Stamp
+            size={64}
+            center={t(lang, "shortStamp")}
+            label="SHORTLISTED"
+            tone="moss"
+            tilt={6}
+          />
+        )}
       </header>
 
       <section className="border-t border-rule pt-8">
-        <h1 className="font-display text-3xl text-brand">{t(lang, shortlisted ? "outcomeYes" : "outcomeNo")}</h1>
-        <p className="mt-2 text-sm text-ink/75">{title}, {employer}</p>
+        <h1 className="font-display text-3xl text-brand">
+          {t(lang, shortlisted ? "outcomeYes" : "outcomeNo")}
+        </h1>
+        <p className="mt-2 text-sm text-ink/75">
+          {title}, {employer}
+        </p>
       </section>
 
       <section className="mt-6">
-        <PhoneMock time={lang === "ne" ? "अहिले" : "now"}>{t(lang, shortlisted ? "smsYes" : "smsNo", vars)}</PhoneMock>
+        <PhoneMock time={lang === "ne" ? "अहिले" : "now"}>
+          {t(lang, shortlisted ? "smsYes" : "smsNo", vars)}
+        </PhoneMock>
       </section>
 
       {shortlisted && (
@@ -79,11 +102,15 @@ export default function OutcomeView({ submissionId, initialLang, name, title, em
               className={`relative h-8 w-14 shrink-0 rounded-full border-2 border-brand ${consent ? "bg-brand" : "bg-transparent"}`}
               aria-hidden
             >
-              <span className={`absolute top-0.5 size-6 rounded-full ${consent ? "left-[26px] bg-ochre" : "left-0.5 bg-brand"}`} />
+              <span
+                className={`absolute top-0.5 size-6 rounded-full ${consent ? "left-[26px] bg-ochre" : "left-0.5 bg-brand"}`}
+              />
             </span>
           </button>
           <p className="mt-2 text-sm" aria-live="polite">
-            {error ? t(lang, "consentError") : t(lang, consent ? "consentOn" : "consentOff", { employer })}
+            {error
+              ? t(lang, "consentError")
+              : t(lang, consent ? "consentOn" : "consentOff", { employer })}
           </p>
         </section>
       )}
@@ -95,7 +122,10 @@ export default function OutcomeView({ submissionId, initialLang, name, title, em
         ) : (
           <ul className="mt-3 flex flex-wrap gap-2">
             {tags.map((tag) => (
-              <li key={tag} className="border border-brand text-brand rounded-[3px] px-2 py-1 text-sm">
+              <li
+                key={tag}
+                className="border border-brand text-brand rounded-[3px] px-2 py-1 text-sm"
+              >
                 {TAG_LABELS[tag]?.[lang] ?? tag}
               </li>
             ))}
@@ -104,7 +134,10 @@ export default function OutcomeView({ submissionId, initialLang, name, title, em
       </section>
 
       <div className="border-t border-rule mt-8 pt-6 space-y-6">
-        <Link href={`/jobs?s=${submissionId}&lang=${lang}`} className="btn btn-primary w-full">
+        <Link
+          href={`/jobs?s=${submissionId}&lang=${lang}`}
+          className="btn btn-primary w-full"
+        >
           {t(lang, "similarCta")}
         </Link>
         <Segmented

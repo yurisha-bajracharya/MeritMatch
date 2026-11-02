@@ -141,7 +141,14 @@ const otherJobs = [
     employer: "Annapurna Traders",
     location: "Pokhara",
     category: "admin",
-    tags: ["accuracy", "data-entry", "time-management", "organization", "digital-literacy", "communication"],
+    tags: [
+      "accuracy",
+      "data-entry",
+      "time-management",
+      "organization",
+      "digital-literacy",
+      "communication",
+    ],
     verified: true,
   },
   {
@@ -150,7 +157,14 @@ const otherJobs = [
     employer: "Lakeside Clinic",
     location: "Pokhara",
     category: "office",
-    tags: ["communication", "professionalism", "problem-solving", "teamwork", "organization", "time-management"],
+    tags: [
+      "communication",
+      "professionalism",
+      "problem-solving",
+      "teamwork",
+      "organization",
+      "time-management",
+    ],
     verified: false,
   },
 ].map((j) => ({ ...j, createdAt: new Date().toISOString() }));
@@ -158,7 +172,11 @@ const otherJobs = [
 mkdirSync("data", { recursive: true });
 writeFileSync(
   FILE,
-  JSON.stringify({ jobs: [job, ...otherJobs], candidates, submissions }, null, 2),
+  JSON.stringify(
+    { jobs: [job, ...otherJobs], candidates, submissions },
+    null,
+    2,
+  ),
 );
 console.log(
   `Seeded ${submissions.length} applicants. Open /employer/jobs/${job.id}`,

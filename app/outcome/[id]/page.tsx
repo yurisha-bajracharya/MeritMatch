@@ -5,7 +5,11 @@ import { readDb } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export default async function OutcomePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function OutcomePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const db = await readDb();
   const sub = db.submissions.find((s) => s.id === id);
@@ -14,7 +18,8 @@ export default async function OutcomePage({ params }: { params: Promise<{ id: st
   if (!sub || !candidate || !ranking) notFound();
 
   // Candidates learn only whether they made the shortlist, never scores or rank.
-  const shortlisted = ranking.entries.find((e) => e.submissionId === id)?.shortlisted ?? false;
+  const shortlisted =
+    ranking.entries.find((e) => e.submissionId === id)?.shortlisted ?? false;
 
   return (
     <OutcomeView

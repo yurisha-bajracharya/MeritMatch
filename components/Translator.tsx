@@ -12,7 +12,8 @@ type Skill = { tag: string; evidence: string };
 /** Skills that share one explanation are shown together as chips. */
 function groupByEvidence(skills: Skill[]) {
   const groups = new Map<string, string[]>();
-  for (const s of skills) groups.set(s.evidence, [...(groups.get(s.evidence) ?? []), s.tag]);
+  for (const s of skills)
+    groups.set(s.evidence, [...(groups.get(s.evidence) ?? []), s.tag]);
   return [...groups].map(([evidence, tags]) => ({ evidence, tags }));
 }
 
@@ -51,16 +52,24 @@ export default function Translator() {
   return (
     <main lang={lang}>
       <header className="py-5">
-        <Link href="/" className="font-semibold text-brand">MeritMatch</Link>
+        <Link href="/" className="font-semibold text-brand">
+          MeritMatch
+        </Link>
       </header>
 
       <section className="border-t border-rule pt-8">
-        <h1 className="font-display text-3xl text-brand">{t(lang, "trTitle")}</h1>
+        <h1 className="font-display text-3xl text-brand">
+          {t(lang, "trTitle")}
+        </h1>
         <p className="mt-3">{t(lang, "trIntro")}</p>
       </section>
 
       {skills === null ? (
-        <form onSubmit={submit} className="border-t border-rule mt-8 pt-6 space-y-6" noValidate>
+        <form
+          onSubmit={submit}
+          className="border-t border-rule mt-8 pt-6 space-y-6"
+          noValidate
+        >
           <Segmented
             legend={t(lang, "language")}
             value={lang}
@@ -71,7 +80,9 @@ export default function Translator() {
             ]}
           />
           <div>
-            <label htmlFor="work" className="block text-sm font-medium mb-2">{t(lang, "trLabel")}</label>
+            <label htmlFor="work" className="block text-sm font-medium mb-2">
+              {t(lang, "trLabel")}
+            </label>
             <textarea
               id="work"
               className="field min-h-44 text-base"
@@ -82,8 +93,16 @@ export default function Translator() {
             />
             <p className="mt-2 text-sm">{t(lang, "trNote")}</p>
           </div>
-          {error && <p role="alert" className="border-l-4 border-ink pl-3">{error}</p>}
-          <button type="submit" className="btn btn-proof w-full" disabled={loading}>
+          {error && (
+            <p role="alert" className="border-l-4 border-ink pl-3">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            className="btn btn-proof w-full"
+            disabled={loading}
+          >
             {loading ? t(lang, "trWorking") : t(lang, "trSubmit")}
           </button>
         </form>
@@ -99,7 +118,10 @@ export default function Translator() {
                   <li key={g.evidence} className="ledger-row">
                     <span className="flex flex-wrap gap-2">
                       {g.tags.map((tag) => (
-                        <span key={tag} className="inline-block border border-brand text-brand rounded-[3px] px-2 py-0.5 text-sm font-medium">
+                        <span
+                          key={tag}
+                          className="inline-block border border-brand text-brand rounded-[3px] px-2 py-0.5 text-sm font-medium"
+                        >
                           {TAG_LABELS[tag]?.[lang] ?? tag}
                         </span>
                       ))}
@@ -112,11 +134,21 @@ export default function Translator() {
           </section>
           <div className="border-t border-rule mt-2 pt-6 space-y-3">
             {skills.length > 0 && (
-              <Link href={`/jobs?tags=${tags}&lang=${lang}`} className="btn btn-primary w-full">
+              <Link
+                href={`/jobs?tags=${tags}&lang=${lang}`}
+                className="btn btn-primary w-full"
+              >
                 {t(lang, "trJobsCta")}
               </Link>
             )}
-            <button type="button" className="btn btn-quiet w-full" onClick={() => { setSkills(null); setText(""); }}>
+            <button
+              type="button"
+              className="btn btn-quiet w-full"
+              onClick={() => {
+                setSkills(null);
+                setText("");
+              }}
+            >
               {t(lang, "trAgain")}
             </button>
           </div>

@@ -39,6 +39,7 @@ export type Job = {
   category: Category;
   tags: string[];
   verified: boolean;
+  verifiedAt?: string;
   createdAt: string;
 };
 

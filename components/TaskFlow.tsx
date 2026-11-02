@@ -3,10 +3,18 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Stamp from "@/components/Stamp";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import Segmented from "@/components/Segmented";
 import SharedDeviceToggle from "@/components/SharedDeviceToggle";
 import VoiceRecorder from "@/components/VoiceRecorder";
-import { clearDraft, isShared, loadDraft, saveDraft, setShared, wipeAll } from "@/lib/device";
+import {
+  clearDraft,
+  isShared,
+  loadDraft,
+  saveDraft,
+  setShared,
+  wipeAll,
+} from "@/lib/device";
 import { localizeDigits, t } from "@/lib/i18n";
 import type { PublicTemplate } from "@/lib/templates";
 import type { Gender, InputMode, Job, Lang, Region } from "@/lib/types";
@@ -163,13 +171,15 @@ export default function TaskFlow({
     <main lang={lang}>
       {stage === "intro" && (
         <>
-          <div className="flex items-start justify-between pt-5">
+          <div className="pt-5">
             <span className="font-semibold text-brand">MeritMatch</span>
-            {job.verified && (
-              <Stamp size={56} center="OK" label="VERIFIED EMPLOYER" tilt={6} />
-            )}
           </div>
           <section className="border-t border-rule mt-5 pt-8">
+            {job.verified && (
+              <div className="mb-6">
+                <VerifiedBadge lang={lang} />
+              </div>
+            )}
             <p className="text-sm text-ink/75">
               {job.employer}
               {job.location ? `, ${job.location}` : ""}
@@ -204,7 +214,11 @@ export default function TaskFlow({
                 { value: "voice", label: t(lang, "voice") },
               ]}
             />
-            <SharedDeviceToggle lang={lang} shared={shared} onChange={changeShared} />
+            <SharedDeviceToggle
+              lang={lang}
+              shared={shared}
+              onChange={changeShared}
+            />
             {restored && !shared && (
               <p className="border-l-4 border-ochre pl-3" role="status">
                 {t(lang, "restored")}
@@ -421,7 +435,10 @@ export default function TaskFlow({
             </ol>
             {submissionId && !shared && (
               <div className="mt-6">
-                <Link href={`/outcome/${submissionId}`} className="btn btn-quiet w-full">
+                <Link
+                  href={`/outcome/${submissionId}`}
+                  className="btn btn-quiet w-full"
+                >
                   {t(lang, "viewResult")}
                 </Link>
                 <p className="mt-2 text-sm">{t(lang, "resultNote")}</p>
@@ -429,8 +446,14 @@ export default function TaskFlow({
             )}
             {shared && (
               <div className="mt-6">
-                <p className="border-l-4 border-ochre pl-3">{t(lang, "sharedDone")}</p>
-                <button type="button" className="btn btn-primary w-full mt-4" onClick={endSession}>
+                <p className="border-l-4 border-ochre pl-3">
+                  {t(lang, "sharedDone")}
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-primary w-full mt-4"
+                  onClick={endSession}
+                >
                   {t(lang, "endSession")}
                 </button>
               </div>

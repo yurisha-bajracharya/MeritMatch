@@ -85,7 +85,10 @@ const strings = {
     ne: "तपाईं छनोटमा परेमा सन्देश आउँछ र सम्पर्क विवरण दिने कि नदिने तपाईंले निर्णय गर्नुहुन्छ।",
   },
   viewResult: { en: "Check your result", ne: "आफ्नो नतिजा हेर्नुहोस्" },
-  resultNote: { en: "Save this link to check your result later.", ne: "पछि नतिजा हेर्न यो लिङ्क सुरक्षित राख्नुहोस्।" },
+  resultNote: {
+    en: "Save this link to check your result later.",
+    ne: "पछि नतिजा हेर्न यो लिङ्क सुरक्षित राख्नुहोस्।",
+  },
   outcomeYes: { en: "You are shortlisted", ne: "तपाईं छनोटमा पर्नुभयो" },
   outcomeNo: { en: "Not shortlisted this time", ne: "यसपटक छनोटमा पर्नुभएन" },
   shortStamp: { en: "TOP", ne: "छनोट" },
@@ -97,17 +100,44 @@ const strings = {
     en: "MeritMatch: {name}, thank you for completing the task for {title} at {employer}. You were not shortlisted this time. See other jobs that fit your skills.",
     ne: "मेरिटम्याच: {name}, {employer} को {title} को काम पूरा गर्नुभएकोमा धन्यवाद। यसपटक तपाईं छनोटमा पर्नुभएन। तपाईंका सीपसँग मिल्ने अन्य काम हेर्नुहोस्।",
   },
-  consentHeading: { en: "Share your contact details?", ne: "सम्पर्क विवरण दिने?" },
-  consentLabel: { en: "Let {employer} see my name and phone number", ne: "{employer} ले मेरो नाम र फोन नम्बर हेर्न सकून्" },
-  consentOn: { en: "Shared. You can turn this off any time.", ne: "दिइएको छ। तपाईं जुनसुकै बेला बन्द गर्न सक्नुहुन्छ।" },
-  consentOff: { en: "Not shared. {employer} cannot see who you are.", ne: "दिइएको छैन। {employer} ले तपाईं को हुनुहुन्छ देख्दैनन्।" },
-  consentError: { en: "Could not save. Try again.", ne: "सुरक्षित गर्न सकिएन। फेरि प्रयास गर्नुहोस्।" },
-  skillsShown: { en: "Skills your answers showed", ne: "तपाईंका उत्तरले देखाएका सीप" },
-  noSkillsYet: { en: "No strong skill signals yet. Try the Career-Break Translator to add your past work.", ne: "अहिलेसम्म स्पष्ट सीप देखिएन। विगतको काम थप्न करियर-ब्रेक अनुवादक प्रयोग गर्नुहोस्।" },
+  consentHeading: {
+    en: "Share your contact details?",
+    ne: "सम्पर्क विवरण दिने?",
+  },
+  consentLabel: {
+    en: "Let {employer} see my name and phone number",
+    ne: "{employer} ले मेरो नाम र फोन नम्बर हेर्न सकून्",
+  },
+  consentOn: {
+    en: "Shared. You can turn this off any time.",
+    ne: "दिइएको छ। तपाईं जुनसुकै बेला बन्द गर्न सक्नुहुन्छ।",
+  },
+  consentOff: {
+    en: "Not shared. {employer} cannot see who you are.",
+    ne: "दिइएको छैन। {employer} ले तपाईं को हुनुहुन्छ देख्दैनन्।",
+  },
+  consentError: {
+    en: "Could not save. Try again.",
+    ne: "सुरक्षित गर्न सकिएन। फेरि प्रयास गर्नुहोस्।",
+  },
+  skillsShown: {
+    en: "Skills your answers showed",
+    ne: "तपाईंका उत्तरले देखाएका सीप",
+  },
+  noSkillsYet: {
+    en: "No strong skill signals yet. Try the Career-Break Translator to add your past work.",
+    ne: "अहिलेसम्म स्पष्ट सीप देखिएन। विगतको काम थप्न करियर-ब्रेक अनुवादक प्रयोग गर्नुहोस्।",
+  },
   similarJobs: { en: "Similar jobs for you", ne: "तपाईंका लागि मिल्दा कामहरू" },
   similarCta: { en: "See similar jobs", ne: "मिल्दा काम हेर्नुहोस्" },
-  matchingSkills: { en: "Matches your skills in {tags}", ne: "{tags} मा तपाईंका सीपसँग मिल्छ" },
-  noSimilar: { en: "No matching jobs yet. Check again soon.", ne: "अहिले मिल्दो काम छैन। केही समयपछि फेरि हेर्नुहोस्।" },
+  matchingSkills: {
+    en: "Matches your skills in {tags}",
+    ne: "{tags} मा तपाईंका सीपसँग मिल्छ",
+  },
+  noSimilar: {
+    en: "No matching jobs yet. Check again soon.",
+    ne: "अहिले मिल्दो काम छैन। केही समयपछि फेरि हेर्नुहोस्।",
+  },
   backToResult: { en: "Back to your result", ne: "नतिजामा फर्कनुहोस्" },
   yourSkills: { en: "Your skills", ne: "तपाईंका सीप" },
   trTitle: { en: "Career-Break Translator", ne: "करियर-ब्रेक अनुवादक" },
@@ -115,23 +145,38 @@ const strings = {
     en: "Caring for family, running a shop, farming, volunteering. It is all work. Tell us what you did and we will show the skills in it.",
     ne: "परिवारको हेरचाह, पसल चलाउनु, खेती, स्वयंसेवा। यी सबै काम हुन्। तपाईंले के गर्नुभयो भन्नुहोस्, हामी त्यसमा लुकेका सीप देखाउँछौँ।",
   },
-  trLabel: { en: "Describe work you have done", ne: "तपाईंले गरेको काम वर्णन गर्नुहोस्" },
+  trLabel: {
+    en: "Describe work you have done",
+    ne: "तपाईंले गरेको काम वर्णन गर्नुहोस्",
+  },
   trPlaceholder: {
     en: "For example: I looked after my mother for three years and also kept the accounts for our family shop.",
     ne: "जस्तै: मैले तीन वर्ष आमाको हेरचाह गरेँ र हाम्रो पसलको हिसाबकिताब पनि राखेँ।",
   },
   trSubmit: { en: "Show my skills", ne: "मेरा सीप देखाउनुहोस्" },
   trWorking: { en: "Reading…", ne: "पढ्दै…" },
-  trTooShort: { en: "Please write a little more, at least a sentence.", ne: "कृपया अलि बढी लेख्नुहोस्, कम्तीमा एउटा वाक्य।" },
-  trError: { en: "Something went wrong. Try again.", ne: "केही गडबड भयो। फेरि प्रयास गर्नुहोस्।" },
+  trTooShort: {
+    en: "Please write a little more, at least a sentence.",
+    ne: "कृपया अलि बढी लेख्नुहोस्, कम्तीमा एउटा वाक्य।",
+  },
+  trError: {
+    en: "Something went wrong. Try again.",
+    ne: "केही गडबड भयो। फेरि प्रयास गर्नुहोस्।",
+  },
   trResultTitle: { en: "What your work shows", ne: "तपाईंको कामले के देखाउँछ" },
   trNone: {
     en: "We could not find skills in that. Try adding what you did day to day and who you helped.",
     ne: "यसबाट सीप भेट्टाउन सकिएन। दैनिक के गर्नुभयो र कसलाई सहयोग गर्नुभयो थप्नुहोस्।",
   },
-  trJobsCta: { en: "See jobs that match these skills", ne: "यी सीपसँग मिल्ने काम हेर्नुहोस्" },
+  trJobsCta: {
+    en: "See jobs that match these skills",
+    ne: "यी सीपसँग मिल्ने काम हेर्नुहोस्",
+  },
   trAgain: { en: "Describe more work", ne: "अरू काम थप्नुहोस्" },
-  trNote: { en: "We do not store what you write.", ne: "तपाईंले लेखेको हामी सुरक्षित राख्दैनौँ।" },
+  trNote: {
+    en: "We do not store what you write.",
+    ne: "तपाईंले लेखेको हामी सुरक्षित राख्दैनौँ।",
+  },
   sharedLabel: { en: "This is a shared phone", ne: "यो साझा फोन हो" },
   sharedOn: {
     en: "Nothing is saved on this phone. Your answers disappear if you close this page.",
@@ -145,8 +190,19 @@ const strings = {
     en: "Shared phone: nothing from this session was kept. Use the link in your text message to see your result.",
     ne: "साझा फोन: यो सत्रको केही पनि राखिएको छैन। नतिजा हेर्न तपाईंको सन्देशमा आएको लिङ्क प्रयोग गर्नुहोस्।",
   },
-  endSession: { en: "End session and clear this phone", ne: "सत्र सक्नुहोस् र यो फोन सफा गर्नुहोस्" },
-  restored: { en: "We restored your earlier answers.", ne: "तपाईंका अघिल्ला उत्तर फर्काइएको छ।" },
+  endSession: {
+    en: "End session and clear this phone",
+    ne: "सत्र सक्नुहोस् र यो फोन सफा गर्नुहोस्",
+  },
+  verifiedEmployer: { en: "Verified employer", ne: "प्रमाणित रोजगारदाता" },
+  verifiedNote: {
+    en: "Business checked by MeritMatch",
+    ne: "व्यवसाय मेरिटम्याचले जाँचेको छ",
+  },
+  restored: {
+    en: "We restored your earlier answers.",
+    ne: "तपाईंका अघिल्ला उत्तर फर्काइएको छ।",
+  },
 } as const;
 
 export type StringKey = keyof typeof strings;

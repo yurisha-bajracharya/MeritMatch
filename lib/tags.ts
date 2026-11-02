@@ -20,7 +20,12 @@ export const isKnownTag = (tag: string) => tag in TAG_LABELS;
 export type JobMatch = { job: Job; shared: string[]; score: number };
 
 /** Ranks jobs by skill-tag overlap (Jaccard); jobs with no shared tag are dropped. */
-export function similarJobs(tags: string[], jobs: Job[], excludeJobIds: string[] = [], limit = 5): JobMatch[] {
+export function similarJobs(
+  tags: string[],
+  jobs: Job[],
+  excludeJobIds: string[] = [],
+  limit = 5,
+): JobMatch[] {
   const mine = new Set(tags);
   return jobs
     .filter((j) => !excludeJobIds.includes(j.id))

@@ -61,6 +61,10 @@ export default function PostJobForm({
             Send this link to candidates by SMS, Viber or WhatsApp. They can
             open it on any phone.
           </p>
+          <p className="mt-3 border-l-4 border-ochre pl-3 text-sm">
+            MeritMatch will review your business. Once approved, a verified
+            stamp appears on this task for candidates.
+          </p>
         </section>
         <section className="border-t border-rule mt-8 pt-6 space-y-4">
           <p className="field break-all select-all">{link}</p>

@@ -20,7 +20,9 @@ export default function SharedDeviceToggle({ lang, shared, onChange }: Props) {
           className={`relative h-8 w-14 shrink-0 rounded-full border-2 border-brand ${shared ? "bg-brand" : "bg-transparent"}`}
           aria-hidden
         >
-          <span className={`absolute top-0.5 size-6 rounded-full ${shared ? "left-[26px] bg-ochre" : "left-0.5 bg-brand"}`} />
+          <span
+            className={`absolute top-0.5 size-6 rounded-full ${shared ? "left-[26px] bg-ochre" : "left-0.5 bg-brand"}`}
+          />
         </span>
       </button>
       <p className="mt-1 text-sm" aria-live="polite">

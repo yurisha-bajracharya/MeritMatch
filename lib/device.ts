@@ -23,12 +23,14 @@ function attempt<T>(fn: () => T, fallback: T): T {
   }
 }
 
-export const isShared = () => attempt(() => sessionStorage.getItem(FLAG) === "1", false);
+export const isShared = () =>
+  attempt(() => sessionStorage.getItem(FLAG) === "1", false);
 
 /** Removes everything MeritMatch has stored on this device (the shared flag itself stays). */
 export function wipeAll() {
   attempt(() => {
-    for (const key of Object.keys(localStorage)) if (key.startsWith(PREFIX)) localStorage.removeItem(key);
+    for (const key of Object.keys(localStorage))
+      if (key.startsWith(PREFIX)) localStorage.removeItem(key);
   }, undefined);
 }
 
@@ -47,14 +49,22 @@ const draftKey = (jobId: string) => `${PREFIX}draft:${jobId}`;
 
 export function saveDraft(jobId: string, draft: Draft) {
   if (isShared()) return;
-  attempt(() => localStorage.setItem(draftKey(jobId), JSON.stringify(draft)), undefined);
+  attempt(
+    () => localStorage.setItem(draftKey(jobId), JSON.stringify(draft)),
+    undefined,
+  );
 }
 
 export function loadDraft(jobId: string): Draft | null {
   if (isShared()) return null;
   return attempt(() => {
     const d = JSON.parse(localStorage.getItem(draftKey(jobId)) ?? "null");
-    if (!d || typeof d.answers !== "object" || (d.lang !== "en" && d.lang !== "ne")) return null;
+    if (
+      !d ||
+      typeof d.answers !== "object" ||
+      (d.lang !== "en" && d.lang !== "ne")
+    )
+      return null;
     return {
       lang: d.lang,
       mode: d.mode === "voice" ? "voice" : "text",
