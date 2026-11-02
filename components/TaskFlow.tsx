@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Stamp from "@/components/Stamp";
 import Segmented from "@/components/Segmented";
 import VoiceRecorder from "@/components/VoiceRecorder";
@@ -37,6 +38,7 @@ export default function TaskFlow({
   const [region, setRegion] = useState<Region | "">("");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [submissionId, setSubmissionId] = useState("");
 
   const total = template.scenarios.length;
   const scenario = template.scenarios[index];
@@ -92,8 +94,10 @@ export default function TaskFlow({
           })),
         }),
       });
-      if (res.status === 201) setStage("done");
-      else if (res.status === 409) setError(t(lang, "errorDuplicate"));
+      if (res.status === 201) {
+        setSubmissionId((await res.json()).id);
+        setStage("done");
+      } else if (res.status === 409) setError(t(lang, "errorDuplicate"));
       else if (res.status === 400) setError(t(lang, "errorFields"));
       else setError(t(lang, "errorGeneric"));
     } catch {
@@ -364,6 +368,14 @@ export default function TaskFlow({
                 </li>
               ))}
             </ol>
+            {submissionId && (
+              <div className="mt-6">
+                <Link href={`/outcome/${submissionId}`} className="btn btn-quiet w-full">
+                  {t(lang, "viewResult")}
+                </Link>
+                <p className="mt-2 text-sm">{t(lang, "resultNote")}</p>
+              </div>
+            )}
           </section>
         </>
       )}

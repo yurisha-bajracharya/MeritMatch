@@ -84,6 +84,32 @@ const strings = {
     en: "If you are shortlisted, you get a message and choose whether to share your contact details.",
     ne: "तपाईं छनोटमा परेमा सन्देश आउँछ र सम्पर्क विवरण दिने कि नदिने तपाईंले निर्णय गर्नुहुन्छ।",
   },
+  viewResult: { en: "Check your result", ne: "आफ्नो नतिजा हेर्नुहोस्" },
+  resultNote: { en: "Save this link to check your result later.", ne: "पछि नतिजा हेर्न यो लिङ्क सुरक्षित राख्नुहोस्।" },
+  outcomeYes: { en: "You are shortlisted", ne: "तपाईं छनोटमा पर्नुभयो" },
+  outcomeNo: { en: "Not shortlisted this time", ne: "यसपटक छनोटमा पर्नुभएन" },
+  shortStamp: { en: "TOP", ne: "छनोट" },
+  smsYes: {
+    en: "MeritMatch: {name}, your answers for {title} at {employer} were among the strongest. You are shortlisted. Open the link to choose whether to share your contact details.",
+    ne: "मेरिटम्याच: {name}, {employer} को {title} का लागि तपाईंका उत्तर उत्कृष्टमध्ये परे। तपाईं छनोटमा पर्नुभयो। सम्पर्क विवरण दिने कि नदिने रोज्न लिङ्क खोल्नुहोस्।",
+  },
+  smsNo: {
+    en: "MeritMatch: {name}, thank you for completing the task for {title} at {employer}. You were not shortlisted this time. See other jobs that fit your skills.",
+    ne: "मेरिटम्याच: {name}, {employer} को {title} को काम पूरा गर्नुभएकोमा धन्यवाद। यसपटक तपाईं छनोटमा पर्नुभएन। तपाईंका सीपसँग मिल्ने अन्य काम हेर्नुहोस्।",
+  },
+  consentHeading: { en: "Share your contact details?", ne: "सम्पर्क विवरण दिने?" },
+  consentLabel: { en: "Let {employer} see my name and phone number", ne: "{employer} ले मेरो नाम र फोन नम्बर हेर्न सकून्" },
+  consentOn: { en: "Shared. You can turn this off any time.", ne: "दिइएको छ। तपाईं जुनसुकै बेला बन्द गर्न सक्नुहुन्छ।" },
+  consentOff: { en: "Not shared. {employer} cannot see who you are.", ne: "दिइएको छैन। {employer} ले तपाईं को हुनुहुन्छ देख्दैनन्।" },
+  consentError: { en: "Could not save. Try again.", ne: "सुरक्षित गर्न सकिएन। फेरि प्रयास गर्नुहोस्।" },
+  skillsShown: { en: "Skills your answers showed", ne: "तपाईंका उत्तरले देखाएका सीप" },
+  noSkillsYet: { en: "No strong skill signals yet. Try the Career-Break Translator to add your past work.", ne: "अहिलेसम्म स्पष्ट सीप देखिएन। विगतको काम थप्न करियर-ब्रेक अनुवादक प्रयोग गर्नुहोस्।" },
+  similarJobs: { en: "Similar jobs for you", ne: "तपाईंका लागि मिल्दा कामहरू" },
+  similarCta: { en: "See similar jobs", ne: "मिल्दा काम हेर्नुहोस्" },
+  matchingSkills: { en: "Matches your skills in {tags}", ne: "{tags} मा तपाईंका सीपसँग मिल्छ" },
+  noSimilar: { en: "No matching jobs yet. Check again soon.", ne: "अहिले मिल्दो काम छैन। केही समयपछि फेरि हेर्नुहोस्।" },
+  backToResult: { en: "Back to your result", ne: "नतिजामा फर्कनुहोस्" },
+  yourSkills: { en: "Your skills", ne: "तपाईंका सीप" },
 } as const;
 
 export type StringKey = keyof typeof strings;
