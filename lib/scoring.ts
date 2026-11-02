@@ -132,6 +132,20 @@ async function callOpenAI(
   return body.choices?.[0]?.message?.content ?? "";
 }
 
+/** Asks whichever provider has a key. Returns null when none is configured; throws on provider errors. */
+export async function askLLM(
+  system: string,
+  user: string,
+): Promise<{ text: string; by: "gemini" | "openai" } | null> {
+  if (process.env.GEMINI_API_KEY) {
+    return { text: await callGemini(system, user, process.env.GEMINI_API_KEY), by: "gemini" };
+  }
+  if (process.env.OPENAI_API_KEY) {
+    return { text: await callOpenAI(system, user, process.env.OPENAI_API_KEY), by: "openai" };
+  }
+  return null;
+}
+
 /** Offline scorer so the demo works without an API key or network. */
 function fallbackScore(template: TaskTemplate, answers: Answer[]) {
   const text = answers
@@ -191,25 +205,15 @@ export async function scoreAnswers(
 ): Promise<ScoreResult> {
   const payload = buildScoringPayload(template, answers);
   const user = JSON.stringify(payload);
-  const gemini = process.env.GEMINI_API_KEY;
-  const openai = process.env.OPENAI_API_KEY;
 
   let parsed: { criteria: CriterionScore[]; summary: string } | null = null;
   let scoredBy: ScoreResult["scoredBy"] = "fallback";
 
   try {
-    if (gemini) {
-      parsed = parseModelOutput(
-        await callGemini(SYSTEM_PROMPT, user, gemini),
-        template,
-      );
-      scoredBy = "gemini";
-    } else if (openai) {
-      parsed = parseModelOutput(
-        await callOpenAI(SYSTEM_PROMPT, user, openai),
-        template,
-      );
-      scoredBy = "openai";
+    const out = await askLLM(SYSTEM_PROMPT, user);
+    if (out) {
+      parsed = parseModelOutput(out.text, template);
+      scoredBy = out.by;
     }
   } catch (err) {
     console.error(

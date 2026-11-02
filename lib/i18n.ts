@@ -110,6 +110,28 @@ const strings = {
   noSimilar: { en: "No matching jobs yet. Check again soon.", ne: "अहिले मिल्दो काम छैन। केही समयपछि फेरि हेर्नुहोस्।" },
   backToResult: { en: "Back to your result", ne: "नतिजामा फर्कनुहोस्" },
   yourSkills: { en: "Your skills", ne: "तपाईंका सीप" },
+  trTitle: { en: "Career-Break Translator", ne: "करियर-ब्रेक अनुवादक" },
+  trIntro: {
+    en: "Caring for family, running a shop, farming, volunteering. It is all work. Tell us what you did and we will show the skills in it.",
+    ne: "परिवारको हेरचाह, पसल चलाउनु, खेती, स्वयंसेवा। यी सबै काम हुन्। तपाईंले के गर्नुभयो भन्नुहोस्, हामी त्यसमा लुकेका सीप देखाउँछौँ।",
+  },
+  trLabel: { en: "Describe work you have done", ne: "तपाईंले गरेको काम वर्णन गर्नुहोस्" },
+  trPlaceholder: {
+    en: "For example: I looked after my mother for three years and also kept the accounts for our family shop.",
+    ne: "जस्तै: मैले तीन वर्ष आमाको हेरचाह गरेँ र हाम्रो पसलको हिसाबकिताब पनि राखेँ।",
+  },
+  trSubmit: { en: "Show my skills", ne: "मेरा सीप देखाउनुहोस्" },
+  trWorking: { en: "Reading…", ne: "पढ्दै…" },
+  trTooShort: { en: "Please write a little more, at least a sentence.", ne: "कृपया अलि बढी लेख्नुहोस्, कम्तीमा एउटा वाक्य।" },
+  trError: { en: "Something went wrong. Try again.", ne: "केही गडबड भयो। फेरि प्रयास गर्नुहोस्।" },
+  trResultTitle: { en: "What your work shows", ne: "तपाईंको कामले के देखाउँछ" },
+  trNone: {
+    en: "We could not find skills in that. Try adding what you did day to day and who you helped.",
+    ne: "यसबाट सीप भेट्टाउन सकिएन। दैनिक के गर्नुभयो र कसलाई सहयोग गर्नुभयो थप्नुहोस्।",
+  },
+  trJobsCta: { en: "See jobs that match these skills", ne: "यी सीपसँग मिल्ने काम हेर्नुहोस्" },
+  trAgain: { en: "Describe more work", ne: "अरू काम थप्नुहोस्" },
+  trNote: { en: "We do not store what you write.", ne: "तपाईंले लेखेको हामी सुरक्षित राख्दैनौँ।" },
 } as const;
 
 export type StringKey = keyof typeof strings;
