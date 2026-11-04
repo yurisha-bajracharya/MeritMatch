@@ -1,7 +1,5 @@
 import type { InputMode, Lang } from "./types";
 
-// Shared-device mode lives in sessionStorage, so it ends when the tab closes.
-// While it is on, nothing is written to localStorage.
 const FLAG = "mm:shared";
 const PREFIX = "mm:";
 
@@ -10,7 +8,6 @@ export type Draft = {
   mode: InputMode;
   answers: Record<string, string>;
   index: number;
-  /** Epoch ms when the timer runs out, or null before the task starts. */
   endAt: number | null;
 };
 
@@ -18,7 +15,6 @@ function attempt<T>(fn: () => T, fallback: T): T {
   try {
     return fn();
   } catch {
-    // Storage can be blocked (private mode, full quota); behave as if empty.
     return fallback;
   }
 }
@@ -26,7 +22,6 @@ function attempt<T>(fn: () => T, fallback: T): T {
 export const isShared = () =>
   attempt(() => sessionStorage.getItem(FLAG) === "1", false);
 
-/** Removes everything MeritMatch has stored on this device (the shared flag itself stays). */
 export function wipeAll() {
   attempt(() => {
     for (const key of Object.keys(localStorage))
@@ -59,11 +54,7 @@ export function loadDraft(jobId: string): Draft | null {
   if (isShared()) return null;
   return attempt(() => {
     const d = JSON.parse(localStorage.getItem(draftKey(jobId)) ?? "null");
-    if (
-      !d ||
-      typeof d.answers !== "object" ||
-      (d.lang !== "en" && d.lang !== "ne")
-    )
+    if (!d || typeof d.answers !== "object" || (d.lang !== "en" && d.lang !== "ne"))
       return null;
     return {
       lang: d.lang,

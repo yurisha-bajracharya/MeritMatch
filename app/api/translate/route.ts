@@ -1,17 +1,24 @@
 import { NextResponse } from "next/server";
 import { translateExperience } from "@/lib/translator";
+import type { Lang } from "@/lib/types";
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
-  const text = String(body?.text ?? "")
-    .trim()
-    .slice(0, 1500);
-  const lang = body?.lang === "en" ? "en" : "ne";
-  if (text.length < 10) {
+  try {
+    const body = await req.json();
+    const { text, lang = "en" } = body;
+    if (!text || typeof text !== "string" || text.trim().length < 5) {
+      return NextResponse.json(
+        { error: "Please describe your experience in a few words." },
+        { status: 400 },
+      );
+    }
+    const result = await translateExperience(text.slice(0, 2000), lang as Lang);
+    return NextResponse.json(result);
+  } catch (err) {
+    console.error("POST /api/translate error:", err);
     return NextResponse.json(
-      { error: "Please describe your work in a sentence or more" },
-      { status: 400 },
+      { error: err instanceof Error ? err.message : "Translation failed" },
+      { status: 500 },
     );
   }
-  return NextResponse.json(await translateExperience(text, lang));
 }

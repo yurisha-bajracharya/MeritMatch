@@ -1,113 +1,110 @@
 import { NextResponse } from "next/server";
-import { readDb, updateDb, newId } from "@/lib/store";
+import { getDb, newId } from "@/lib/db";
 import { getTemplate } from "@/lib/templates";
 import { scoreAnswers } from "@/lib/scoring";
-import type {
-  Answer,
-  Candidate,
-  Gender,
-  InputMode,
-  Lang,
-  Region,
-  Submission,
-} from "@/lib/types";
-
-const str = (v: unknown, max: number) =>
-  String(v ?? "")
-    .trim()
-    .slice(0, max);
-const GENDERS: Gender[] = ["female", "male", "other"];
-const REGIONS: Region[] = ["urban", "rural"];
+import { rowToJob } from "@/lib/shortlist";
+import type { Answer, Lang, InputMode, Gender, Region } from "@/lib/types";
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
-  if (!body)
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  try {
+    const body = await req.json();
+    const {
+      job_id,
+      language = "ne",
+      input_mode = "text",
+      answers = [],
+      candidate_name = "",
+      candidate_phone = "",
+      candidate_gender = "",
+      candidate_region = "",
+    } = body;
 
-  const jobId = str(body.jobId, 20);
-  const name = str(body.candidate?.name, 80);
-  const phone = str(body.candidate?.phone, 20).replace(/[^\d+]/g, "");
-  const gender = body.candidate?.gender as Gender;
-  const region = body.candidate?.region as Region;
-  const language: Lang = body.language === "ne" ? "ne" : "en";
-  const inputMode: InputMode = body.inputMode === "voice" ? "voice" : "text";
-
-  if (
-    !name ||
-    phone.length < 7 ||
-    !GENDERS.includes(gender) ||
-    !REGIONS.includes(region)
-  ) {
-    return NextResponse.json(
-      { error: "Candidate name, phone, gender and region are required" },
-      { status: 400 },
-    );
-  }
-
-  const job = (await readDb()).jobs.find((j) => j.id === jobId);
-  if (!job)
-    return NextResponse.json({ error: "Job not found" }, { status: 404 });
-  const template = getTemplate(job.category);
-
-  const answers: Answer[] = template.scenarios.map((s) => ({
-    scenarioId: s.id,
-    text: str(
-      body.answers?.find?.(
-        (a: { scenarioId?: string }) => a?.scenarioId === s.id,
-      )?.text,
-      4000,
-    ),
-  }));
-  if (answers.every((a) => !a.text)) {
-    return NextResponse.json(
-      { error: "At least one answer is required" },
-      { status: 400 },
-    );
-  }
-
-  // Scoring sees only the answers; identity stays in the candidate record.
-  const result = await scoreAnswers(template, answers);
-
-  const outcome = await updateDb((db) => {
-    let candidate = db.candidates.find((c) => c.phone === phone);
-    if (!candidate) {
-      candidate = {
-        id: newId(),
-        name,
-        phone,
-        gender,
-        region,
-      } satisfies Candidate;
-      db.candidates.push(candidate);
+    if (!job_id) {
+      return NextResponse.json({ error: "job_id is required" }, { status: 400 });
     }
-    if (
-      db.submissions.some(
-        (s) => s.jobId === jobId && s.candidateId === candidate!.id,
-      )
-    ) {
-      return null;
+
+    const db = getDb();
+    const jobRow = db.prepare("SELECT * FROM jobs WHERE id = ?").get(job_id) as any;
+    if (!jobRow) {
+      return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
-    const submission: Submission = {
-      id: newId(),
-      jobId,
-      candidateId: candidate.id,
+
+    const job = rowToJob(jobRow);
+    const template = getTemplate(job.category);
+
+    // Upsert candidate
+    let candidateId: string;
+    if (candidate_phone) {
+      const existing = db
+        .prepare("SELECT id FROM candidates WHERE phone = ?")
+        .get(candidate_phone) as any;
+      if (existing) {
+        candidateId = existing.id;
+        db.prepare("UPDATE candidates SET name = ?, gender = ?, region = ? WHERE id = ?")
+          .run(candidate_name, candidate_gender, candidate_region, candidateId);
+      } else {
+        candidateId = newId();
+        db.prepare(
+          "INSERT INTO candidates (id, name, phone, gender, region) VALUES (?, ?, ?, ?, ?)",
+        ).run(candidateId, candidate_name, candidate_phone, candidate_gender, candidate_region);
+      }
+    } else {
+      candidateId = newId();
+      db.prepare(
+        "INSERT INTO candidates (id, name, phone, gender, region) VALUES (?, ?, ?, ?, ?)",
+      ).run(candidateId, candidate_name, `anon-${candidateId}`, candidate_gender, candidate_region);
+    }
+
+    // Check for duplicate submission
+    const existing = db
+      .prepare("SELECT id FROM submissions WHERE job_id = ? AND candidate_id = ?")
+      .get(job_id, candidateId) as any;
+    if (existing) {
+      return NextResponse.json(
+        { error: "Already submitted", submissionId: existing.id },
+        { status: 409 },
+      );
+    }
+
+    // Score answers
+    const useAI = job.ai_scoring;
+    const result = await scoreAnswers(template, answers as Answer[], useAI);
+
+    const subId = newId();
+    db.prepare(
+      `INSERT INTO submissions (id, job_id, candidate_id, language, input_mode, answers, criteria, total, reason, tags, scored_by, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      subId,
+      job_id,
+      candidateId,
       language,
-      inputMode,
-      answers,
-      ...result,
-      consent: false,
-      createdAt: new Date().toISOString(),
-    };
-    db.submissions.push(submission);
-    return submission.id;
-  });
+      input_mode,
+      JSON.stringify(answers),
+      JSON.stringify(result.criteria),
+      result.total,
+      result.reason,
+      JSON.stringify(result.tags),
+      result.scoredBy,
+      new Date().toISOString(),
+    );
 
-  if (!outcome) {
     return NextResponse.json(
-      { error: "You have already submitted for this job" },
-      { status: 409 },
+      {
+        submissionId: subId,
+        total: result.total,
+        reason: result.reason,
+        scoredBy: result.scoredBy,
+        criteria: result.criteria,
+        tags: result.tags,
+      },
+      { status: 201 },
+    );
+  } catch (err) {
+    console.error("POST /api/submissions error:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Submission failed" },
+      { status: 500 },
     );
   }
-  // Scores are not returned: candidates are reviewed blindly and see outcomes later.
-  return NextResponse.json({ id: outcome }, { status: 201 });
 }

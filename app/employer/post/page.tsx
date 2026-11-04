@@ -1,7 +1,15 @@
-import PostJobForm from "@/components/PostJobForm";
-import { TEMPLATES, toPublicTemplate } from "@/lib/templates";
+"use client";
 
-export default function PostJobPage() {
-  const templates = Object.values(TEMPLATES).map(toPublicTemplate);
-  return <PostJobForm templates={templates} />;
+import Navbar from "@/components/Navbar";
+import PostJobForm from "@/components/PostJobForm";
+
+export default function EmployerPostPage() {
+  return (
+    <>
+      <Navbar />
+      <div className="container-main py-8 max-w-2xl mx-auto">
+        <PostJobForm />
+      </div>
+    </>
+  );
 }

@@ -5,7 +5,7 @@ export type ScoreResult = {
   total: number;
   reason: string;
   tags: string[];
-  scoredBy: Submission["scoredBy"];
+  scoredBy: Submission["scored_by"];
 };
 
 const MAX_ANSWER_CHARS = 4000;
@@ -16,7 +16,7 @@ export function redact(text: string): string {
     .slice(0, MAX_ANSWER_CHARS)
     .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[removed]")
     .replace(/https?:\/\/\S+/gi, "[removed]")
-    .replace(/(?:[+]?[\d\u0966-\u096F][\s-]?){7,}/g, "[removed]");
+    .replace(/(?:[+]?[\d०-९][\s-]?){7,}/g, "[removed]");
 }
 
 /** Only rubric + redacted answers leave the server. No name, phone, gender or region. */
@@ -132,7 +132,7 @@ async function callOpenAI(
   return body.choices?.[0]?.message?.content ?? "";
 }
 
-/** Asks whichever provider has a key. Returns null when none is configured; throws on provider errors. */
+/** Asks whichever provider has a key. Returns null when none is configured. */
 export async function askLLM(
   system: string,
   user: string,
@@ -160,7 +160,7 @@ function fallbackScore(template: TaskTemplate, answers: Answer[]) {
     .toLowerCase();
   const words = text.split(/\s+/).filter(Boolean).length;
   const sentences = text
-    .split(/[.!?\u0964\n]+/)
+    .split(/[.!?।\n]+/)
     .filter((s) => s.trim().length > 3).length;
 
   const criteria: CriterionScore[] = template.rubric.map((c) => {
@@ -208,6 +208,7 @@ function fallbackScore(template: TaskTemplate, answers: Answer[]) {
 export async function scoreAnswers(
   template: TaskTemplate,
   answers: Answer[],
+  useAI: boolean = true,
 ): Promise<ScoreResult> {
   const payload = buildScoringPayload(template, answers);
   const user = JSON.stringify(payload);
@@ -215,18 +216,20 @@ export async function scoreAnswers(
   let parsed: { criteria: CriterionScore[]; summary: string } | null = null;
   let scoredBy: ScoreResult["scoredBy"] = "fallback";
 
-  try {
-    const out = await askLLM(SYSTEM_PROMPT, user);
-    if (out) {
-      parsed = parseModelOutput(out.text, template);
-      scoredBy = out.by;
+  if (useAI) {
+    try {
+      const out = await askLLM(SYSTEM_PROMPT, user);
+      if (out) {
+        parsed = parseModelOutput(out.text, template);
+        scoredBy = out.by;
+      }
+    } catch (err) {
+      console.error(
+        "LLM scoring failed, using fallback:",
+        err instanceof Error ? err.message : err,
+      );
+      parsed = null;
     }
-  } catch (err) {
-    console.error(
-      "LLM scoring failed, using fallback:",
-      err instanceof Error ? err.message : err,
-    );
-    parsed = null;
   }
 
   if (!parsed) {

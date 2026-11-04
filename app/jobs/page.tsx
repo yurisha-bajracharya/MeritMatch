@@ -1,94 +1,196 @@
-import Link from "next/link";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Navbar from "@/components/Navbar";
+import JobCard from "@/components/JobCard";
+import type { Job, Lang, Category } from "@/lib/types";
+import { CATEGORIES } from "@/lib/types";
 import { t } from "@/lib/i18n";
-import { readDb } from "@/lib/store";
-import { isKnownTag, similarJobs, TAG_LABELS } from "@/lib/tags";
-import type { Lang } from "@/lib/types";
+import { resolveTag } from "@/lib/tags";
 
-export const dynamic = "force-dynamic";
+const CATEGORY_LABELS: Record<string, Record<Lang, string>> = {
+  retail: { en: "Retail", ne: "रिटेल" },
+  admin: { en: "Admin", ne: "प्रशासन" },
+  office: { en: "Data", ne: "डेटा" },
+  hospitality: { en: "Hotel", ne: "होटल" },
+  teaching: { en: "Teaching", ne: "शिक्षण" },
+  driving: { en: "Driving", ne: "ड्राइभिङ" },
+  construction: { en: "Construction", ne: "निर्माण" },
+  "it-support": { en: "IT", ne: "आईटी" },
+};
 
-type Search = { s?: string; tags?: string; lang?: string };
+export default function JobsPage() {
+  const searchParams = useSearchParams();
+  const tagsParam = searchParams.get("tags");
+  const highlightParam = searchParams.get("highlight");
 
-export default async function JobsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Search>;
-}) {
-  const sp = await searchParams;
-  const lang: Lang = sp.lang === "en" ? "en" : "ne";
-  const db = await readDb();
+  const [lang, setLang] = useState<Lang>("en");
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState<Category | "">("");
 
-  const sub = sp.s ? db.submissions.find((s) => s.id === sp.s) : undefined;
-  const tags = sub ? sub.tags : (sp.tags ?? "").split(",").filter(isKnownTag);
-  const applied = sub
-    ? db.submissions
-        .filter((s) => s.candidateId === sub.candidateId)
-        .map((s) => s.jobId)
-    : [];
-  const matches = similarJobs(tags, db.jobs, applied);
+  useEffect(() => {
+    fetch("/api/jobs")
+      .then((r) => r.json())
+      .then((data) => {
+        setJobs(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  // Filter jobs
+  const filtered = jobs.filter((job) => {
+    // Category filter
+    if (category && job.category !== category) return false;
+
+    // Search filter
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const matches =
+        job.title.toLowerCase().includes(q) ||
+        job.employer_name.toLowerCase().includes(q) ||
+        job.location.toLowerCase().includes(q) ||
+        job.category.includes(q) ||
+        job.tags.some((tag) => tag.includes(q));
+
+      // Fuzzy tag matching
+      const resolved = resolveTag(q);
+      const fuzzyMatch = resolved
+        ? job.tags.some((tag) => tag === resolved)
+        : false;
+
+      if (!matches && !fuzzyMatch) return false;
+    }
+
+    // Tag filter from URL
+    if (tagsParam) {
+      const filterTags = tagsParam.split(",").filter(Boolean);
+      const hasOverlap = filterTags.some((ft) => {
+        const resolved = resolveTag(ft);
+        return resolved
+          ? job.tags.includes(resolved)
+          : job.tags.some((jt) => jt.includes(ft) || ft.includes(jt));
+      });
+      if (!hasOverlap) return false;
+    }
+
+    return true;
+  });
+
+  // Subscribe handler
+  const [subbing, setSubbing] = useState(false);
+  const [subbed, setSubbed] = useState(false);
+
+  const subscribe = async () => {
+    setSubbing(true);
+    const tags = tagsParam
+      ? tagsParam.split(",").filter(Boolean)
+      : search.trim()
+        ? [search.trim().toLowerCase().replace(/\s+/g, "-")]
+        : [];
+
+    try {
+      await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tags, category: category || "" }),
+      });
+      setSubbed(true);
+    } catch {} finally {
+      setSubbing(false);
+    }
+  };
 
   return (
-    <main lang={lang}>
-      <header className="py-5">
-        {sub ? (
-          <Link
-            href={`/outcome/${sub.id}`}
-            className="font-semibold text-brand"
+    <>
+      <Navbar />
+      <div className="container-main py-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="section-title">{t("jobs", lang)}</h1>
+          <button
+            onClick={() => setLang(lang === "en" ? "ne" : "en")}
+            className="text-sm text-ink-muted hover:text-ink"
           >
-            &larr; {t(lang, "backToResult")}
-          </Link>
-        ) : (
-          <Link href="/" className="font-semibold text-brand">
-            MeritMatch
-          </Link>
-        )}
-      </header>
+            {t("langToggle", lang)}
+          </button>
+        </div>
 
-      <section className="border-t border-rule pt-8">
-        <h1 className="font-display text-3xl text-brand">
-          {t(lang, "similarJobs")}
-        </h1>
-        {tags.length > 0 && (
-          <ul
-            className="mt-4 flex flex-wrap gap-2"
-            aria-label={t(lang, "yourSkills")}
-          >
-            {tags.map((tag) => (
-              <li
-                key={tag}
-                className="border border-brand text-brand rounded-[3px] px-2 py-1 text-sm"
+        {/* Search + filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"
+              width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              className="input pl-10"
+              placeholder={t("searchJobs", lang)}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <button
+              onClick={() => setCategory("")}
+              className={`badge whitespace-nowrap cursor-pointer ${!category ? "badge-brand" : "badge-muted"}`}
+            >
+              {t("allCategories", lang)}
+            </button>
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategory(cat === category ? "" : cat)}
+                className={`badge whitespace-nowrap cursor-pointer ${cat === category ? "badge-brand" : "badge-muted"}`}
               >
-                {TAG_LABELS[tag][lang]}
-              </li>
+                {CATEGORY_LABELS[cat]?.[lang] ?? cat}
+              </button>
             ))}
-          </ul>
-        )}
-      </section>
+          </div>
+        </div>
 
-      <section className="mt-6">
-        {matches.length === 0 && (
-          <p className="ledger-row">{t(lang, "noSimilar")}</p>
+        {/* Subscribe button */}
+        {(tagsParam || search || category) && (
+          <button
+            onClick={subscribe}
+            disabled={subbing || subbed}
+            className={`btn-sm ${subbed ? "btn-secondary" : "btn-primary"}`}
+          >
+            {subbed ? t("subscribed", lang) : t("subscribeTo", lang)}
+          </button>
         )}
-        {matches.map(({ job, shared }) => (
-          <Link key={job.id} href={`/t/${job.id}`} className="ledger-row block">
-            <span className="block text-sm text-ink/75">
-              {job.employer}
-              {job.location ? `, ${job.location}` : ""}
-            </span>
-            <span className="block font-semibold text-lg">{job.title}</span>
-            {job.verified && (
-              <span className="block text-sm font-medium text-moss">
-                {t(lang, "verifiedEmployer")}
-              </span>
-            )}
-            <span className="block text-sm mt-1">
-              {t(lang, "matchingSkills", {
-                tags: shared.map((x) => TAG_LABELS[x][lang]).join(", "),
-              })}
-            </span>
-          </Link>
-        ))}
-        {matches.length > 0 && <div className="border-t border-rule" />}
-      </section>
-    </main>
+
+        {/* Results */}
+        {loading ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="skeleton h-40 rounded-xl" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="card text-center text-sm text-ink-muted py-12">
+            {t("noJobs", lang)}
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 stagger-children">
+            {filtered.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                lang={lang}
+                highlight={job.id === highlightParam}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   );
 }

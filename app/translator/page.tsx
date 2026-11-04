@@ -1,5 +1,5 @@
-import Translator from "@/components/Translator";
+import { redirect } from "next/navigation";
 
-export default function TranslatorPage() {
-  return <Translator />;
+export default function TranslatorRedirect() {
+  redirect("/experience-mapper");
 }

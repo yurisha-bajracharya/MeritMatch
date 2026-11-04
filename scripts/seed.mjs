@@ -1,183 +1,226 @@
-// Writes a demo job with synthetic applicants to data/store.json. Run: npm run seed
-import { mkdirSync, writeFileSync } from "node:fs";
+/**
+ * Seed script: creates demo data in the SQLite database.
+ * Run with: node scripts/seed.mjs
+ */
 
-const FILE = "data/store.json";
+import Database from "better-sqlite3";
+import path from "path";
+import { fileURLToPath } from "url";
+import crypto from "crypto";
 
-// Small seeded PRNG so the demo is the same every run.
-let s = 20260502;
-const rand = () => {
-  s = (s * 1664525 + 1013904223) % 4294967296;
-  return s / 4294967296;
-};
-const pick = (a) => a[Math.floor(rand() * a.length)];
-const hex = () =>
-  Math.floor(rand() * 0xffffffff)
-    .toString(16)
-    .padStart(8, "0");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DB_PATH = path.join(__dirname, "..", "data", "meritmatch.db");
 
-const female = [
-  "Sita Gurung",
-  "Anita Tamang",
-  "Sunita Rai",
-  "Mina Thapa",
-  "Kamala Magar",
-  "Rita Shrestha",
-  "Laxmi Karki",
-  "Gita Adhikari",
-  "Binita Limbu",
-  "Sarita Chaudhary",
-  "Pooja Sherpa",
-  "Radha Bhandari",
-  "Anju Pun",
-];
-const male = [
-  "Ram Thapa",
-  "Hari KC",
-  "Bikash Rana",
-  "Suresh Poudel",
-  "Dipak Oli",
-  "Nabin Basnet",
-  "Prakash Dahal",
-  "Sanjay Yadav",
-  "Kiran Tamang",
-  "Anil Gurung",
-  "Rajesh Karki",
-];
+import fs from "fs";
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
-const job = {
-  id: "demo0001",
-  title: "Shop assistant",
-  employer: "Himal Mart",
-  location: "Pokhara",
-  category: "retail",
-  tags: [
-    "customer-service",
-    "communication",
-    "problem-solving",
-    "time-management",
-    "numeracy",
-    "accuracy",
-  ],
-  verified: true,
-  createdAt: new Date().toISOString(),
-};
+const db = new Database(DB_PATH);
+db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
 
-const criteria = [
-  { id: "empathy", max: 10, tags: ["customer-service", "communication"] },
-  {
-    id: "problem_solving",
-    max: 10,
-    tags: ["problem-solving", "time-management"],
-  },
-  { id: "numeracy", max: 10, tags: ["numeracy", "accuracy"] },
-  { id: "clarity", max: 10, tags: ["communication"] },
-];
-
-const reasonFor = {
-  empathy: "Calm and apologetic with the upset customer",
-  problem_solving: "Offers an exchange and calls the manager",
-  numeracy: "Gets the Rs 3,000 total with clear working",
-  clarity: "Short, clear and specific answers",
-};
-
-const candidates = [];
-const submissions = [];
-
-for (let i = 0; i < 60; i++) {
-  const woman = rand() < 0.55;
-  const rural = rand() < 0.45;
-  const candidate = {
-    id: `c${hex().slice(0, 6)}`,
-    name: pick(woman ? female : male),
-    phone: `98${Math.floor(10000000 + rand() * 89999999)}`,
-    gender: woman ? "female" : "male",
-    region: rural ? "rural" : "urban",
-  };
-  candidates.push(candidate);
-
-  // Scores depend on the task answers only, never on gender or region.
-  const ability = 3 + rand() * 6;
-  const scored = criteria.map((c) => {
-    const score = Math.max(
-      0,
-      Math.min(c.max, Math.round(ability + (rand() - 0.5) * 4)),
-    );
-    return { id: c.id, max: c.max, score, reason: reasonFor[c.id] };
-  });
-  const best = [...scored].sort((a, b) => b.score - a.score)[0];
-  const total = Math.round(
-    (scored.reduce((n, c) => n + c.score, 0) / 40) * 100,
+// Create tables
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    phone TEXT UNIQUE NOT NULL,
+    email TEXT DEFAULT '',
+    role TEXT NOT NULL CHECK(role IN ('candidate', 'employer')),
+    gender TEXT DEFAULT '',
+    region TEXT DEFAULT '',
+    skills TEXT DEFAULT '[]',
+    experience_text TEXT DEFAULT '',
+    created_at TEXT NOT NULL
   );
-  const tags = [
-    ...new Set(
-      criteria
-        .filter((c) => scored.find((x) => x.id === c.id).score >= 6)
-        .flatMap((c) => c.tags),
-    ),
-  ];
 
-  submissions.push({
-    id: hex(),
-    jobId: job.id,
-    candidateId: candidate.id,
-    language: rand() < 0.6 ? "ne" : "en",
-    inputMode: rand() < 0.3 ? "voice" : "text",
-    answers: [],
-    criteria: scored,
-    total,
-    reason: reasonFor[best.id],
-    tags,
-    scoredBy: "demo",
-    consent: rand() < 0.3,
-    createdAt: new Date(Date.now() - i * 3600_000).toISOString(),
-  });
+  CREATE TABLE IF NOT EXISTS jobs (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    employer_name TEXT NOT NULL,
+    employer_id TEXT DEFAULT '',
+    location TEXT DEFAULT '',
+    category TEXT NOT NULL,
+    tags TEXT NOT NULL DEFAULT '[]',
+    custom_questions TEXT DEFAULT '',
+    duration_min INTEGER DEFAULT 15,
+    ai_scoring INTEGER DEFAULT 1,
+    verified INTEGER DEFAULT 0,
+    verified_at TEXT DEFAULT '',
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS candidates (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    gender TEXT DEFAULT '',
+    region TEXT DEFAULT ''
+  );
+
+  CREATE TABLE IF NOT EXISTS submissions (
+    id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    candidate_id TEXT NOT NULL,
+    language TEXT DEFAULT 'ne',
+    input_mode TEXT DEFAULT 'text',
+    answers TEXT NOT NULL DEFAULT '[]',
+    criteria TEXT NOT NULL DEFAULT '[]',
+    total INTEGER DEFAULT 0,
+    reason TEXT DEFAULT '',
+    tags TEXT DEFAULT '[]',
+    scored_by TEXT DEFAULT 'fallback',
+    consent INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS subscriptions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    tags TEXT NOT NULL DEFAULT '[]',
+    category TEXT DEFAULT '',
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    job_id TEXT DEFAULT '',
+    read INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_sub_job_candidate
+    ON submissions(job_id, candidate_id);
+
+  CREATE INDEX IF NOT EXISTS idx_notifications_user
+    ON notifications(user_id, read);
+
+  CREATE INDEX IF NOT EXISTS idx_subscriptions_user
+    ON subscriptions(user_id);
+
+  CREATE INDEX IF NOT EXISTS idx_jobs_created
+    ON jobs(created_at);
+`);
+
+const id = () => crypto.randomUUID().slice(0, 8);
+
+// --- Demo employer ---
+const employerId = id();
+db.prepare(
+  `INSERT OR IGNORE INTO users (id, name, phone, email, role, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+).run(employerId, "Hari Sharma", "9800000001", "hari@himalmart.com", "employer", new Date().toISOString());
+
+// --- Demo jobs ---
+const jobs = [
+  {
+    id: id(),
+    title: "Shop Assistant",
+    employer_name: "Himal Mart",
+    employer_id: employerId,
+    location: "Pokhara",
+    category: "retail",
+    tags: JSON.stringify(["customer-service", "numeracy", "communication"]),
+  },
+  {
+    id: id(),
+    title: "Office Clerk",
+    employer_name: "Nepal Trust Bank",
+    employer_id: "",
+    location: "Kathmandu",
+    category: "admin",
+    tags: JSON.stringify(["accuracy", "data-entry", "organization"]),
+  },
+  {
+    id: id(),
+    title: "Hotel Receptionist",
+    employer_name: "Mountain View Resort",
+    employer_id: "",
+    location: "Pokhara",
+    category: "hospitality",
+    tags: JSON.stringify(["customer-service", "communication", "teamwork"]),
+  },
+  {
+    id: id(),
+    title: "Delivery Driver",
+    employer_name: "FastSewa",
+    employer_id: "",
+    location: "Kathmandu",
+    category: "driving",
+    tags: JSON.stringify(["driving", "time-management", "communication"]),
+  },
+  {
+    id: id(),
+    title: "Primary Teacher",
+    employer_name: "Bright Future School",
+    employer_id: "",
+    location: "Bharatpur",
+    category: "teaching",
+    tags: JSON.stringify(["communication", "organization", "teaching"]),
+  },
+];
+
+const insertJob = db.prepare(
+  `INSERT OR IGNORE INTO jobs (id, title, employer_name, employer_id, location, category, tags, duration_min, ai_scoring, created_at)
+   VALUES (?, ?, ?, ?, ?, ?, ?, 15, 1, ?)`,
+);
+
+for (const j of jobs) {
+  insertJob.run(j.id, j.title, j.employer_name, j.employer_id, j.location, j.category, j.tags, new Date().toISOString());
 }
 
-// Extra openings (no applicants) so the "similar jobs" screen has something to match.
-const otherJobs = [
-  {
-    id: "demo0002",
-    title: "Data entry operator",
-    employer: "Annapurna Traders",
-    location: "Pokhara",
-    category: "admin",
-    tags: [
-      "accuracy",
-      "data-entry",
-      "time-management",
-      "organization",
-      "digital-literacy",
-      "communication",
-    ],
-    verified: true,
-  },
-  {
-    id: "demo0003",
-    title: "Office assistant",
-    employer: "Lakeside Clinic",
-    location: "Pokhara",
-    category: "office",
-    tags: [
-      "communication",
-      "professionalism",
-      "problem-solving",
-      "teamwork",
-      "organization",
-      "time-management",
-    ],
-    verified: false,
-  },
-].map((j) => ({ ...j, createdAt: new Date().toISOString() }));
+// --- Demo candidates & submissions for first job ---
+const firstJobId = jobs[0].id;
+const firstNames = ["Sita", "Ram", "Gita", "Krishna", "Mina", "Hari", "Anita", "Bikash", "Sunita", "Prakash"];
+const lastNames = ["Gurung", "Tamang", "Thapa", "Rai", "Sherpa", "Magar", "Karki", "Adhikari", "Dahal", "Poudel"];
 
-mkdirSync("data", { recursive: true });
-writeFileSync(
-  FILE,
-  JSON.stringify(
-    { jobs: [job, ...otherJobs], candidates, submissions },
-    null,
-    2,
-  ),
+const insertCandidate = db.prepare(
+  `INSERT OR IGNORE INTO candidates (id, name, phone, gender, region) VALUES (?, ?, ?, ?, ?)`,
 );
-console.log(
-  `Seeded ${submissions.length} applicants. Open /employer/jobs/${job.id}`,
+
+const insertSubmission = db.prepare(
+  `INSERT OR IGNORE INTO submissions (id, job_id, candidate_id, language, input_mode, answers, criteria, total, reason, tags, scored_by, created_at)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 );
+
+for (let i = 0; i < 30; i++) {
+  const candId = id();
+  const firstName = firstNames[i % firstNames.length];
+  const lastName = lastNames[Math.floor(i / 3) % lastNames.length];
+  const gender = i % 3 === 0 ? "female" : i % 3 === 1 ? "male" : "female";
+  const region = i % 4 === 0 ? "rural" : "urban";
+
+  insertCandidate.run(candId, `${firstName} ${lastName}`, `98${String(i).padStart(8, "0")}`, gender, region);
+
+  const total = Math.floor(Math.random() * 60) + 30;
+  const criteria = JSON.stringify([
+    { id: "greeting", score: Math.floor(Math.random() * 8) + 2, max: 10, reason: "Adequate greeting" },
+    { id: "product", score: Math.floor(Math.random() * 8) + 2, max: 10, reason: "Covered main points" },
+    { id: "close", score: Math.floor(Math.random() * 8) + 2, max: 10, reason: "Reasonable close" },
+    { id: "tone", score: Math.floor(Math.random() * 8) + 2, max: 10, reason: "Appropriate tone" },
+  ]);
+
+  insertSubmission.run(
+    id(),
+    firstJobId,
+    candId,
+    i % 2 === 0 ? "ne" : "en",
+    "text",
+    JSON.stringify([{ scenarioId: "s1", text: "Demo answer " + i }]),
+    criteria,
+    total,
+    "Demo scored submission",
+    JSON.stringify(["customer-service", "numeracy"]),
+    "demo",
+    new Date(Date.now() - i * 3600000).toISOString(),
+  );
+}
+
+console.log(`✅ Seeded database at ${DB_PATH}`);
+console.log(`   - 1 employer`);
+console.log(`   - ${jobs.length} jobs`);
+console.log(`   - 30 candidates with submissions for "${jobs[0].title}"`);
+
+db.close();

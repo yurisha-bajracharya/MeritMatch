@@ -1,28 +1,12 @@
-import Stamp from "@/components/Stamp";
-import { t } from "@/lib/i18n";
-import type { Lang } from "@/lib/types";
+"use client";
 
-/** Stamp plus words, so the meaning never depends on the graphic alone. */
-export default function VerifiedBadge({
-  lang = "en",
-  size = 64,
-}: {
-  lang?: Lang;
-  size?: number;
-}) {
+import Stamp from "./Stamp";
+
+export default function VerifiedBadge({ className }: { className?: string }) {
   return (
-    <div className="flex items-center gap-3">
-      <Stamp
-        size={size}
-        center="PROOF"
-        label="VERIFIED EMPLOYER"
-        tone="moss"
-        tilt={-6}
-      />
-      <div>
-        <p className="font-semibold text-moss">{t(lang, "verifiedEmployer")}</p>
-        <p className="text-sm">{t(lang, "verifiedNote")}</p>
-      </div>
+    <div className={`flex items-center gap-2 text-moss ${className ?? ""}`}>
+      <Stamp ringText="VERIFIED EMPLOYER" center="✓" size={36} />
+      <span className="text-xs font-semibold uppercase tracking-wider">Verified</span>
     </div>
   );
 }

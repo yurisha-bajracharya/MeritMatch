@@ -1,31 +1,30 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
-import { updateDb } from "@/lib/store";
+import { getDb } from "@/lib/db";
 
 export async function POST(
   req: Request,
-  ctx: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!isAdmin(req))
-    return NextResponse.json({ error: "Not allowed" }, { status: 401 });
-
-  const { id } = await ctx.params;
-  const body = await req.json().catch(() => null);
-  if (typeof body?.verified !== "boolean") {
-    return NextResponse.json(
-      { error: "verified must be true or false" },
-      { status: 400 },
-    );
+  if (!isAdmin(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const job = await updateDb((db) => {
-    const j = db.jobs.find((x) => x.id === id);
-    if (j) {
-      j.verified = body.verified;
-      j.verifiedAt = body.verified ? new Date().toISOString() : undefined;
-    }
-    return j;
-  });
-  if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ job });
+  const { id } = await params;
+  const body = await req.json();
+  const verified = Boolean(body.verified);
+
+  const db = getDb();
+  const job = db.prepare("SELECT id FROM jobs WHERE id = ?").get(id) as any;
+  if (!job) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  db.prepare("UPDATE jobs SET verified = ?, verified_at = ? WHERE id = ?").run(
+    verified ? 1 : 0,
+    verified ? new Date().toISOString() : "",
+    id,
+  );
+
+  return NextResponse.json({ ok: true, verified });
 }

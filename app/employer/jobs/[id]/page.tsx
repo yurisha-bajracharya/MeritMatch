@@ -1,138 +1,121 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import VerifiedBadge from "@/components/VerifiedBadge";
 import { getRanking } from "@/lib/shortlist";
-import { getTemplate } from "@/lib/templates";
+import { notFound } from "next/navigation";
+import Navbar from "@/components/Navbar";
+import Link from "next/link";
 
-export const dynamic = "force-dynamic";
-
-export default async function ShortlistPage({
+export default async function EmployerJobPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const data = await getRanking(id);
-  if (!data) notFound();
-  const { job, entries } = data;
-  const labels = new Map(
-    getTemplate(job.category).rubric.map((c) => [c.id, c.label.en]),
-  );
-  const cut = entries.filter((e) => e.shortlisted).length;
+  const result = getRanking(id);
+  if (!result) notFound();
+
+  const { job, entries } = result;
 
   return (
-    <main>
-      <header className="py-5">
-        <Link href="/" className="font-semibold text-brand">
-          MeritMatch
-        </Link>
-      </header>
-
-      <section className="border-t border-rule pt-8">
-        <div className="mb-6">
-          {job.verified ? (
-            <VerifiedBadge />
-          ) : (
-            <p className="border-l-4 border-ochre pl-3 text-sm">
-              Not verified yet. Candidates can still take the task; MeritMatch
-              will review your business.
+    <>
+      <Navbar />
+      <div className="container-main py-8 max-w-3xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="section-title">{job.title}</h1>
+            <p className="text-sm text-ink-light">
+              {job.employer_name} · {job.location} · {entries.length} applicants
             </p>
-          )}
-        </div>
-        <p className="text-sm text-ink/75">
-          {job.employer}
-          {job.location ? `, ${job.location}` : ""}
-        </p>
-        <h1 className="font-display text-3xl text-brand mt-1">{job.title}</h1>
-        <p className="mt-3">
-          {entries.length} {entries.length === 1 ? "applicant" : "applicants"},
-          ranked by task score. Names stay hidden until a candidate agrees to
-          share them.
-        </p>
-        <div className="mt-4 flex gap-3">
-          <Link
-            href={`/employer/jobs/${job.id}/bias`}
-            className="btn btn-primary flex-1"
-          >
-            Fairness dashboard
-          </Link>
-          <Link href={`/t/${job.id}`} className="btn btn-quiet">
-            Task link
-          </Link>
-        </div>
-      </section>
-
-      <section className="mt-8">
-        {entries.length === 0 && (
-          <p className="ledger-row">
-            No answers yet. Share the task link with candidates.
-          </p>
-        )}
-        {entries.map((e, i) => (
-          <div key={e.submissionId}>
-            {i === cut && (
-              <p className="border-t-2 border-brand pt-2 pb-1 text-sm font-medium text-brand">
-                Shortlist ends here
-              </p>
-            )}
-            <details
-              className={`ledger-row ${e.shortlisted ? "" : "text-ink/75"}`}
-            >
-              <summary className="flex items-start gap-3 cursor-pointer min-h-12 list-none">
-                <span className="w-7 shrink-0 font-semibold text-brand">
-                  {e.rank}
-                </span>
-                <span className="flex-1">
-                  <span className="block font-semibold">
-                    {e.contact ? e.contact.name : `Applicant ${e.label}`}
-                  </span>
-                  <span className="block text-sm">{e.reason}</span>
-                </span>
-                <span className="shrink-0 bg-ochre text-ink font-semibold px-2 py-0.5 rounded-[3px] tabular-nums">
-                  {e.total}
-                </span>
-              </summary>
-
-              <div className="pl-10 pt-3 space-y-3">
-                {e.contact ? (
-                  <p className="text-sm">
-                    <span className="font-medium">{e.contact.name}</span>,{" "}
-                    {e.contact.phone}
-                    <span className="block text-moss font-medium">
-                      Candidate agreed to share contact details
-                    </span>
-                  </p>
-                ) : (
-                  <p className="text-sm">
-                    Name and phone hidden until the candidate agrees.
-                  </p>
-                )}
-                <ul>
-                  {e.criteria.map((c) => (
-                    <li
-                      key={c.id}
-                      className="flex justify-between gap-3 border-t border-rule py-1.5 text-sm"
-                    >
-                      <span>
-                        <span className="block font-medium">
-                          {labels.get(c.id) ?? c.id}
-                        </span>
-                        <span className="block">{c.reason}</span>
-                      </span>
-                      <span className="tabular-nums">
-                        {c.score}/{c.max}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                {e.tags.length > 0 && (
-                  <p className="text-sm">Shows: {e.tags.join(", ")}</p>
-                )}
-              </div>
-            </details>
           </div>
-        ))}
-      </section>
-    </main>
+          <Link
+            href={`/employer/jobs/${id}/bias`}
+            className="btn-secondary btn-sm"
+          >
+            Fairness Dashboard
+          </Link>
+        </div>
+
+        {entries.length === 0 ? (
+          <div className="card text-center text-sm text-ink-muted py-12">
+            No applicants yet. Share your job link to get started.
+          </div>
+        ) : (
+          <div className="space-y-3 stagger-children">
+            {entries.map((entry) => (
+              <div
+                key={entry.submissionId}
+                className={`card !p-4 ${entry.shortlisted ? "ring-1 ring-brand" : ""}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-full bg-brand-light text-brand-dark flex items-center justify-center text-xs font-bold">
+                      #{entry.rank}
+                    </span>
+                    <div>
+                      <span className="font-mono text-sm font-semibold">
+                        {entry.label}
+                      </span>
+                      {entry.shortlisted && (
+                        <span className="badge-moss ml-2 text-[10px]">
+                          Shortlisted
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-brand">
+                      {entry.total}%
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-ink-muted mt-2">{entry.reason}</p>
+
+                {/* Criteria breakdown */}
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {entry.criteria.map((c) => (
+                    <div
+                      key={c.id}
+                      className="p-2 rounded bg-paper-dark text-xs"
+                    >
+                      <div className="flex justify-between">
+                        <span className="text-ink-light">{c.id}</span>
+                        <span className="font-semibold">
+                          {c.score}/{c.max}
+                        </span>
+                      </div>
+                      <p className="text-ink-muted mt-0.5 text-[10px]">
+                        {c.reason}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Tags */}
+                {entry.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {entry.tags.map((tag) => (
+                      <span key={tag} className="badge-brand text-[10px]">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Contact info (if consent given) */}
+                {entry.consent && entry.contact ? (
+                  <div className="mt-3 p-2 rounded bg-moss-light text-xs text-moss">
+                    <span className="font-semibold">Identity Revealed:</span>{" "}
+                    {entry.contact.name} · {entry.contact.phone}
+                  </div>
+                ) : entry.shortlisted ? (
+                  <p className="mt-2 text-[10px] text-ink-muted italic">
+                    Waiting for candidate consent to reveal identity
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   );
 }

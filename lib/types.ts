@@ -1,25 +1,25 @@
-export type Category = "retail" | "admin" | "office";
+export type Category = "retail" | "admin" | "office" | "hospitality" | "teaching" | "driving" | "construction" | "it-support";
 export type Lang = "en" | "ne";
 export type InputMode = "text" | "voice";
 export type Bilingual = Record<Lang, string>;
+export type Role = "candidate" | "employer";
 
-export const CATEGORIES: Category[] = ["retail", "admin", "office"];
+export const CATEGORIES: Category[] = [
+  "retail", "admin", "office", "hospitality",
+  "teaching", "driving", "construction", "it-support",
+];
 
 export type Criterion = {
   id: string;
   label: Bilingual;
-  /** What a strong answer shows. Sent to the scorer. */
   description: string;
   max: number;
-  /** Skill tags earned when the criterion is scored well. */
   tags: string[];
-  /** Keywords (English + Nepali) used only by the offline fallback scorer. */
   signals: string[];
 };
 
 export type Scenario = {
   id: string;
-  /** English text is also what the scorer sees. */
   prompt: Bilingual;
 };
 
@@ -31,22 +31,43 @@ export type TaskTemplate = {
   rubric: Criterion[];
 };
 
+export type CustomQuestion = {
+  id: string;
+  prompt: Bilingual;
+};
+
 export type Job = {
   id: string;
   title: string;
-  employer: string;
+  employer_name: string;
+  employer_id: string;
   location: string;
   category: Category;
   tags: string[];
+  custom_questions: CustomQuestion[];
+  duration_min: number;
+  ai_scoring: boolean;
   verified: boolean;
-  verifiedAt?: string;
-  createdAt: string;
+  verified_at: string;
+  created_at: string;
 };
 
 export type Gender = "female" | "male" | "other";
 export type Region = "urban" | "rural";
 
-/** Identity data. Never sent to the scorer. */
+export type User = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  role: Role;
+  gender: string;
+  region: string;
+  skills: string[];
+  experience_text: string;
+  created_at: string;
+};
+
 export type Candidate = {
   id: string;
   name: string;
@@ -66,25 +87,35 @@ export type CriterionScore = {
 
 export type Submission = {
   id: string;
-  jobId: string;
-  candidateId: string;
+  job_id: string;
+  candidate_id: string;
   language: Lang;
-  inputMode: InputMode;
+  input_mode: InputMode;
   answers: Answer[];
   criteria: CriterionScore[];
-  /** 0-100 */
   total: number;
-  /** One line shown to the employer */
   reason: string;
   tags: string[];
-  scoredBy: "gemini" | "openai" | "fallback" | "demo";
-  /** Candidate agreed to share contact details with the employer */
+  scored_by: "gemini" | "openai" | "fallback" | "demo";
   consent: boolean;
-  createdAt: string;
+  created_at: string;
 };
 
-export type Db = {
-  jobs: Job[];
-  candidates: Candidate[];
-  submissions: Submission[];
+export type Subscription = {
+  id: string;
+  user_id: string;
+  tags: string[];
+  category: string;
+  created_at: string;
+};
+
+export type Notification = {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  message: string;
+  job_id: string;
+  read: boolean;
+  created_at: string;
 };

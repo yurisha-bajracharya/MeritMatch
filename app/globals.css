@@ -1,80 +1,201 @@
 @import "tailwindcss";
 
 @theme {
-  --color-paper: #f6f5f1;
-  --color-brand: #1e3a5f;
-  --color-ochre: #d9a441;
-  --color-moss: #4a7856;
-  --color-ink: #24262b;
-  --color-rule: #d8d5cb;
+  --color-paper: #faf8f5;
+  --color-paper-dark: #f2efe9;
+  --color-ink: #1a1a1a;
+  --color-ink-light: #4a4a4a;
+  --color-ink-muted: #8a8a8a;
+  --color-brand: #2563eb;
+  --color-brand-dark: #1d4ed8;
+  --color-brand-light: #dbeafe;
+  --color-ochre: #d97706;
+  --color-ochre-light: #fef3c7;
+  --color-moss: #059669;
+  --color-moss-light: #d1fae5;
+  --color-rule: #e5e2dc;
+  --color-danger: #dc2626;
+  --color-danger-light: #fee2e2;
 
-  --font-sans: var(--font-plex), var(--font-plex-deva), system-ui, sans-serif;
-  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: "IBM Plex Sans", "IBM Plex Sans Devanagari", system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
 }
 
-html {
-  background: var(--color-paper);
-  color: var(--color-ink);
+/* Tailwind v4: classes reused via @apply must be utilities */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer;
+  @apply focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
-body {
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+@utility card {
+  @apply bg-white rounded-xl border border-rule shadow-sm p-6;
 }
 
-/* Devanagari needs more line height than Latin */
-:lang(ne) {
-  line-height: 1.8;
+@utility badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  ::selection {
+    @apply bg-brand-light text-brand-dark;
+  }
 }
 
 @layer components {
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 48px;
-    padding: 0 1.25rem;
-    font-weight: 600;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: none;
+  .container-main {
+    @apply mx-auto max-w-5xl px-4 sm:px-6;
   }
+
   .btn-primary {
-    background: var(--color-brand);
-    color: var(--color-paper);
+    @apply btn bg-brand text-white hover:bg-brand-dark shadow-sm;
   }
-  .btn-proof {
-    background: var(--color-ochre);
-    color: var(--color-ink);
+
+  .btn-secondary {
+    @apply btn bg-white text-ink border border-rule hover:bg-paper-dark;
   }
-  .btn-quiet {
-    border: 1.5px solid var(--color-brand);
-    color: var(--color-brand);
+
+  .btn-ghost {
+    @apply btn text-ink-light hover:bg-paper-dark;
   }
-  .btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
+
+  .btn-danger {
+    @apply btn bg-danger text-white hover:bg-red-700;
   }
-  .btn:focus-visible,
-  a:focus-visible,
-  input:focus-visible,
-  textarea:focus-visible,
-  select:focus-visible {
-    outline: 3px solid var(--color-ochre);
-    outline-offset: 2px;
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
   }
-  .field {
-    width: 100%;
-    min-height: 48px;
-    padding: 0.625rem 0.75rem;
-    background: #fff;
-    border: 1.5px solid var(--color-rule);
-    border-radius: 4px;
+
+  .card-hover {
+    @apply card transition-shadow hover:shadow-md;
   }
-  .ledger-row {
-    border-top: 1px solid var(--color-rule);
-    padding: 1rem 0;
+
+  .input {
+    @apply w-full rounded-lg border border-rule bg-white px-4 py-2.5 text-sm text-ink
+           placeholder:text-ink-muted
+           focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent
+           transition-colors;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-ink-light mb-1.5;
+  }
+
+  .badge-brand {
+    @apply badge bg-brand-light text-brand-dark;
+  }
+
+  .badge-ochre {
+    @apply badge bg-ochre-light text-ochre;
+  }
+
+  .badge-moss {
+    @apply badge bg-moss-light text-moss;
+  }
+
+  .badge-muted {
+    @apply badge bg-paper-dark text-ink-muted;
+  }
+
+  .section-title {
+    @apply text-2xl font-bold text-ink font-display;
+  }
+
+  .section-sub {
+    @apply text-ink-light mt-1;
+  }
+
+  .divider {
+    @apply border-t border-rule;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    @apply h-2 rounded-full bg-paper-dark overflow-hidden;
+  }
+  .progress-bar-fill {
+    @apply h-full rounded-full bg-brand transition-all duration-500;
+  }
+
+  /* Toggle switch */
+  .toggle {
+    @apply relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer;
+  }
+  .toggle-on {
+    @apply bg-brand;
+  }
+  .toggle-off {
+    @apply bg-rule;
+  }
+  .toggle-dot {
+    @apply inline-block h-4 w-4 rounded-full bg-white transition-transform shadow-sm;
+  }
+  .toggle-dot-on {
+    @apply translate-x-6;
+  }
+  .toggle-dot-off {
+    @apply translate-x-1;
+  }
+
+  /* Tabs */
+  .tab-list {
+    @apply flex gap-1 rounded-lg bg-paper-dark p-1;
+  }
+  .tab {
+    @apply flex-1 rounded-md px-3 py-2 text-sm font-medium text-ink-muted transition-colors cursor-pointer;
+  }
+  .tab-active {
+    @apply bg-white text-ink shadow-sm;
+  }
+
+  /* Skeleton loader */
+  .skeleton {
+    @apply bg-paper-dark rounded animate-pulse;
   }
 }
+
+/* Notification bell animation */
+@keyframes bell-shake {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(15deg); }
+  50% { transform: rotate(-10deg); }
+  75% { transform: rotate(5deg); }
+}
+.bell-ring {
+  animation: bell-shake 0.5s ease-in-out;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Stagger children */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeIn 0.4s ease-out forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger-children > *:nth-child(8) { animation-delay: 0.4s; }

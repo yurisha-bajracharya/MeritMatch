@@ -1,113 +1,105 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { Job } from "@/lib/types";
+import type { Job, Lang } from "@/lib/types";
+import { t } from "@/lib/i18n";
 
 export default function VerifyList() {
-  const [jobs, setJobs] = useState<Job[] | null>(null);
-  const [key, setKey] = useState("");
-  const [busy, setBusy] = useState("");
-  const [error, setError] = useState("");
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [adminKey, setAdminKey] = useState("");
+  const lang: Lang = "en";
 
   useEffect(() => {
     fetch("/api/jobs")
       .then((r) => r.json())
-      .then((d) => setJobs(d.jobs))
-      .catch(() => setError("Could not load jobs."));
+      .then((data) => {
+        setJobs(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
-  async function setVerified(job: Job, verified: boolean) {
-    setBusy(job.id);
-    setError("");
+  const toggle = async (jobId: string, verified: boolean) => {
     try {
-      const res = await fetch(`/api/admin/jobs/${job.id}/verify`, {
+      const res = await fetch(`/api/admin/jobs/${jobId}/verify`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-key": key },
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
         body: JSON.stringify({ verified }),
       });
-      if (res.status === 401) throw new Error("Wrong or missing admin key.");
-      if (!res.ok) throw new Error("Could not update.");
-      const { job: updated } = await res.json();
-      setJobs(
-        (list) => list?.map((j) => (j.id === updated.id ? updated : j)) ?? null,
+      if (!res.ok) throw new Error("Failed");
+
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === jobId
+            ? { ...j, verified, verified_at: verified ? new Date().toISOString() : "" }
+            : j,
+        ),
       );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not update.");
-    } finally {
-      setBusy("");
+    } catch (err) {
+      alert("Failed to update. Check your admin key.");
     }
+  };
+
+  if (loading) {
+    return (
+      <div className="card">
+        <div className="skeleton h-6 w-48 mb-4" />
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="skeleton h-16 w-full" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <main>
-      <header className="py-5">
-        <Link href="/" className="font-semibold text-brand">
-          MeritMatch
-        </Link>
-      </header>
-      <section className="border-t border-rule pt-8">
-        <h1 className="font-display text-3xl text-brand">Verify employers</h1>
-        <p className="mt-3">
-          Check the business is real before approving. The stamp then shows on
-          the job&apos;s task page and shortlist.
-        </p>
-        <div className="mt-6">
-          <label htmlFor="key" className="block text-sm font-medium mb-2">
-            Admin key
-          </label>
+    <div className="space-y-4">
+      <div className="card">
+        <h2 className="section-title">{t("adminVerify", lang)}</h2>
+        <div className="mt-4">
+          <label className="label">Admin Key</label>
           <input
-            id="key"
             type="password"
-            className="field"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            autoComplete="off"
+            className="input max-w-xs"
+            value={adminKey}
+            onChange={(e) => setAdminKey(e.target.value)}
+            placeholder="Enter admin key…"
           />
-          <p className="mt-2 text-sm">
-            Leave empty when running locally without an ADMIN_KEY.
-          </p>
         </div>
-        {error && (
-          <p role="alert" className="border-l-4 border-ink pl-3 mt-4">
-            {error}
-          </p>
-        )}
-      </section>
+      </div>
 
-      <section className="mt-8">
-        {jobs === null && !error && <p className="ledger-row">Loading…</p>}
-        {jobs?.length === 0 && (
-          <p className="ledger-row">No jobs posted yet.</p>
-        )}
-        {jobs?.map((j) => (
+      <div className="space-y-2 stagger-children">
+        {jobs.map((job) => (
           <div
-            key={j.id}
-            className="ledger-row flex items-center justify-between gap-3"
+            key={job.id}
+            className="card !p-4 flex items-center justify-between"
           >
             <div>
-              <p className="font-semibold">{j.employer}</p>
-              <p className="text-sm">
-                {j.title}
-                {j.location ? `, ${j.location}` : ""}
+              <h4 className="font-medium text-sm">{job.title}</h4>
+              <p className="text-xs text-ink-muted">
+                {job.employer_name} · {job.location || "—"} · {job.category}
               </p>
-              <p
-                className={`text-sm font-medium ${j.verified ? "text-moss" : "text-ink/75"}`}
-              >
-                {j.verified ? "Verified" : "Not verified"}
-              </p>
+              {job.verified && (
+                <span className="badge-moss mt-1 text-[10px]">
+                  Verified {job.verified_at && `on ${new Date(job.verified_at).toLocaleDateString()}`}
+                </span>
+              )}
             </div>
             <button
-              type="button"
-              className={`btn shrink-0 ${j.verified ? "btn-quiet" : "btn-primary"}`}
-              disabled={busy === j.id}
-              onClick={() => setVerified(j, !j.verified)}
+              onClick={() => toggle(job.id, !job.verified)}
+              className={job.verified ? "btn-ghost btn-sm" : "btn-primary btn-sm"}
+              disabled={!adminKey}
             >
-              {j.verified ? "Revoke" : "Approve"}
+              {job.verified ? t("revoke", lang) : t("verify", lang)}
             </button>
           </div>
         ))}
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }

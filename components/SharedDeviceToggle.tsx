@@ -1,33 +1,34 @@
 "use client";
 
-import { t } from "@/lib/i18n";
+import { isShared, setShared } from "@/lib/device";
+import { useState } from "react";
 import type { Lang } from "@/lib/types";
+import { t } from "@/lib/i18n";
 
-type Props = { lang: Lang; shared: boolean; onChange: (on: boolean) => void };
+export default function SharedDeviceToggle({ lang }: { lang: Lang }) {
+  const [on, setOn] = useState(isShared);
 
-export default function SharedDeviceToggle({ lang, shared, onChange }: Props) {
+  const toggle = () => {
+    const next = !on;
+    setShared(next);
+    setOn(next);
+  };
+
   return (
-    <div>
+    <div className="flex items-center gap-3">
       <button
-        type="button"
+        onClick={toggle}
+        className={`toggle ${on ? "toggle-on" : "toggle-off"}`}
         role="switch"
-        aria-checked={shared}
-        onClick={() => onChange(!shared)}
-        className="flex w-full items-center justify-between gap-4 min-h-12 text-left cursor-pointer"
+        aria-checked={on}
+        aria-label={t("sharedDevice", lang)}
       >
-        <span className="font-medium">{t(lang, "sharedLabel")}</span>
-        <span
-          className={`relative h-8 w-14 shrink-0 rounded-full border-2 border-brand ${shared ? "bg-brand" : "bg-transparent"}`}
-          aria-hidden
-        >
-          <span
-            className={`absolute top-0.5 size-6 rounded-full ${shared ? "left-[26px] bg-ochre" : "left-0.5 bg-brand"}`}
-          />
-        </span>
+        <span className={`toggle-dot ${on ? "toggle-dot-on" : "toggle-dot-off"}`} />
       </button>
-      <p className="mt-1 text-sm" aria-live="polite">
-        {t(lang, shared ? "sharedOn" : "sharedOff")}
-      </p>
+      <div>
+        <span className="text-sm font-medium">{t("sharedDevice", lang)}</span>
+        <p className="text-xs text-ink-muted">{t("sharedDeviceHint", lang)}</p>
+      </div>
     </div>
   );
 }

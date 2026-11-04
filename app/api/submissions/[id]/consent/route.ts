@@ -1,24 +1,24 @@
 import { NextResponse } from "next/server";
-import { updateDb } from "@/lib/store";
+import { getDb } from "@/lib/db";
 
-// The submission id acts as the candidate's private link in this demo (no accounts).
 export async function POST(
   req: Request,
-  ctx: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await ctx.params;
-  const body = await req.json().catch(() => null);
-  if (typeof body?.consent !== "boolean") {
-    return NextResponse.json(
-      { error: "consent must be true or false" },
-      { status: 400 },
-    );
+  const { id } = await params;
+  const body = await req.json();
+  const consent = Boolean(body.consent);
+
+  const db = getDb();
+  const sub = db.prepare("SELECT id FROM submissions WHERE id = ?").get(id) as any;
+  if (!sub) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  const found = await updateDb((db) => {
-    const sub = db.submissions.find((s) => s.id === id);
-    if (sub) sub.consent = body.consent;
-    return Boolean(sub);
-  });
-  if (!found) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ consent: body.consent });
+
+  db.prepare("UPDATE submissions SET consent = ? WHERE id = ?").run(
+    consent ? 1 : 0,
+    id,
+  );
+
+  return NextResponse.json({ ok: true, consent });
 }

@@ -1,466 +1,398 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import Stamp from "@/components/Stamp";
-import VerifiedBadge from "@/components/VerifiedBadge";
-import Segmented from "@/components/Segmented";
-import SharedDeviceToggle from "@/components/SharedDeviceToggle";
-import VoiceRecorder from "@/components/VoiceRecorder";
-import {
-  clearDraft,
-  isShared,
-  loadDraft,
-  saveDraft,
-  setShared,
-  wipeAll,
-} from "@/lib/device";
-import { localizeDigits, t } from "@/lib/i18n";
-import type { PublicTemplate } from "@/lib/templates";
-import type { Gender, InputMode, Job, Lang, Region } from "@/lib/types";
+import { useState, useEffect, useCallback, useRef } from "react";
+import Segmented from "./Segmented";
+import SharedDeviceToggle from "./SharedDeviceToggle";
+import VoiceRecorder from "./VoiceRecorder";
+import { saveDraft, loadDraft, clearDraft } from "@/lib/device";
+import type { Lang, InputMode, Scenario, Criterion, CustomQuestion } from "@/lib/types";
+import { t, localizeDigits } from "@/lib/i18n";
 
-type Stage = "intro" | "task" | "details" | "done";
+type Stage = "intro" | "task" | "details" | "submitting" | "done";
 
-function formatClock(seconds: number, lang: Lang) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return localizeDigits(`${m}:${String(s).padStart(2, "0")}`, lang);
-}
+type Props = {
+  jobId: string;
+  jobTitle: string;
+  employerName: string;
+  durationMin: number;
+  scenarios: Scenario[];
+  rubric: Criterion[];
+  customQuestions: CustomQuestion[];
+  aiScoring: boolean;
+};
 
 export default function TaskFlow({
-  job,
-  template,
-}: {
-  job: Job;
-  template: PublicTemplate;
-}) {
-  const [lang, setLang] = useState<Lang>("ne");
+  jobId,
+  jobTitle,
+  employerName,
+  durationMin,
+  scenarios,
+  rubric,
+  customQuestions,
+  aiScoring,
+}: Props) {
+  const [lang, setLang] = useState<Lang>("en");
   const [mode, setMode] = useState<InputMode>("text");
   const [stage, setStage] = useState<Stage>("intro");
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [remaining, setRemaining] = useState(template.durationMin * 60);
-  const [timeUp, setTimeUp] = useState(false);
-
+  const [endAt, setEndAt] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState<string>("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [gender, setGender] = useState<Gender | "">("");
-  const [region, setRegion] = useState<Region | "">("");
-  const [error, setError] = useState("");
-  const [sending, setSending] = useState(false);
+  const [gender, setGender] = useState("");
+  const [region, setRegion] = useState("");
+  const [result, setResult] = useState<any>(null);
   const [submissionId, setSubmissionId] = useState("");
+  const [error, setError] = useState("");
+  const timerRef = useRef<ReturnType<typeof setInterval>>();
 
-  const [shared, setSharedState] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [restored, setRestored] = useState(false);
-  const [endAt, setEndAt] = useState<number | null>(null);
+  // The questions the candidate sees (custom if set, otherwise scenarios)
+  const questions: { id: string; prompt: Record<Lang, string> }[] =
+    customQuestions.length > 0
+      ? customQuestions.map((q) => ({ id: q.id, prompt: q.prompt }))
+      : scenarios;
 
-  const total = template.scenarios.length;
-  const scenario = template.scenarios[index];
-
-  // Restore an earlier attempt unless this is a shared phone.
+  // Load draft on mount
   useEffect(() => {
-    const sharedNow = isShared();
-    setSharedState(sharedNow);
-    const draft = loadDraft(job.id);
+    const draft = loadDraft(jobId);
     if (draft) {
       setLang(draft.lang);
       setMode(draft.mode);
       setAnswers(draft.answers);
-      setIndex(Math.min(draft.index, total - 1));
-      setRestored(true);
-      if (draft.endAt) {
+      setIndex(draft.index);
+      if (draft.endAt && draft.endAt > Date.now()) {
         setEndAt(draft.endAt);
         setStage("task");
       }
     }
-    setReady(true);
-  }, [job.id, total]);
+  }, [jobId]);
 
+  // Timer
   useEffect(() => {
-    if (!ready || shared || stage === "done") return;
-    saveDraft(job.id, { lang, mode, answers, index, endAt });
-  }, [ready, shared, stage, job.id, lang, mode, answers, index, endAt]);
-
-  useEffect(() => {
-    if (stage !== "task" || endAt === null) return;
+    if (!endAt) return;
     const tick = () => {
-      const left = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
-      setRemaining(left);
-      if (left === 0) {
-        setTimeUp(true);
-        setStage("details");
-      }
+      const diff = Math.max(0, endAt - Date.now());
+      const m = Math.floor(diff / 60_000);
+      const s = Math.floor((diff % 60_000) / 1000);
+      setTimeLeft(`${m}:${String(s).padStart(2, "0")}`);
+      if (diff <= 0) clearInterval(timerRef.current);
     };
     tick();
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
-  }, [stage, endAt]);
+    timerRef.current = setInterval(tick, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [endAt]);
 
-  function changeShared(on: boolean) {
-    setShared(on);
-    setSharedState(on);
-    if (on) setRestored(false);
-  }
-
-  function endSession() {
-    wipeAll();
-    window.location.assign("/");
-  }
-
-  function appendVoice(text: string) {
-    setAnswers((a) => ({
-      ...a,
-      [scenario.id]: [a[scenario.id], text].filter(Boolean).join(" "),
-    }));
-  }
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    if (
-      !name.trim() ||
-      phone.replace(/\D/g, "").length < 7 ||
-      !gender ||
-      !region
-    ) {
-      setError(t(lang, "errorFields"));
-      return;
+  // Save draft
+  useEffect(() => {
+    if (stage === "task") {
+      saveDraft(jobId, { lang, mode, answers, index, endAt });
     }
-    setSending(true);
+  }, [answers, index, lang, mode, endAt, jobId, stage]);
+
+  const startTask = () => {
+    const end = Date.now() + durationMin * 60_000;
+    setEndAt(end);
+    setStage("task");
+  };
+
+  const setAnswer = (id: string, text: string) => {
+    setAnswers((prev) => ({ ...prev, [id]: text }));
+  };
+
+  const handleVoice = useCallback(
+    (text: string) => {
+      const q = questions[index];
+      if (q) setAnswer(q.id, (answers[q.id] ?? "") + " " + text);
+    },
+    [index, answers, questions],
+  );
+
+  const handleSubmit = async () => {
+    setStage("submitting");
+    setError("");
+
+    const answerList = questions.map((q) => ({
+      scenarioId: q.id,
+      text: answers[q.id] ?? "",
+    }));
+
     try {
       const res = await fetch("/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          jobId: job.id,
+          job_id: jobId,
           language: lang,
-          inputMode: mode,
-          candidate: { name, phone, gender, region },
-          answers: template.scenarios.map((s) => ({
-            scenarioId: s.id,
-            text: answers[s.id] ?? "",
-          })),
+          input_mode: mode,
+          answers: answerList,
+          candidate_name: name,
+          candidate_phone: phone,
+          candidate_gender: gender,
+          candidate_region: region,
         }),
       });
-      if (res.status === 201) {
-        setSubmissionId((await res.json()).id);
-        clearDraft(job.id);
-        setStage("done");
-      } else if (res.status === 409) setError(t(lang, "errorDuplicate"));
-      else if (res.status === 400) setError(t(lang, "errorFields"));
-      else setError(t(lang, "errorGeneric"));
-    } catch {
-      setError(t(lang, "errorGeneric"));
-    } finally {
-      setSending(false);
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Submission failed");
+
+      setResult(data);
+      setSubmissionId(data.submissionId);
+      clearDraft(jobId);
+      setStage("done");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Submission failed");
+      setStage("details");
     }
+  };
+
+  // --- INTRO ---
+  if (stage === "intro") {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="card">
+          <h2 className="section-title">{jobTitle}</h2>
+          <p className="text-sm text-ink-light mt-1">{employerName}</p>
+
+          <p className="text-sm text-ink mt-4">{t("taskIntro", lang)}</p>
+
+          <div className="mt-4 p-3 rounded-lg bg-brand-light/30 text-sm text-brand-dark">
+            {t("minuteTask", lang, { min: String(durationMin) })}
+            {aiScoring && <span className="ml-2 badge-ochre text-[10px]">{t("aiScored", lang)}</span>}
+          </div>
+
+          <div className="mt-5 space-y-4">
+            <div>
+              <label className="label">{t("english", lang)} / {t("nepali", lang)}</label>
+              <Segmented
+                name="language"
+                value={lang}
+                onChange={setLang}
+                options={[
+                  { value: "en", label: "English" },
+                  { value: "ne", label: "नेपाली" },
+                ]}
+              />
+            </div>
+
+            <SharedDeviceToggle lang={lang} />
+          </div>
+
+          <button onClick={startTask} className="btn-primary mt-6 w-full">
+            {t("startTask", lang)}
+          </button>
+        </div>
+      </div>
+    );
   }
 
-  const header = (
-    <header className="py-5">
-      <p className="text-sm text-ink/75">
-        {job.employer}
-        {job.location ? `, ${job.location}` : ""}
-      </p>
-      <p className="font-semibold text-brand">{job.title}</p>
-    </header>
-  );
+  // --- TASK ---
+  if (stage === "task") {
+    const q = questions[index];
+    const total = questions.length;
 
-  return (
-    <main lang={lang}>
-      {stage === "intro" && (
-        <>
-          <div className="pt-5">
-            <span className="font-semibold text-brand">MeritMatch</span>
+    return (
+      <div className="space-y-4 animate-fade-in">
+        {/* Timer bar */}
+        <div className="card !p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-ink-light">
+              {t("scenario", lang)} {localizeDigits(index + 1, lang)}/{localizeDigits(total, lang)}
+            </span>
           </div>
-          <section className="border-t border-rule mt-5 pt-8">
-            {job.verified && (
-              <div className="mb-6">
-                <VerifiedBadge lang={lang} />
-              </div>
-            )}
-            <p className="text-sm text-ink/75">
-              {job.employer}
-              {job.location ? `, ${job.location}` : ""}
-            </p>
-            <h1 className="font-display text-4xl leading-tight text-brand mt-1">
-              {job.title}
-            </h1>
-            <p className="mt-4 text-lg font-semibold">
-              {t(lang, "minutes", {
-                n: localizeDigits(template.durationMin, lang),
-              })}
-            </p>
-            <p className="mt-3">{t(lang, "introBody")}</p>
-          </section>
-
-          <section className="border-t border-rule mt-8 pt-6 space-y-6">
+          <div className="flex items-center gap-2">
             <Segmented
-              legend={t(lang, "language")}
-              value={lang}
-              onChange={setLang}
-              options={[
-                { value: "ne", label: "नेपाली" },
-                { value: "en", label: "English" },
-              ]}
-            />
-            <Segmented
-              legend={t(lang, "inputMode")}
+              name="input-mode"
               value={mode}
               onChange={setMode}
               options={[
-                { value: "text", label: t(lang, "type") },
-                { value: "voice", label: t(lang, "voice") },
+                { value: "text", label: t("textMode", lang) },
+                { value: "voice", label: t("voiceMode", lang) },
               ]}
             />
-            <SharedDeviceToggle
-              lang={lang}
-              shared={shared}
-              onChange={changeShared}
-            />
-            {restored && !shared && (
-              <p className="border-l-4 border-ochre pl-3" role="status">
-                {t(lang, "restored")}
-              </p>
-            )}
-          </section>
-
-          <div className="border-t border-rule mt-8 pt-6">
-            <button
-              type="button"
-              className="btn btn-proof w-full"
-              onClick={() => {
-                setEndAt(Date.now() + template.durationMin * 60_000);
-                setStage("task");
-              }}
-            >
-              {t(lang, "start")}
-            </button>
-          </div>
-        </>
-      )}
-
-      {stage === "task" && scenario && (
-        <>
-          <div className="sticky top-0 z-10 bg-paper border-b border-rule py-3 flex items-center justify-between">
-            <span className="text-sm">
-              {t(lang, "situation", {
-                n: localizeDigits(index + 1, lang),
-                m: localizeDigits(total, lang),
-              })}
-            </span>
-            <span className="text-right">
-              <span className="block text-xs text-ink/75">
-                {t(lang, "timeLeft")}
-              </span>
-              <span
-                className={`block text-2xl font-semibold tabular-nums ${remaining <= 120 ? "text-ink underline decoration-ochre decoration-4 underline-offset-4" : "text-brand"}`}
-                role="timer"
-              >
-                {formatClock(remaining, lang)}
-              </span>
+            <span className="text-sm font-mono text-ochre font-semibold">
+              {t("timeLeft", lang)}: {localizeDigits(timeLeft, lang)}
             </span>
           </div>
+        </div>
 
-          <section className="pt-6">
-            <p className="whitespace-pre-line text-lg">
-              {scenario.prompt[lang]}
-            </p>
-          </section>
+        {/* Progress */}
+        <div className="progress-bar">
+          <div
+            className="progress-bar-fill"
+            style={{ width: `${((index + 1) / total) * 100}%` }}
+          />
+        </div>
 
-          <section className="border-t border-rule mt-6 pt-6 space-y-4">
-            <label htmlFor="answer" className="block text-sm font-medium">
-              {t(lang, "yourAnswer")}
-            </label>
+        {/* Question */}
+        <div className="card">
+          <p className="text-sm font-medium text-ink leading-relaxed">
+            {q.prompt[lang] || q.prompt.en}
+          </p>
+
+          {mode === "voice" ? (
+            <div className="mt-4 space-y-3">
+              <VoiceRecorder lang={lang} onResult={handleVoice} />
+              {answers[q.id] && (
+                <div className="p-3 rounded-lg bg-paper-dark text-sm text-ink-light">
+                  {answers[q.id]}
+                </div>
+              )}
+            </div>
+          ) : (
             <textarea
-              id="answer"
-              key={scenario.id}
-              className="field min-h-48 text-base"
-              value={answers[scenario.id] ?? ""}
-              onChange={(e) =>
-                setAnswers((a) => ({ ...a, [scenario.id]: e.target.value }))
-              }
-              placeholder={t(lang, "placeholder")}
+              className="input mt-4 min-h-[120px] resize-y"
+              placeholder={t("typeHere", lang)}
+              value={answers[q.id] ?? ""}
+              onChange={(e) => setAnswer(q.id, e.target.value)}
             />
-            {mode === "voice" && (
-              <VoiceRecorder lang={lang} onText={appendVoice} />
-            )}
-          </section>
+          )}
 
-          <div className="border-t border-rule mt-6 pt-6 flex gap-3">
-            {index > 0 && (
-              <button
-                type="button"
-                className="btn btn-quiet"
-                onClick={() => setIndex(index - 1)}
-              >
-                {t(lang, "back")}
-              </button>
-            )}
+          <div className="flex justify-between mt-4">
+            <button
+              onClick={() => setIndex(Math.max(0, index - 1))}
+              className="btn-ghost btn-sm"
+              disabled={index === 0}
+            >
+              {t("back", lang)}
+            </button>
+
             {index < total - 1 ? (
               <button
-                type="button"
-                className="btn btn-primary flex-1"
                 onClick={() => setIndex(index + 1)}
+                className="btn-primary btn-sm"
               >
-                {t(lang, "next")}
+                {t("next", lang)}
               </button>
             ) : (
               <button
-                type="button"
-                className="btn btn-proof flex-1"
                 onClick={() => setStage("details")}
+                className="btn-primary btn-sm"
               >
-                {t(lang, "finish")}
+                {t("next", lang)}
               </button>
             )}
           </div>
-        </>
-      )}
+        </div>
+      </div>
+    );
+  }
 
-      {stage === "details" && (
-        <>
-          {header}
-          <form
-            onSubmit={submit}
-            className="border-t border-rule pt-6 space-y-6"
-            noValidate
-          >
-            {timeUp && (
-              <p className="border-l-4 border-ochre pl-3" role="status">
-                {t(lang, "timeUp")}
-              </p>
-            )}
-            <div>
-              <h1 className="font-display text-3xl text-brand">
-                {t(lang, "aboutYou")}
-              </h1>
-              <p className="mt-2 text-sm">{t(lang, "aboutYouNote")}</p>
-            </div>
+  // --- DETAILS ---
+  if (stage === "details") {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <div className="card">
+          <h3 className="text-lg font-semibold">{t("almostDone", lang)}</h3>
+          <p className="text-sm text-ink-muted mt-1">{t("detailsHint", lang)}</p>
 
+          <div className="mt-5 space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium mb-2">
-                {t(lang, "name")}
-              </label>
+              <label className="label">{t("yourName", lang)}</label>
               <input
-                id="name"
-                className="field"
-                autoComplete={shared ? "off" : "name"}
+                className="input"
+                placeholder={t("namePlaceholder", lang)}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                maxLength={80}
               />
             </div>
+
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium mb-2">
-                {t(lang, "phone")}
-              </label>
+              <label className="label">{t("yourPhone", lang)}</label>
               <input
-                id="phone"
-                className="field"
-                type="tel"
-                inputMode="tel"
-                autoComplete={shared ? "off" : "tel"}
+                className="input"
+                placeholder={t("phonePlaceholder", lang)}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                maxLength={20}
               />
             </div>
-            <Segmented
-              legend={t(lang, "gender")}
-              value={gender as Gender}
-              onChange={setGender}
-              options={[
-                { value: "female", label: t(lang, "female") },
-                { value: "male", label: t(lang, "male") },
-                { value: "other", label: t(lang, "other") },
-              ]}
-            />
-            <Segmented
-              legend={t(lang, "region")}
-              value={region as Region}
-              onChange={setRegion}
-              options={[
-                { value: "urban", label: t(lang, "urban") },
-                { value: "rural", label: t(lang, "rural") },
-              ]}
-            />
 
-            {error && (
-              <p role="alert" className="border-l-4 border-ink pl-3">
-                {error}
-              </p>
-            )}
-
-            <div className="border-t border-rule pt-6">
-              <button
-                type="submit"
-                className="btn btn-proof w-full"
-                disabled={sending}
-              >
-                {sending ? t(lang, "sending") : t(lang, "submit")}
-              </button>
+            <div>
+              <label className="label">{t("gender", lang)}</label>
+              <Segmented
+                name="gender"
+                value={gender as any}
+                onChange={setGender}
+                options={[
+                  { value: "female", label: t("female", lang) },
+                  { value: "male", label: t("male", lang) },
+                  { value: "other", label: t("other", lang) },
+                ]}
+              />
             </div>
-          </form>
-        </>
+
+            <div>
+              <label className="label">{t("region", lang)}</label>
+              <Segmented
+                name="region"
+                value={region as any}
+                onChange={setRegion}
+                options={[
+                  { value: "urban", label: t("urban", lang) },
+                  { value: "rural", label: t("rural", lang) },
+                ]}
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="mt-4 p-3 rounded-lg bg-danger-light text-sm text-danger">
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-3 mt-6">
+            <button onClick={() => setStage("task")} className="btn-secondary flex-1">
+              {t("back", lang)}
+            </button>
+            <button onClick={handleSubmit} className="btn-primary flex-1">
+              {t("submitAll", lang)}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- SUBMITTING ---
+  if (stage === "submitting") {
+    return (
+      <div className="card text-center py-12 animate-fade-in">
+        <div className="w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-sm text-ink-light mt-4">{t("submitting", lang)}</p>
+      </div>
+    );
+  }
+
+  // --- DONE ---
+  return (
+    <div className="card text-center animate-fade-in">
+      <div className="text-4xl mb-4">✓</div>
+      <h3 className="section-title">{t("taskDone", lang)}</h3>
+      <p className="text-sm text-ink-light mt-2 max-w-md mx-auto">
+        {t("taskDoneMsg", lang)}
+      </p>
+
+      {result && (
+        <div className="mt-6 p-4 rounded-lg bg-paper-dark text-left max-w-sm mx-auto">
+          <p className="text-sm font-medium">
+            {t("totalScore", lang)}: <span className="text-brand font-bold">{result.total}%</span>
+          </p>
+          <p className="text-xs text-ink-muted mt-1">{result.reason}</p>
+          <p className="text-xs text-ink-muted mt-1">
+            {t("scoredBy", lang)}: {result.scoredBy}
+          </p>
+        </div>
       )}
 
-      {stage === "done" && (
-        <>
-          {header}
-          <section className="border-t border-rule pt-8 flex flex-col items-center text-center">
-            <Stamp
-              size={140}
-              center={t(lang, "doneStamp")}
-              label="ANSWERS RECEIVED"
-              tone="moss"
-            />
-            <h1 className="font-display text-3xl text-brand mt-6">
-              {t(lang, "doneTitle")}
-            </h1>
-            <p className="mt-2 text-lg">{t(lang, "doneBlind")}</p>
-          </section>
-          <section className="border-t border-rule mt-8 pt-6">
-            <h2 className="font-semibold">{t(lang, "nextHeading")}</h2>
-            <ol className="mt-3">
-              {(["next1", "next2", "next3"] as const).map((k, i) => (
-                <li key={k} className="ledger-row flex gap-3">
-                  <span className="font-semibold text-brand w-6 shrink-0">
-                    {localizeDigits(i + 1, lang)}
-                  </span>
-                  <span>{t(lang, k)}</span>
-                </li>
-              ))}
-            </ol>
-            {submissionId && !shared && (
-              <div className="mt-6">
-                <Link
-                  href={`/outcome/${submissionId}`}
-                  className="btn btn-quiet w-full"
-                >
-                  {t(lang, "viewResult")}
-                </Link>
-                <p className="mt-2 text-sm">{t(lang, "resultNote")}</p>
-              </div>
-            )}
-            {shared && (
-              <div className="mt-6">
-                <p className="border-l-4 border-ochre pl-3">
-                  {t(lang, "sharedDone")}
-                </p>
-                <button
-                  type="button"
-                  className="btn btn-primary w-full mt-4"
-                  onClick={endSession}
-                >
-                  {t(lang, "endSession")}
-                </button>
-              </div>
-            )}
-          </section>
-        </>
+      {submissionId && (
+        <a
+          href={`/outcome/${submissionId}`}
+          className="btn-primary mt-6 inline-flex"
+        >
+          {t("viewOutcome", lang)}
+        </a>
       )}
-    </main>
+    </div>
   );
 }

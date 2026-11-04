@@ -12,27 +12,9 @@ const MAX_SKILLS = 6;
 
 type Rule = { keywords: string[]; tags: string[]; evidence: Bilingual };
 
-/** Offline rules, used when no LLM key is set or the call fails. */
 const RULES: Rule[] = [
   {
-    keywords: [
-      "caring",
-      "caregiv",
-      "care for",
-      "cared for",
-      "looked after",
-      "nursing",
-      "elderly",
-      "children",
-      "child",
-      "sick",
-      "बिरामी",
-      "हेरचाह",
-      "बच्चा",
-      "वृद्ध",
-      "बुढा",
-      "स्याहार",
-    ],
+    keywords: ["caring", "caregiv", "care for", "cared for", "looked after", "nursing", "elderly", "children", "child", "sick", "बिरामी", "हेरचाह", "बच्चा", "वृद्ध", "बुढा", "स्याहार"],
     tags: ["time-management", "problem-solving", "communication"],
     evidence: {
       en: "Caring for others means planning the day, handling emergencies and talking with doctors and family.",
@@ -40,21 +22,7 @@ const RULES: Rule[] = [
     },
   },
   {
-    keywords: [
-      "shop",
-      "business",
-      "store",
-      "sold",
-      "selling",
-      "customer",
-      "pasal",
-      "पसल",
-      "व्यापार",
-      "व्यवसाय",
-      "बिक्री",
-      "ग्राहक",
-      "किराना",
-    ],
+    keywords: ["shop", "business", "store", "sold", "selling", "customer", "pasal", "पसल", "व्यापार", "व्यवसाय", "बिक्री", "ग्राहक", "किराना"],
     tags: ["customer-service", "numeracy", "communication"],
     evidence: {
       en: "Running or helping in a shop means serving customers, handling money and explaining prices.",
@@ -62,20 +30,7 @@ const RULES: Rule[] = [
     },
   },
   {
-    keywords: [
-      "account",
-      "ledger",
-      "cash",
-      "money",
-      "bill",
-      "budget",
-      "hisab",
-      "हिसाब",
-      "खाता",
-      "बजेट",
-      "पैसा",
-      "बिल",
-    ],
+    keywords: ["account", "ledger", "cash", "money", "bill", "budget", "hisab", "हिसाब", "खाता", "बजेट", "पैसा", "बिल"],
     tags: ["numeracy", "accuracy"],
     evidence: {
       en: "Keeping accounts or managing money needs careful, correct numbers.",
@@ -83,19 +38,7 @@ const RULES: Rule[] = [
     },
   },
   {
-    keywords: [
-      "volunteer",
-      "community",
-      "ngo",
-      "committee",
-      "mothers group",
-      "स्वयंसेवक",
-      "समुदाय",
-      "समिति",
-      "आमा समूह",
-      "सहकारी",
-      "समूह",
-    ],
+    keywords: ["volunteer", "community", "ngo", "committee", "mothers group", "स्वयंसेवक", "समुदाय", "समिति", "आमा समूह", "सहकारी", "समूह"],
     tags: ["teamwork", "organization", "communication"],
     evidence: {
       en: "Community and volunteer work means working with many people towards a shared goal.",
@@ -103,19 +46,7 @@ const RULES: Rule[] = [
     },
   },
   {
-    keywords: [
-      "organis",
-      "organiz",
-      "festival",
-      "wedding",
-      "puja",
-      "program",
-      "आयोजना",
-      "कार्यक्रम",
-      "विवाह",
-      "चाडपर्व",
-      "मेला",
-    ],
+    keywords: ["organis", "organiz", "festival", "wedding", "puja", "program", "आयोजना", "कार्यक्रम", "विवाह", "चाडपर्व", "मेला"],
     tags: ["organization", "time-management", "teamwork"],
     evidence: {
       en: "Organising an event means planning, scheduling and coordinating people.",
@@ -123,16 +54,7 @@ const RULES: Rule[] = [
     },
   },
   {
-    keywords: [
-      "computer",
-      "typing",
-      "typed",
-      "excel",
-      "spreadsheet",
-      "कम्प्युटर",
-      "टाइप",
-      "एक्सेल",
-    ],
+    keywords: ["computer", "typing", "typed", "excel", "spreadsheet", "कम्प्युटर", "टाइप", "एक्सेल"],
     tags: ["digital-literacy", "data-entry"],
     evidence: {
       en: "Using a computer or typing shows basic digital skills and data entry.",
@@ -140,16 +62,7 @@ const RULES: Rule[] = [
     },
   },
   {
-    keywords: [
-      "farm",
-      "crop",
-      "livestock",
-      "harvest",
-      "खेती",
-      "किसान",
-      "पशुपालन",
-      "कृषि",
-    ],
+    keywords: ["farm", "crop", "livestock", "harvest", "खेती", "किसान", "पशुपालन", "कृषि"],
     tags: ["time-management", "problem-solving", "organization"],
     evidence: {
       en: "Farming means planning the season, solving problems with weather and animals, and managing work.",
@@ -165,17 +78,7 @@ const RULES: Rule[] = [
     },
   },
   {
-    keywords: [
-      "cook",
-      "kitchen",
-      "restaurant",
-      "cafe",
-      "hotel",
-      "खाना",
-      "भान्सा",
-      "रेस्टुरेन्ट",
-      "होटल",
-    ],
+    keywords: ["cook", "kitchen", "restaurant", "cafe", "hotel", "खाना", "भान्सा", "रेस्टुरेन्ट", "होटल"],
     tags: ["customer-service", "time-management", "teamwork"],
     evidence: {
       en: "Cooking or hospitality work means serving people on time and working as a team.",
@@ -205,9 +108,8 @@ export function fallbackTranslate(text: string, lang: Lang): TranslatedSkill[] {
     .map(([tag, evidence]) => ({ tag, evidence }));
 }
 
-const systemPrompt = (
-  lang: Lang,
-) => `You help people with little or no formal job history show the skills they built through unpaid or informal work such as caregiving, a family business, farming, community or volunteer roles.
+const systemPrompt = (lang: Lang) =>
+  `You help people with little or no formal job history show the skills they built through unpaid or informal work such as caregiving, a family business, farming, community or volunteer roles.
 
 Read the description and map it to skills from this fixed list of tags: ${Object.keys(TAG_LABELS).join(", ")}.
 
@@ -245,14 +147,11 @@ export async function translateExperience(
 ): Promise<TranslateResult> {
   const clean = redact(text);
   try {
-    const out = await askLLM(
-      systemPrompt(lang),
-      JSON.stringify({ description: clean }),
-    );
+    const out = await askLLM(systemPrompt(lang), JSON.stringify({ description: clean }));
     if (out) return { skills: parse(out.text), by: out.by };
   } catch (err) {
     console.error(
-      "Translator LLM failed, using fallback:",
+      "Experience Mapper LLM failed, using fallback:",
       err instanceof Error ? err.message : err,
     );
   }
