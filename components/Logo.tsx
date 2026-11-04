@@ -85,7 +85,7 @@ export default function Logo({
 }) {
   return (
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
-      <LogoMark size={size} className="text-white shrink-0" />
+      <LogoMark size={size} className="text-ink shrink-0" />
       {showText && (
         <span className="font-display font-bold tracking-tight text-ink">
           MeritMatch

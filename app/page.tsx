@@ -50,7 +50,7 @@ export default function Home() {
 
             {/* The mark, at display size */}
             <div className="hidden lg:flex justify-center">
-              <LogoMark size={260} className="text-white opacity-95" />
+              <LogoMark size={260} className="text-ink opacity-95" />
             </div>
           </div>
         </div>
@@ -120,7 +120,7 @@ export default function Home() {
       <footer className="border-t border-rule bg-surface">
         <div className="container-main py-8 flex items-center justify-between text-xs text-ink-muted">
           <span className="flex items-center gap-2">
-            <LogoMark size={16} className="text-white opacity-70" />
+            <LogoMark size={16} className="text-ink opacity-70" />
             © {new Date().getFullYear()} MeritMatch · Nepal
           </span>
           <button

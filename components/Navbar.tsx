@@ -43,7 +43,7 @@ export default function Navbar() {
           className="flex items-center gap-2.5 font-display text-lg font-bold text-ink tracking-tight
                      transition-opacity hover:opacity-80"
         >
-          <LogoMark size={26} className="text-white shrink-0" />
+          <LogoMark size={26} className="text-ink shrink-0" />
           MeritMatch
         </Link>
 
