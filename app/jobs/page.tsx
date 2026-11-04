@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import JobCard from "@/components/JobCard";
 import type { Job, Lang, Category } from "@/lib/types";
 import { CATEGORIES } from "@/lib/types";
 import { t } from "@/lib/i18n";
-import { resolveTag } from "@/lib/tags";
+import { matchJobs, resolveTag } from "@/lib/tags";
 
 const CATEGORY_LABELS: Record<string, Record<Lang, string>> = {
   retail: { en: "Retail", ne: "रिटेल" },
@@ -41,40 +41,43 @@ export default function JobsPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Filter jobs
-  const filtered = jobs.filter((job) => {
+  const filterTags = useMemo(
+    () =>
+      (tagsParam ?? "")
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean),
+    [tagsParam],
+  );
+
+  // When ?tags= is present, rank with the same fuzzy matcher the Experience
+  // Mapper and the notifier use, so both sides of the comparison are resolved.
+  const base = useMemo(() => {
+    if (filterTags.length === 0) return jobs;
+    return matchJobs(filterTags, jobs, [], jobs.length).map((m) => m.job);
+  }, [filterTags, jobs]);
+
+  const filtered = base.filter((job) => {
     // Category filter
     if (category && job.category !== category) return false;
 
     // Search filter
     if (search.trim()) {
-      const q = search.toLowerCase();
+      const q = search.trim().toLowerCase();
       const matches =
         job.title.toLowerCase().includes(q) ||
         job.employer_name.toLowerCase().includes(q) ||
         job.location.toLowerCase().includes(q) ||
         job.category.includes(q) ||
-        job.tags.some((tag) => tag.includes(q));
+        job.tags.some((tag) => tag.toLowerCase().includes(q));
 
-      // Fuzzy tag matching
+      // Fuzzy tag matching — resolve the job's tags too, not just the query
       const resolved = resolveTag(q);
       const fuzzyMatch = resolved
-        ? job.tags.some((tag) => tag === resolved)
+        ? job.tags.some((tag) => (resolveTag(tag) ?? tag) === resolved)
         : false;
 
       if (!matches && !fuzzyMatch) return false;
-    }
-
-    // Tag filter from URL
-    if (tagsParam) {
-      const filterTags = tagsParam.split(",").filter(Boolean);
-      const hasOverlap = filterTags.some((ft) => {
-        const resolved = resolveTag(ft);
-        return resolved
-          ? job.tags.includes(resolved)
-          : job.tags.some((jt) => jt.includes(ft) || ft.includes(jt));
-      });
-      if (!hasOverlap) return false;
     }
 
     return true;
@@ -86,10 +89,11 @@ export default function JobsPage() {
 
   const subscribe = async () => {
     setSubbing(true);
-    const tags = tagsParam
-      ? tagsParam.split(",").filter(Boolean)
-      : search.trim()
-        ? [search.trim().toLowerCase().replace(/\s+/g, "-")]
+    const searchTag = search.trim() ? resolveTag(search.trim()) : null;
+    const tags = filterTags.length
+      ? filterTags
+      : searchTag
+        ? [searchTag]
         : [];
 
     try {

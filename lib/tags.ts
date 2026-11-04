@@ -83,6 +83,8 @@ function normalize(s: string): string {
 /** Resolve a tag to its canonical form, checking aliases and fuzzy substring */
 export function resolveTag(input: string): string | null {
   const norm = normalize(input);
+  if (!norm) return null;
+
   // Direct match
   if (TAG_LABELS[input]) return input;
   // Check normalized direct match
@@ -93,7 +95,12 @@ export function resolveTag(input: string): string | null {
   for (const [alias, canonical] of Object.entries(TAG_ALIASES)) {
     if (normalize(alias) === norm) return canonical;
   }
-  // Substring matching — if input contains a known tag label
+
+  // Substring matching is only safe for inputs long enough to be meaningful.
+  // Without this guard a 1-2 character query matches almost every label.
+  if (norm.length < 3) return null;
+
+  // If input contains a known tag label, or vice versa
   for (const [key, labels] of Object.entries(TAG_LABELS)) {
     if (
       norm.includes(normalize(labels.en)) ||
@@ -113,6 +120,17 @@ export function resolveTag(input: string): string | null {
   return null;
 }
 
+/** Resolve a list of raw tags to canonical form, dropping blanks and duplicates. */
+export function resolveTags(tags: string[]): string[] {
+  const out = new Set<string>();
+  for (const raw of tags) {
+    const trimmed = String(raw ?? "").trim();
+    if (!trimmed) continue;
+    out.add(resolveTag(trimmed) ?? normalize(trimmed));
+  }
+  return [...out];
+}
+
 export type JobMatch = { job: Job; shared: string[]; score: number };
 
 /** Ranks jobs by fuzzy skill-tag overlap; jobs with no match are dropped. */
@@ -122,25 +140,37 @@ export function matchJobs(
   excludeJobIds: string[] = [],
   limit = 20,
 ): JobMatch[] {
-  // Resolve user tags to canonical forms
-  const resolvedUser = new Set(
-    userTags.map((t) => resolveTag(t) ?? t).filter(Boolean),
-  );
+  // Resolve BOTH sides to canonical form, so a job tagged "sales" still
+  // matches a candidate skill of "customer-service".
+  const resolvedUser = new Set(resolveTags(userTags));
+  if (resolvedUser.size === 0) return [];
+
+  const excluded = new Set(excludeJobIds);
 
   return jobs
-    .filter((j) => !excludeJobIds.includes(j.id))
+    .filter((j) => !excluded.has(j.id))
     .map((job) => {
-      const jobTags = job.tags.map((t) => resolveTag(t) ?? t);
-      const shared = jobTags.filter((t) => resolvedUser.has(t));
-      const uniqueShared = [...new Set(shared)];
-      const union = new Set([...jobTags, ...userTags.map((t) => resolveTag(t) ?? t)]).size;
+      const jobTags = new Set(resolveTags(job.tags));
+      const shared = [...jobTags].filter((tag) => resolvedUser.has(tag));
+
+      // Blend two views so neither a broad job nor a broad candidate wins
+      // purely on tag count: how much of the job's need the person covers,
+      // and how much of the person's skill set the job uses.
+      const jobCoverage = jobTags.size ? shared.length / jobTags.size : 0;
+      const skillCoverage = shared.length / resolvedUser.size;
+
       return {
         job,
-        shared: uniqueShared,
-        score: union === 0 ? 0 : uniqueShared.length / union,
+        shared,
+        score: (jobCoverage + skillCoverage) / 2,
       };
     })
     .filter((m) => m.shared.length > 0)
-    .sort((a, b) => b.score - a.score || b.shared.length - a.shared.length)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        b.shared.length - a.shared.length ||
+        (b.job.created_at > a.job.created_at ? 1 : -1),
+    )
     .slice(0, limit);
 }
