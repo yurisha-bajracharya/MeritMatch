@@ -6,10 +6,33 @@ import Navbar from "@/components/Navbar";
 import JobCard from "@/components/JobCard";
 import type { Job, Lang, User } from "@/lib/types";
 import { t } from "@/lib/i18n";
-import { TAG_LABELS } from "@/lib/tags";
+import { TAG_LABELS, matchJobs } from "@/lib/tags";
 import Link from "next/link";
 
 type SubData = { id: string; tags: string[]; category: string };
+
+/** Local strings so lib/i18n.ts does not need editing. */
+const L = {
+  proven: { en: "Proven by your work", ne: "तपाईंको कामले प्रमाणित" },
+  provenSub: {
+    en: "Skills you showed by scoring well on a job's task.",
+    ne: "कुनै कामको कार्यमा राम्रो अंक ल्याएर देखाएका सीप।",
+  },
+  noneProven: {
+    en: "Nothing proven yet. Apply to a job below and do its short task. Good work shows up here.",
+    ne: "अहिलेसम्म केही प्रमाणित भएको छैन। तल कुनै कामका लागि आवेदन दिई सानो कार्य गर्नुहोस्।",
+  },
+  claimed: { en: "Skills you described", ne: "तपाईंले वर्णन गरेका सीप" },
+  claimedSub: {
+    en: "Used to suggest jobs. Employers never see these, only your task results.",
+    ne: "कामहरू सुझाउन प्रयोग हुन्छ। रोजगारदाताले यी देख्दैनन्, तपाईंको कार्य नतिजा मात्र देख्छन्।",
+  },
+  noMatch: {
+    en: "No open jobs match your skills yet. Turn on alerts and we'll tell you when one appears.",
+    ne: "तपाईंका सीपसँग मिल्ने खुला काम अहिले छैन। सूचना खोल्नुहोस्, आएपछि खबर गर्छौं।",
+  },
+} as const;
+const s = (k: keyof typeof L, lang: Lang) => L[k][lang];
 
 export default function DashboardPage() {
   const [lang, setLang] = useState<Lang>("en");
@@ -35,24 +58,24 @@ export default function DashboardPage() {
       }
       setUser(authData.user);
 
-      // Filter matching jobs by user's skills
+      // Rank jobs with the same fuzzy matcher the jobs page, Experience
+      // Mapper and notifier use, so "sales" still matches "customer-service".
+      // Claimed and proven skills both count for SUGGESTING jobs; neither
+      // affects how an employer ranks the candidate.
       const allJobs: Job[] = Array.isArray(jobsData) ? jobsData : [];
-      const userSkills: string[] = authData.user.skills || [];
+      const userSkills: string[] = [
+        ...new Set([
+          ...(authData.user.skills || []),
+          ...(authData.user.proven_skills || []),
+        ]),
+      ];
 
       if (userSkills.length > 0) {
-        const matched = allJobs.filter((job) =>
-          job.tags.some((tag) =>
-            userSkills.some(
-              (skill) =>
-                skill === tag ||
-                skill.includes(tag) ||
-                tag.includes(skill),
-            ),
-          ),
-        );
-        setMatchingJobs(matched.length > 0 ? matched : allJobs.slice(0, 5));
+        // Only real matches. The old code padded with unrelated jobs when
+        // nothing matched, which made the recommendations look broken.
+        setMatchingJobs(matchJobs(userSkills, allJobs, [], 6).map((m) => m.job));
       } else {
-        setMatchingJobs(allJobs.slice(0, 5));
+        setMatchingJobs(allJobs.slice(0, 6));
       }
 
       setSubs(Array.isArray(subsData) ? subsData : []);
@@ -104,28 +127,57 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Skills */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold">{t("yourSkills", lang)}</h2>
-            <Link
-              href="/experience-mapper"
-              className="text-sm text-brand hover:underline"
-            >
-              {t("experienceMapper", lang)} →
-            </Link>
-          </div>
-          {user?.skills && user.skills.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {user.skills.map((skill) => (
-                <span key={skill} className="badge-brand">
-                  {TAG_LABELS[skill]?.[lang] ?? skill}
-                </span>
-              ))}
+        {/* Skills: proven (earned) vs claimed (described) */}
+        <div className="card space-y-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-moss" />
+              <h2 className="font-semibold">{s("proven", lang)}</h2>
             </div>
-          ) : (
-            <p className="text-sm text-ink-muted">{t("noSkillsYet", lang)}</p>
-          )}
+            <p className="text-xs text-ink-muted mt-0.5 mb-3">
+              {s("provenSub", lang)}
+            </p>
+            {user?.proven_skills && user.proven_skills.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {user.proven_skills.map((skill) => (
+                  <span key={skill} className="badge-moss">
+                    ✓ {TAG_LABELS[skill]?.[lang] ?? skill}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-ink-muted">{s("noneProven", lang)}</p>
+            )}
+          </div>
+
+          <div className="divider pt-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full border border-ink-muted" />
+                <h2 className="font-semibold">{s("claimed", lang)}</h2>
+              </div>
+              <Link
+                href="/experience-mapper"
+                className="text-sm text-brand hover:underline"
+              >
+                {t("experienceMapper", lang)} →
+              </Link>
+            </div>
+            <p className="text-xs text-ink-muted mt-0.5 mb-3">
+              {s("claimedSub", lang)}
+            </p>
+            {user?.skills && user.skills.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {user.skills.map((skill) => (
+                  <span key={skill} className="badge-muted">
+                    {TAG_LABELS[skill]?.[lang] ?? skill}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-ink-muted">{t("noSkillsYet", lang)}</p>
+            )}
+          </div>
         </div>
 
         {/* Matching Jobs */}
@@ -144,7 +196,9 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="card text-center text-sm text-ink-muted py-8">
-              {t("noJobs", lang)}
+              {user?.skills?.length || user?.proven_skills?.length
+                ? s("noMatch", lang)
+                : t("noJobs", lang)}
             </div>
           )}
         </div>

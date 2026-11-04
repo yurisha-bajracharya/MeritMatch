@@ -1,5 +1,12 @@
 import { getDb } from "./db";
-import type { Candidate, CriterionScore, Job, Submission } from "./types";
+import { findSimilar } from "./integrity";
+import type {
+  Candidate,
+  CriterionScore,
+  IntegrityFlag,
+  Job,
+  Submission,
+} from "./types";
 
 export type RankedEntry = {
   submissionId: string;
@@ -11,8 +18,19 @@ export type RankedEntry = {
   criteria: CriterionScore[];
   shortlisted: boolean;
   consent: boolean;
+  /** Review notes for the employer. Advisory only; never affects rank. */
+  flags: IntegrityFlag[];
   contact?: { name: string; phone: string };
 };
+
+function parseFlags(raw: unknown): IntegrityFlag[] {
+  try {
+    const v = JSON.parse(String(raw || "[]"));
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
 
 export function shortlistSize(applicants: number): number {
   return Math.min(applicants, Math.max(3, Math.ceil(applicants * 0.25)));
@@ -38,6 +56,7 @@ function rowToSubmission(row: any): Submission {
     tags: JSON.parse(row.tags || "[]"),
     scored_by: row.scored_by,
     consent: Boolean(row.consent),
+    flags: parseFlags(row.flags),
     created_at: row.created_at,
   };
 }
@@ -82,6 +101,13 @@ export function getRanking(jobId: string): {
   const ranked = rankSubmissions(subs);
   const cut = shortlistSize(ranked.length);
 
+  // Similarity is computed here, at read time, so it is symmetric: when two
+  // applicants have near-identical answers BOTH are flagged and each note
+  // names the other.
+  const similar = findSimilar(
+    subs.map((s) => ({ id: s.id, answers: s.answers })),
+  );
+
   const entries = ranked.map((s, i): RankedEntry => {
     const c = candidates.get(s.candidate_id);
     return {
@@ -94,6 +120,7 @@ export function getRanking(jobId: string): {
       criteria: s.criteria,
       shortlisted: i < cut,
       consent: s.consent,
+      flags: [...(s.flags ?? []), ...(similar.get(s.id) ?? [])],
       contact:
         s.consent && c ? { name: c.name, phone: c.phone } : undefined,
     };

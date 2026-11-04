@@ -63,7 +63,10 @@ export type User = {
   role: Role;
   gender: string;
   region: string;
+  /** Skills the person CLAIMED (from the Experience Mapper). Never used for ranking. */
   skills: string[];
+  /** Skills they DEMONSTRATED: tags earned by scoring well on real work tasks. */
+  proven_skills?: string[];
   experience_text: string;
   created_at: string;
 };
@@ -85,6 +88,15 @@ export type CriterionScore = {
   reason: string;
 };
 
+/**
+ * An integrity signal for the employer to look at. These are hints, never
+ * proof, and they never change a score or remove anyone from the ranking.
+ */
+export type IntegrityFlag = {
+  code: "similar" | "pasted" | "fast" | "late";
+  note: string;
+};
+
 export type Submission = {
   id: string;
   job_id: string;
@@ -98,6 +110,7 @@ export type Submission = {
   tags: string[];
   scored_by: "gemini" | "openai" | "fallback" | "demo";
   consent: boolean;
+  flags?: IntegrityFlag[];
   created_at: string;
 };
 

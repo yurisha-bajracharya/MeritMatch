@@ -45,7 +45,10 @@ export default function TaskFlow({
   const [result, setResult] = useState<any>(null);
   const [submissionId, setSubmissionId] = useState("");
   const [error, setError] = useState("");
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  // Characters pasted in (not typed). Reported to the server as an advisory
+  // signal for the employer; it never changes the score.
+  const pasteChars = useRef(0);
 
   // The questions the candidate sees (custom if set, otherwise scenarios)
   const questions: { id: string; prompt: Record<Lang, string> }[] =
@@ -117,6 +120,11 @@ export default function TaskFlow({
       text: answers[q.id] ?? "",
     }));
 
+    // Start time = end time minus the allowed duration. Derived from endAt so
+    // it is still right when the candidate resumed from a saved draft.
+    const startedAt = endAt ? endAt - durationMin * 60_000 : Date.now();
+    const elapsedSec = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+
     try {
       const res = await fetch("/api/submissions", {
         method: "POST",
@@ -130,6 +138,8 @@ export default function TaskFlow({
           candidate_phone: phone,
           candidate_gender: gender,
           candidate_region: region,
+          elapsed_sec: elapsedSec,
+          paste_chars: pasteChars.current,
         }),
       });
 
@@ -156,7 +166,7 @@ export default function TaskFlow({
 
           <p className="text-sm text-ink mt-4">{t("taskIntro", lang)}</p>
 
-          <div className="mt-4 p-3 rounded-lg bg-brand-light/30 text-sm text-brand-dark">
+          <div className="mt-4 p-3 rounded-lg bg-brand-light text-sm text-brand">
             {t("minuteTask", lang, { min: String(durationMin) })}
             {aiScoring && <span className="ml-2 badge-ochre text-[10px]">{t("aiScored", lang)}</span>}
           </div>
@@ -245,6 +255,9 @@ export default function TaskFlow({
               placeholder={t("typeHere", lang)}
               value={answers[q.id] ?? ""}
               onChange={(e) => setAnswer(q.id, e.target.value)}
+              onPaste={(e) => {
+                pasteChars.current += e.clipboardData.getData("text").length;
+              }}
             />
           )}
 

@@ -101,7 +101,25 @@ export function getDb(): Database.Database {
       ON jobs(created_at);
   `);
 
+  migrate(_db);
+
   return _db;
+}
+
+/**
+ * CREATE TABLE IF NOT EXISTS never alters a table that already exists, so a
+ * column added later has to be applied here. Safe to run on every start:
+ * it only acts when the column is missing, so existing data is kept.
+ */
+function hasColumn(db: Database.Database, table: string, column: string) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  return cols.some((c) => c.name === column);
+}
+
+function migrate(db: Database.Database) {
+  if (!hasColumn(db, "submissions", "flags")) {
+    db.exec("ALTER TABLE submissions ADD COLUMN flags TEXT DEFAULT '[]'");
+  }
 }
 
 export const newId = () => crypto.randomUUID().slice(0, 8);

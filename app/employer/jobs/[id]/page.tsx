@@ -46,7 +46,7 @@ export default async function EmployerJobPage({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-full bg-brand-light text-brand-dark flex items-center justify-center text-xs font-bold">
+                    <span className="w-8 h-8 rounded-full bg-brand-light text-brand flex items-center justify-center text-xs font-bold">
                       #{entry.rank}
                     </span>
                     <div>
@@ -68,6 +68,26 @@ export default async function EmployerJobPage({
                 </div>
 
                 <p className="text-xs text-ink-muted mt-2">{entry.reason}</p>
+
+                {/* Integrity notes: advisory, never affect rank */}
+                {entry.flags.length > 0 && (
+                  <div className="mt-3 rounded-lg bg-ochre-light border border-ochre/25 p-3">
+                    <p className="text-xs font-semibold text-ochre">
+                      Worth a closer look
+                    </p>
+                    <ul className="mt-1 space-y-0.5">
+                      {entry.flags.map((f, i) => (
+                        <li key={i} className="text-xs text-ink-light">
+                          • {f.note}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-[10px] text-ink-muted mt-2">
+                      A signal, not proof. Consider asking a short follow-up
+                      question before deciding.
+                    </p>
+                  </div>
+                )}
 
                 {/* Criteria breakdown */}
                 <div className="mt-3 grid grid-cols-2 gap-2">

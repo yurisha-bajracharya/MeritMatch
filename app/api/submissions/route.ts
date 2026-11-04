@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb, newId } from "@/lib/db";
 import { getTemplate } from "@/lib/templates";
 import { scoreAnswers } from "@/lib/scoring";
+import { behaviourFlags } from "@/lib/integrity";
 import { rowToJob } from "@/lib/shortlist";
 import type { Answer, Lang, InputMode, Gender, Region } from "@/lib/types";
 
@@ -17,6 +18,9 @@ export async function POST(req: Request) {
       candidate_phone = "",
       candidate_gender = "",
       candidate_region = "",
+      // Browser-reported; advisory signals only (see lib/integrity.ts)
+      elapsed_sec,
+      paste_chars,
     } = body;
 
     if (!job_id) {
@@ -70,10 +74,19 @@ export async function POST(req: Request) {
     const useAI = job.ai_scoring;
     const result = await scoreAnswers(template, answers as Answer[], useAI);
 
+    // Integrity signals: stored for the employer to read, never used to score.
+    const flags = behaviourFlags({
+      answers: answers as Answer[],
+      inputMode: input_mode as InputMode,
+      durationMin: job.duration_min,
+      elapsedSec: elapsed_sec,
+      pasteChars: paste_chars,
+    });
+
     const subId = newId();
     db.prepare(
-      `INSERT INTO submissions (id, job_id, candidate_id, language, input_mode, answers, criteria, total, reason, tags, scored_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO submissions (id, job_id, candidate_id, language, input_mode, answers, criteria, total, reason, tags, scored_by, flags, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       subId,
       job_id,
@@ -86,6 +99,7 @@ export async function POST(req: Request) {
       result.reason,
       JSON.stringify(result.tags),
       result.scoredBy,
+      JSON.stringify(flags),
       new Date().toISOString(),
     );
 

@@ -24,6 +24,10 @@ const L = {
   seeAll: { en: "See all matching jobs", ne: "सबै मिल्ने कामहरू हेर्नुहोस्" },
   notifyMe: { en: "Notify me about jobs like these", ne: "यस्ता काम आए खबर गर्नुहोस्" },
   notified: { en: "✓ You'll be notified", ne: "✓ खबर गरिनेछ" },
+  claimNote: {
+    en: "These are skills you described, not yet proven. They're used only to suggest jobs. You prove them by doing a job's short task, and employers only ever see those results.",
+    ne: "यी तपाईंले वर्णन गरेका सीप हुन्, अझै प्रमाणित भएका छैनन्। यी कामहरू सुझाउन मात्र प्रयोग हुन्छन्। कुनै कामको सानो कार्य गरेर तपाईं प्रमाणित गर्नुहुन्छ, र रोजगारदाताले ती नतिजा मात्र देख्छन्।",
+  },
   loginFirst: {
     en: "Please log in first so we can save this to your profile.",
     ne: "यो तपाईंको प्रोफाइलमा राख्न पहिले लगइन गर्नुहोस्।",
@@ -209,7 +213,10 @@ export default function ExperienceMapper({
       {/* ---------- skills found ---------- */}
       {skills.length > 0 && (
         <div className="card animate-fade-in">
-          <h3 className="font-semibold mb-4">{t("skillsFound", lang)}</h3>
+          <h3 className="font-semibold">{t("skillsFound", lang)}</h3>
+          <p className="text-xs text-ink-muted mt-1 mb-4 leading-relaxed">
+            {s("claimNote", lang)}
+          </p>
 
           <div className="space-y-4">
             {Object.entries(grouped).map(([key, group]) => (

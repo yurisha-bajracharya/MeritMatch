@@ -19,6 +19,20 @@ export async function POST(req: Request) {
       const db = getDb();
       const row = db.prepare("SELECT * FROM users WHERE id = ?").get(session.userId) as any;
       if (!row) return NextResponse.json({ user: null });
+
+      // Skills the person has actually DEMONSTRATED: tags earned on scored
+      // work tasks. Candidates are linked to users by phone number.
+      const provenRows = db
+        .prepare(
+          `SELECT s.tags FROM submissions s
+             JOIN candidates c ON c.id = s.candidate_id
+            WHERE c.phone = ?`,
+        )
+        .all(row.phone) as { tags: string }[];
+      const proven = [
+        ...new Set(provenRows.flatMap((r) => JSON.parse(r.tags || "[]"))),
+      ];
+
       return NextResponse.json({
         user: {
           id: row.id,
@@ -29,6 +43,7 @@ export async function POST(req: Request) {
           gender: row.gender || "",
           region: row.region || "",
           skills: JSON.parse(row.skills || "[]"),
+          proven_skills: proven,
           experience_text: row.experience_text || "",
           created_at: row.created_at,
         },
