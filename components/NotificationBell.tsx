@@ -79,14 +79,14 @@ export default function NotificationBell({ lang }: { lang: Lang }) {
           <path d="M13.73 21a2 2 0 01-3.46 0" />
         </svg>
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-danger text-white text-[10px] font-bold flex items-center justify-center bell-ring">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-danger text-paper text-[10px] font-bold flex items-center justify-center bell-ring">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 w-80 bg-white border border-rule rounded-xl shadow-lg overflow-hidden animate-fade-in z-50">
+        <div className="absolute right-0 top-10 w-80 bg-surface border border-rule rounded-xl shadow-xl shadow-black/50 overflow-hidden animate-fade-in z-50">
           <div className="flex items-center justify-between px-4 py-3 border-b border-rule">
             <span className="text-sm font-semibold">{t("notifications", lang)}</span>
             {unread > 0 && (

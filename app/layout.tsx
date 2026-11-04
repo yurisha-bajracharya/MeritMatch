@@ -1,10 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "MeritMatch — Nepal's Merit-Based Hiring Platform",
   description:
     "Fair hiring through anonymous work-sample tasks. No résumé, no network — just your skills.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#191824",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -20,7 +25,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen">
+      <body className="min-h-screen bg-paper text-ink antialiased">
         {children}
       </body>
     </html>

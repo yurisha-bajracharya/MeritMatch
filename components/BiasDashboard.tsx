@@ -51,7 +51,7 @@ function Bar({
             className="h-full rounded bg-brand transition-all duration-1000 ease-out flex items-center px-2"
             style={{ width: animate ? `${merit}%` : "0%" }}
           >
-            <span className="text-[10px] font-bold text-white whitespace-nowrap">
+            <span className="text-[10px] font-bold text-paper whitespace-nowrap">
               {merit}%
             </span>
           </div>

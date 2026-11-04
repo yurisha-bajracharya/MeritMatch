@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { LogoMark } from "@/components/Logo";
 import { useState } from "react";
 import type { Lang } from "@/lib/types";
 import { t } from "@/lib/i18n";
@@ -27,26 +28,32 @@ export default function Home() {
       <Navbar />
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-light/40 via-transparent to-ochre-light/30" />
+      <section className="relative overflow-hidden glow grid-field">
         <div className="container-main relative py-20 sm:py-28">
-          <div className="max-w-2xl">
-            <h1 className="text-4xl sm:text-5xl font-display font-bold text-ink leading-tight">
-              {t("appName", lang)}
-            </h1>
-            <p className="text-lg sm:text-xl text-ink-light mt-3 font-display">
-              {t("tagline", lang)}
-            </p>
-            <p className="text-ink-light mt-4 max-w-lg leading-relaxed">
-              {t("heroSub", lang)}
-            </p>
-            <div className="flex flex-wrap gap-3 mt-8">
-              <Link href="/signup" className="btn-primary text-base px-8 py-3">
-                {t("getStarted", lang)}
-              </Link>
-              <Link href="/jobs" className="btn-secondary text-base px-8 py-3">
-                {t("browseAll", lang)}
-              </Link>
+          <div className="grid lg:grid-cols-[1.15fr_1fr] gap-12 items-center">
+            <div className="max-w-2xl">
+              <span className="badge-brand mb-5">
+                {t("tagline", lang)}
+              </span>
+              <h1 className="text-4xl sm:text-6xl font-display font-bold leading-[1.05] tracking-tight">
+                <span className="text-ink">{t("appName", lang)}</span>
+              </h1>
+              <p className="text-ink-light mt-5 max-w-lg leading-relaxed text-lg">
+                {t("heroSub", lang)}
+              </p>
+              <div className="flex flex-wrap gap-3 mt-9">
+                <Link href="/signup" className="btn-primary text-base px-8 py-3">
+                  {t("getStarted", lang)}
+                </Link>
+                <Link href="/jobs" className="btn-secondary text-base px-8 py-3">
+                  {t("browseAll", lang)}
+                </Link>
+              </div>
+            </div>
+
+            {/* The mark, at display size */}
+            <div className="hidden lg:flex justify-center">
+              <LogoMark size={260} className="text-white opacity-95" />
             </div>
           </div>
         </div>
@@ -70,7 +77,7 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="bg-white border-y border-rule">
+      <section className="bg-surface border-y border-rule">
         <div className="container-main py-16">
           <h2 className="section-title text-center mb-10">
             {t("howItWorks", lang)}
@@ -79,7 +86,7 @@ export default function Home() {
           <div className="grid sm:grid-cols-4 gap-6">
             {STEPS.map((s, i) => (
               <div key={s.key} className="text-center">
-                <div className="w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center font-bold text-lg mx-auto">
+                <div className="w-10 h-10 rounded-full bg-brand-gradient text-paper flex items-center justify-center font-bold text-lg mx-auto">
                   {s.icon}
                 </div>
                 {i < 3 && (
@@ -99,7 +106,7 @@ export default function Home() {
 
       {/* For employers CTA */}
       <section className="container-main py-16">
-        <div className="card bg-gradient-to-r from-brand-light/50 to-ochre-light/30 border-0 text-center">
+        <div className="card relative overflow-hidden glow border-brand/20 text-center">
           <h2 className="section-title">{t("forEmployers", lang)}</h2>
           <p className="text-ink-light mt-2 max-w-lg mx-auto">
             {t("forEmployersDesc", lang)}
@@ -113,9 +120,12 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-rule bg-white">
+      <footer className="border-t border-rule bg-surface">
         <div className="container-main py-8 flex items-center justify-between text-xs text-ink-muted">
-          <span>© 2024 MeritMatch · Nepal</span>
+          <span className="flex items-center gap-2">
+            <LogoMark size={16} className="text-white opacity-70" />
+            © {new Date().getFullYear()} MeritMatch · Nepal
+          </span>
           <button
             onClick={() => setLang(lang === "en" ? "ne" : "en")}
             className="hover:text-ink"

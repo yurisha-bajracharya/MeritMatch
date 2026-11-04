@@ -1,43 +1,48 @@
 @import "tailwindcss";
 
+/* ============================================================
+   MeritMatch dark theme
+   Palette lifted from the logo: #191824 ground, coral circle.
+   Token NAMES are unchanged from the light theme on purpose —
+   every component keeps working, only the values flip.
+   ============================================================ */
+
 @theme {
-  --color-paper: #faf8f5;
-  --color-paper-dark: #f2efe9;
-  --color-ink: #1a1a1a;
-  --color-ink-light: #4a4a4a;
-  --color-ink-muted: #8a8a8a;
-  --color-brand: #2563eb;
-  --color-brand-dark: #1d4ed8;
-  --color-brand-light: #dbeafe;
-  --color-ochre: #d97706;
-  --color-ochre-light: #fef3c7;
-  --color-moss: #059669;
-  --color-moss-light: #d1fae5;
-  --color-rule: #e5e2dc;
-  --color-danger: #dc2626;
-  --color-danger-light: #fee2e2;
+  /* --- surfaces, darkest to lightest --- */
+  --color-sunken: #13121c;      /* inputs, wells, progress tracks */
+  --color-paper: #191824;       /* page background (straight from the logo) */
+  --color-surface: #201f2e;     /* cards, nav, dropdowns */
+  --color-paper-dark: #272636;  /* blocks nested inside a card */
+  --color-rule: #302e42;        /* borders & dividers */
+
+  /* --- text --- */
+  --color-ink: #f3f1f8;
+  --color-ink-light: #b7b4c6;
+  --color-ink-muted: #8d8aa0;
+
+  /* --- brand coral --- */
+  --color-brand: #fd5e6e;
+  --color-brand-hover: #ff7b88;
+  --color-brand-dark: #e8384f;
+  --color-brand-light: #36202b; /* dark coral tint, for badge/alert grounds */
+  --color-brand-tint: #ffa3ad;  /* light coral, for accent text */
+
+  /* --- supporting --- */
+  --color-ochre: #ffb45c;
+  --color-ochre-light: #3a2b18;
+  --color-moss: #46dd9b;
+  --color-moss-light: #15301f;
+  --color-danger: #ff6b78;
+  --color-danger-light: #3a1c24;
 
   --font-sans: "IBM Plex Sans", "IBM Plex Sans Devanagari", system-ui, sans-serif;
   --font-display: "Fraunces", Georgia, serif;
 }
 
-/* Tailwind v4: classes reused via @apply must be utilities */
-@utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer;
-  @apply focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2;
-  @apply disabled:opacity-50 disabled:cursor-not-allowed;
-}
-
-@utility card {
-  @apply bg-white rounded-xl border border-rule shadow-sm p-6;
-}
-
-@utility badge {
-  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
-}
-
 @layer base {
   html {
+    /* makes native scrollbars, date pickers and autofill render dark */
+    color-scheme: dark;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -49,8 +54,57 @@
   }
 
   ::selection {
-    @apply bg-brand-light text-brand-dark;
+    @apply bg-brand text-paper;
   }
+
+  /* Chrome autofill otherwise paints a bright yellow box */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--color-ink);
+    -webkit-box-shadow: 0 0 0 1000px var(--color-sunken) inset;
+    caret-color: var(--color-ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-paper);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-rule);
+    border-radius: 999px;
+    border: 2px solid var(--color-paper);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3d3a53;
+  }
+}
+
+/* ------------------------------------------------------------
+   Composable bases.
+
+   These MUST be @utility, not .btn/.card/.badge inside
+   @layer components. Tailwind v4 can only `@apply` a class that is
+   a registered utility — applying a plain component class throws
+   "Cannot apply unknown utility class `btn`" and the whole
+   stylesheet fails to build.
+   ------------------------------------------------------------ */
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer;
+  @apply focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-paper;
+  @apply disabled:opacity-40 disabled:cursor-not-allowed;
+}
+
+@utility card {
+  @apply bg-surface rounded-xl border border-rule p-6;
+}
+
+@utility badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
 }
 
 @layer components {
@@ -58,34 +112,40 @@
     @apply mx-auto max-w-5xl px-4 sm:px-6;
   }
 
+  /* ---------- buttons ---------- */
+  /* Dark ink on coral: white on this coral is only ~2.9:1, ink is ~5.4:1 */
   .btn-primary {
-    @apply btn bg-brand text-white hover:bg-brand-dark shadow-sm;
+    @apply btn bg-brand text-paper hover:bg-brand-hover;
+    box-shadow: 0 1px 0 0 rgb(255 255 255 / 0.12) inset;
   }
 
   .btn-secondary {
-    @apply btn bg-white text-ink border border-rule hover:bg-paper-dark;
+    @apply btn bg-surface text-ink border border-rule hover:border-ink-muted hover:bg-paper-dark;
   }
 
   .btn-ghost {
-    @apply btn text-ink-light hover:bg-paper-dark;
+    @apply btn text-ink-light hover:bg-paper-dark hover:text-ink;
   }
 
   .btn-danger {
-    @apply btn bg-danger text-white hover:bg-red-700;
+    @apply btn bg-danger text-paper hover:brightness-110;
   }
 
   .btn-sm {
     @apply px-3 py-1.5 text-xs;
   }
 
+  /* ---------- surfaces ---------- */
   .card-hover {
-    @apply card transition-shadow hover:shadow-md;
+    @apply card transition-all duration-200 hover:border-ink-muted/40;
+    @apply hover:-translate-y-0.5;
   }
 
+  /* ---------- forms ---------- */
   .input {
-    @apply w-full rounded-lg border border-rule bg-white px-4 py-2.5 text-sm text-ink
+    @apply w-full rounded-lg border border-rule bg-sunken px-4 py-2.5 text-sm text-ink
            placeholder:text-ink-muted
-           focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent
+           focus:outline-none focus:ring-2 focus:ring-brand/60 focus:border-brand
            transition-colors;
   }
 
@@ -93,24 +153,23 @@
     @apply block text-sm font-medium text-ink-light mb-1.5;
   }
 
+  /* ---------- badges ---------- */
   .badge-brand {
-    @apply badge bg-brand-light text-brand-dark;
+    @apply badge bg-brand-light text-brand;
   }
-
   .badge-ochre {
     @apply badge bg-ochre-light text-ochre;
   }
-
   .badge-moss {
     @apply badge bg-moss-light text-moss;
   }
-
   .badge-muted {
     @apply badge bg-paper-dark text-ink-muted;
   }
 
+  /* ---------- type ---------- */
   .section-title {
-    @apply text-2xl font-bold text-ink font-display;
+    @apply text-2xl font-bold text-ink font-display tracking-tight;
   }
 
   .section-sub {
@@ -121,15 +180,16 @@
     @apply border-t border-rule;
   }
 
-  /* Progress bar */
+  /* ---------- progress ---------- */
   .progress-bar {
-    @apply h-2 rounded-full bg-paper-dark overflow-hidden;
+    @apply h-2 rounded-full bg-sunken overflow-hidden;
   }
   .progress-bar-fill {
-    @apply h-full rounded-full bg-brand transition-all duration-500;
+    @apply h-full rounded-full transition-all duration-500;
+    background-image: linear-gradient(90deg, #f2707c, #f03b50);
   }
 
-  /* Toggle switch */
+  /* ---------- toggle ---------- */
   .toggle {
     @apply relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer;
   }
@@ -140,7 +200,8 @@
     @apply bg-rule;
   }
   .toggle-dot {
-    @apply inline-block h-4 w-4 rounded-full bg-white transition-transform shadow-sm;
+    @apply inline-block h-4 w-4 rounded-full bg-white transition-transform;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
   }
   .toggle-dot-on {
     @apply translate-x-6;
@@ -149,24 +210,68 @@
     @apply translate-x-1;
   }
 
-  /* Tabs */
+  /* ---------- tabs / segmented ---------- */
   .tab-list {
-    @apply flex gap-1 rounded-lg bg-paper-dark p-1;
+    @apply flex gap-1 rounded-lg bg-sunken p-1 border border-rule;
   }
   .tab {
     @apply flex-1 rounded-md px-3 py-2 text-sm font-medium text-ink-muted transition-colors cursor-pointer;
   }
   .tab-active {
-    @apply bg-white text-ink shadow-sm;
+    @apply bg-surface text-ink;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
   }
 
-  /* Skeleton loader */
+  /* ---------- skeleton ---------- */
   .skeleton {
     @apply bg-paper-dark rounded animate-pulse;
   }
 }
 
-/* Notification bell animation */
+/* ============================================================
+   Brand flourishes
+   ============================================================ */
+
+/* Coral gradient as text — for hero headlines and numbers */
+.text-gradient {
+  background-image: linear-gradient(135deg, #ffa3ad 0%, #fd5e6e 45%, #f03b50 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-brand-gradient {
+  background-image: linear-gradient(135deg, #f2707c 0%, #f65f6f 45%, #f03b50 100%);
+}
+
+/* Soft coral bloom, echoing the logo's filled circle. Sits behind content. */
+.glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(42rem 28rem at 78% -10%, rgb(253 94 110 / 0.20), transparent 60%),
+    radial-gradient(30rem 22rem at 8% 10%, rgb(255 180 92 / 0.07), transparent 65%);
+}
+
+/* Hairline grid, barely there — gives large dark areas some structure */
+.grid-field::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.03) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 40%, transparent 100%);
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+
 @keyframes bell-shake {
   0%, 100% { transform: rotate(0); }
   25% { transform: rotate(15deg); }
@@ -177,7 +282,6 @@
   animation: bell-shake 0.5s ease-in-out;
 }
 
-/* Fade in animation */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -186,7 +290,6 @@
   animation: fadeIn 0.3s ease-out forwards;
 }
 
-/* Stagger children */
 .stagger-children > * {
   opacity: 0;
   animation: fadeIn 0.4s ease-out forwards;
@@ -199,3 +302,16 @@
 .stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
 .stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
 .stagger-children > *:nth-child(8) { animation-delay: 0.4s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .stagger-children > * {
+    opacity: 1;
+  }
+}

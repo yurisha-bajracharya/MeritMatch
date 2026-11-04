@@ -6,6 +6,7 @@ import type { User } from "@/lib/types";
 import type { Lang } from "@/lib/types";
 import { t } from "@/lib/i18n";
 import NotificationBell from "./NotificationBell";
+import { LogoMark } from "./Logo";
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
@@ -34,13 +35,15 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-rule">
-      <div className="container-main flex items-center justify-between h-14">
+    <nav className="sticky top-0 z-50 bg-paper/80 backdrop-blur-xl border-b border-rule">
+      <div className="container-main flex items-center justify-between h-16">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 font-display text-lg font-bold text-ink">
-          <span className="w-7 h-7 bg-brand rounded-lg flex items-center justify-center text-white text-xs font-bold">
-            M
-          </span>
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 font-display text-lg font-bold text-ink tracking-tight
+                     transition-opacity hover:opacity-80"
+        >
+          <LogoMark size={26} className="text-white shrink-0" />
           MeritMatch
         </Link>
 
@@ -82,13 +85,13 @@ export default function Navbar() {
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="flex items-center gap-2 text-sm text-ink-light hover:text-ink"
               >
-                <span className="w-7 h-7 rounded-full bg-brand-light text-brand-dark flex items-center justify-center text-xs font-bold">
+                <span className="w-7 h-7 rounded-full bg-brand-light text-brand border border-brand/25 flex items-center justify-center text-xs font-bold">
                   {user.name?.[0]?.toUpperCase() || "?"}
                 </span>
                 <span className="hidden sm:inline">{user.name || user.phone}</span>
               </button>
               {menuOpen && (
-                <div className="absolute right-0 top-10 bg-white border border-rule rounded-lg shadow-lg py-1 min-w-[140px] animate-fade-in">
+                <div className="absolute right-0 top-10 bg-surface border border-rule rounded-lg shadow-xl shadow-black/40 py-1 min-w-[140px] animate-fade-in">
                   <button
                     onClick={logout}
                     className="w-full text-left px-4 py-2 text-sm text-ink-light hover:bg-paper-dark"
@@ -127,7 +130,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden border-t border-rule bg-white animate-fade-in">
+        <div className="md:hidden border-t border-rule bg-surface animate-fade-in">
           <div className="container-main py-3 flex flex-col gap-2">
             <Link href="/jobs" className="py-2 text-sm text-ink-light" onClick={() => setMenuOpen(false)}>
               {t("jobs", lang)}
