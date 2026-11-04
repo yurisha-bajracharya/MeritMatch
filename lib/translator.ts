@@ -1,5 +1,5 @@
 import { askLLM, redact } from "./scoring";
-import { isKnownTag, TAG_LABELS } from "./tags";
+import { findTagsInText, isKnownTag, TAG_LABELS } from "./tags";
 import type { Bilingual, Lang } from "./types";
 
 export type TranslatedSkill = { tag: string; evidence: string };
@@ -98,6 +98,20 @@ const RULES: Rule[] = [
 export function fallbackTranslate(text: string, lang: Lang): TranslatedSkill[] {
   const lower = text.toLowerCase();
   const found = new Map<string, string>();
+
+  // 1. Named skills first: "leadership", "software engineering", "sales"...
+  //    The person told us the skill directly, so it should always show up
+  //    and must not be crowded out by the life-situation rules below.
+  for (const { tag, phrase } of findTagsInText(text)) {
+    found.set(
+      tag,
+      lang === "ne"
+        ? `तपाईंले "${phrase}" उल्लेख गर्नुभयो।`
+        : `You mentioned "${phrase}".`,
+    );
+  }
+
+  // 2. Life situations: shop, caring, farming... (inferred skills)
   for (const rule of RULES) {
     if (!rule.keywords.some((k) => lower.includes(k.toLowerCase()))) continue;
     for (const tag of rule.tags)
@@ -148,7 +162,23 @@ export async function translateExperience(
   const clean = redact(text);
   try {
     const out = await askLLM(systemPrompt(lang), JSON.stringify({ description: clean }));
-    if (out) return { skills: parse(out.text), by: out.by };
+    if (out) {
+      const skills = parse(out.text);
+      // A skill the person named outright ("leadership") is never dropped,
+      // even if the model skipped it.
+      const have = new Set(skills.map((s) => s.tag));
+      for (const { tag, phrase } of findTagsInText(clean)) {
+        if (have.has(tag) || skills.length >= MAX_SKILLS) continue;
+        skills.push({
+          tag,
+          evidence:
+            lang === "ne"
+              ? `तपाईंले "${phrase}" उल्लेख गर्नुभयो।`
+              : `You mentioned "${phrase}".`,
+        });
+      }
+      return { skills, by: out.by };
+    }
   } catch (err) {
     console.error(
       "Experience Mapper LLM failed, using fallback:",

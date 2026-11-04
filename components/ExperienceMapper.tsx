@@ -24,6 +24,14 @@ const L = {
   seeAll: { en: "See all matching jobs", ne: "सबै मिल्ने कामहरू हेर्नुहोस्" },
   notifyMe: { en: "Notify me about jobs like these", ne: "यस्ता काम आए खबर गर्नुहोस्" },
   notified: { en: "✓ You'll be notified", ne: "✓ खबर गरिनेछ" },
+  nothingFound: {
+    en: "We couldn't find a skill in that. Try saying what you actually did, for example: “I managed a team of 5 at a call centre” or “I built websites for small businesses”.",
+    ne: "त्यसमा कुनै सीप भेटिएन। आफूले के गर्नुभयो भन्ने लेख्नुहोस्, जस्तै: “मैले कल सेन्टरमा ५ जनाको टोली सम्हालेँ” वा “मैले साना व्यवसायका लागि वेबसाइट बनाएँ”।",
+  },
+  keywordMode: {
+    en: "Mapped by keywords. Add a GEMINI_API_KEY to .env for smarter mapping.",
+    ne: "किवर्डबाट मिलाइएको। राम्रो नतिजाका लागि .env मा GEMINI_API_KEY थप्नुहोस्।",
+  },
   claimNote: {
     en: "These are skills you described, not yet proven. They're used only to suggest jobs. You prove them by doing a job's short task, and employers only ever see those results.",
     ne: "यी तपाईंले वर्णन गरेका सीप हुन्, अझै प्रमाणित भएका छैनन्। यी कामहरू सुझाउन मात्र प्रयोग हुन्छन्। कुनै कामको सानो कार्य गरेर तपाईं प्रमाणित गर्नुहुन्छ, र रोजगारदाताले ती नतिजा मात्र देख्छन्।",
@@ -47,6 +55,10 @@ export default function ExperienceMapper({
   const [skills, setSkills] = useState<TranslatedSkill[]>([]);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  // Which engine produced the result, and whether a mapping has run at all,
+  // so an empty result can say so instead of showing nothing.
+  const [by, setBy] = useState<string>("");
+  const [mapped, setMapped] = useState(false);
 
   // --- job recommendations ---
   const [matches, setMatches] = useState<JobMatch[]>([]);
@@ -80,6 +92,7 @@ export default function ExperienceMapper({
     setMatches([]);
     setSaved(false);
     setSubbed(false);
+    setMapped(false);
 
     try {
       const res = await fetch("/api/translate", {
@@ -92,6 +105,8 @@ export default function ExperienceMapper({
 
       const found: TranslatedSkill[] = data.skills || [];
       setSkills(found);
+      setBy(data.by || "");
+      setMapped(true);
       await loadMatches(found.map((x) => x.tag));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
@@ -209,6 +224,18 @@ export default function ExperienceMapper({
           </div>
         )}
       </div>
+
+      {/* ---------- nothing found: say so instead of showing nothing ---------- */}
+      {mapped && skills.length === 0 && !error && (
+        <div className="card animate-fade-in border-ochre/30">
+          <p className="text-sm text-ink-light leading-relaxed">
+            {s("nothingFound", lang)}
+          </p>
+          {by === "fallback" && (
+            <p className="text-xs text-ink-muted mt-3">{s("keywordMode", lang)}</p>
+          )}
+        </div>
+      )}
 
       {/* ---------- skills found ---------- */}
       {skills.length > 0 && (

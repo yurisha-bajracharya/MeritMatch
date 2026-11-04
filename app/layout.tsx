@@ -2,9 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MeritMatch — Nepal's Merit-Based Hiring Platform",
-  description:
-    "Fair hiring through anonymous work-sample tasks. No résumé, no network — just your skills.",
+  title: "MeritMatch",
+  description: "Fair hiring through anonymous work-sample tasks",
 };
 
 export const viewport: Viewport = {

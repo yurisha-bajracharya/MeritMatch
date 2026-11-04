@@ -32,9 +32,6 @@ export default function Home() {
         <div className="container-main relative py-20 sm:py-28">
           <div className="grid lg:grid-cols-[1.15fr_1fr] gap-12 items-center">
             <div className="max-w-2xl">
-              <span className="badge-brand mb-5">
-                {t("tagline", lang)}
-              </span>
               <h1 className="text-4xl sm:text-6xl font-display font-bold leading-[1.05] tracking-tight">
                 <span className="text-ink">{t("appName", lang)}</span>
               </h1>

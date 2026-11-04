@@ -68,6 +68,33 @@ const TAG_ALIASES: Record<string, string> = {
   "work ethic": "professionalism",
   reliability: "professionalism",
   dependability: "professionalism",
+  // Leadership
+  leader: "leadership",
+  "team lead": "leadership",
+  "team leader": "leadership",
+  "led a team": "leadership",
+  "managed a team": "leadership",
+  "team management": "leadership",
+  supervisor: "leadership",
+  supervised: "leadership",
+  supervising: "leadership",
+  captain: "leadership",
+  mentoring: "leadership",
+  // Software / IT
+  "software engineer": "digital-literacy",
+  programmer: "digital-literacy",
+  "web developer": "digital-literacy",
+  "app developer": "digital-literacy",
+  "computer engineering": "digital-literacy",
+  // Other trades
+  driver: "driving",
+  "delivery rider": "driving",
+  chef: "cooking",
+  teacher: "teaching",
+  tutor: "teaching",
+  tutoring: "teaching",
+  "heavy lifting": "physical-fitness",
+  "manual labour": "physical-fitness",
   // Nepali aliases
   "सफ्टवेयर": "digital-literacy",
   "प्रोग्रामिङ": "digital-literacy",
@@ -118,6 +145,50 @@ export function resolveTag(input: string): string | null {
     }
   }
   return null;
+}
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Does `phrase` appear in `text` as a whole word / phrase?
+ * Latin phrases use word boundaries so "led" doesn't match "called" and
+ * "lead" doesn't match "misleading". Nepali has no spaces-as-boundaries
+ * guarantee, so it uses a plain substring check.
+ */
+function mentions(text: string, phrase: string): boolean {
+  const p = normalize(phrase);
+  if (!p) return false;
+  if (/^[a-z0-9 ]+$/.test(p)) {
+    return new RegExp(`(^|[^a-z0-9])${escapeRe(p)}([^a-z0-9]|$)`).test(text);
+  }
+  return text.includes(p);
+}
+
+/**
+ * Find skill tags a piece of free text names directly: a tag's own label
+ * ("leadership"), an alias ("software engineering"), or the Nepali label.
+ * Returns each tag once, with the phrase that triggered it, so the UI can
+ * show real evidence ("You mentioned 'software engineering'").
+ */
+export function findTagsInText(
+  input: string,
+): { tag: string; phrase: string }[] {
+  const text = normalize(input).replace(/\s+/g, " ");
+  const found = new Map<string, string>();
+
+  for (const [tag, labels] of Object.entries(TAG_LABELS)) {
+    for (const phrase of [labels.en, labels.ne, tag]) {
+      if (mentions(text, phrase)) {
+        found.set(tag, phrase);
+        break;
+      }
+    }
+  }
+  for (const [alias, tag] of Object.entries(TAG_ALIASES)) {
+    if (!found.has(tag) && mentions(text, alias)) found.set(tag, alias);
+  }
+
+  return [...found].map(([tag, phrase]) => ({ tag, phrase }));
 }
 
 /** Resolve a list of raw tags to canonical form, dropping blanks and duplicates. */
