@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import RankingList from "@/components/RankingList";
 import { getSession } from "@/lib/auth";
 import { getTemplate } from "@/lib/templates";
+import type { Bilingual } from "@/lib/types";
 
 export default async function EmployerJobPage({
   params,
@@ -23,6 +24,16 @@ export default async function EmployerJobPage({
     getTemplate(job.category).rubric.map((c) => [c.id, c.label]),
   );
 
+  // Template questions first, then the ones this employer added.
+  const questions: { id: string; prompt: Bilingual; mine: boolean }[] = [
+    ...getTemplate(job.category).scenarios.map((s) => ({ id: s.id, prompt: s.prompt, mine: false })),
+    ...job.custom_questions.map((q) => ({
+      id: q.id,
+      prompt: { en: q.prompt.en || q.prompt.ne, ne: q.prompt.ne || q.prompt.en },
+      mine: true,
+    })),
+  ];
+
   return (
     <>
       <Navbar />
@@ -35,7 +46,8 @@ export default async function EmployerJobPage({
           ai_scoring: job.ai_scoring,
           evidence: job.evidence,
         }}
-        initial={entries}
+        initial={isOwner ? entries : entries.map((e) => ({ ...e, answers: [] }))}
+        questions={isOwner ? questions : []}
         isOwner={isOwner}
         criteriaLabels={criteriaLabels}
       />

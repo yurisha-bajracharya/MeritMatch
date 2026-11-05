@@ -121,6 +121,7 @@ addColumn("submissions", "access_token", "TEXT DEFAULT ''");
 addColumn("jobs", "evidence", "TEXT DEFAULT 'none'");
 addColumn("submissions", "shortlisted", "INTEGER DEFAULT 0");
 addColumn("submissions", "shortlisted_at", "TEXT DEFAULT ''");
+addColumn("submissions", "rejected", "INTEGER DEFAULT 0");
 addColumn("notifications", "link", "TEXT DEFAULT ''");
 addColumn("users", "preferred_cities", "TEXT DEFAULT '[]'");
 db.exec(`

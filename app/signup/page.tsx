@@ -52,7 +52,7 @@ function SignupPageInner() {
 
       // Redirect based on role
       if (data.user?.role === "employer") {
-        router.push("/employer/post");
+        router.push("/employer/dashboard");
       } else {
         router.push("/dashboard");
       }

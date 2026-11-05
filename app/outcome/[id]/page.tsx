@@ -28,6 +28,7 @@ type Outcome = {
   rank: number | null;
   applicants: number | null;
   shortlisted: boolean;
+  rejected?: boolean;
   media: { id: string; kind: "photo" | "video"; caption?: string }[];
 };
 
@@ -179,9 +180,9 @@ export default function OutcomePage() {
             }`}
           >
             {data.shortlisted && <Icon name="check-circle" size={16} />}
-            {data.shortlisted ? t("shortlisted", lang) : x("stillReview", lang)}
+            {data.shortlisted ? t("shortlisted", lang) : data.rejected ? t("notShortlisted", lang) : x("stillReview", lang)}
           </p>
-          {!data.shortlisted && (
+          {!data.shortlisted && !data.rejected && (
             <p className="mt-1 text-xs text-ink-muted">
               {x("stillReviewHint", lang)}
             </p>

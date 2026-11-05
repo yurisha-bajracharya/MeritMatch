@@ -75,7 +75,18 @@ export async function POST(req: Request) {
 
     // Score answers
     const useAI = job.ai_scoring;
-    const result = await scoreAnswers(template, answers as Answer[], useAI, language === "ne" ? "ne" : "en");
+    // The recruiter's own questions are scored along with the template ones.
+    const custom: { id: string; prompt: { en: string; ne: string } }[] = Array.isArray(job.custom_questions)
+      ? job.custom_questions
+      : [];
+    const scoringTemplate = {
+      ...template,
+      scenarios: [
+        ...template.scenarios,
+        ...custom.map((q) => ({ id: q.id, prompt: { en: q.prompt?.en || q.prompt?.ne || "", ne: q.prompt?.ne || q.prompt?.en || "" } })),
+      ],
+    };
+    const result = await scoreAnswers(scoringTemplate, answers as Answer[], useAI, language === "ne" ? "ne" : "en");
 
     // Choice questions are scored against the server-held key (no AI), then
     // blended with the written score into the one number used for ranking.

@@ -143,6 +143,8 @@ export type Submission = {
   consent: boolean;
   /** Set by the employer. The top-25% rule only suggests; this is the decision. */
   shortlisted?: boolean;
+  /** Set by the employer: not moving forward. Never set automatically. */
+  rejected?: boolean;
   flags?: IntegrityFlag[];
   /**
    * `total` is the combined score the ranking uses. These two show where it

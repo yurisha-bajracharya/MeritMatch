@@ -26,6 +26,7 @@ export type RankedEntry = {
   writtenScore: number | null;
   /** The employer's decision. Candidates see this; video is asked only from these. */
   shortlisted: boolean;
+  rejected: boolean;
   /** The top-25% rule's suggestion. Only a hint; never shown to candidates. */
   suggested: boolean;
   consent: boolean;
@@ -37,6 +38,8 @@ export type RankedEntry = {
   media: { id: string; kind: "photo" | "video"; caption: string }[];
   /** Human ratings (1-5) the employer gave. Never part of `total`. */
   reviews: Partial<Record<"photo" | "video", { scores: Record<string, number>; note: string }>>;
+  /** What the candidate wrote, per question. Shown to the job owner only. */
+  answers: { scenarioId: string; text: string }[];
   contact?: { name: string; phone: string };
 };
 
@@ -91,6 +94,7 @@ function rowToSubmission(row: any): Submission {
     scored_by: row.scored_by,
     consent: Boolean(row.consent),
     shortlisted: Boolean(row.shortlisted),
+    rejected: Boolean(row.rejected),
     flags: parseFlags(row.flags),
     mcq_score: row.mcq_score ?? null,
     written_score: row.written_score ?? null,
@@ -187,6 +191,7 @@ export function getRanking(jobId: string): {
     const cities = c ? (cityByPhone.get(c.phone) ?? []) : [];
     return {
       submissionId: s.id,
+      answers: s.answers,
       label: `#${s.id.slice(0, 4).toUpperCase()}`,
       rank: i + 1,
       total: s.total,
@@ -201,6 +206,7 @@ export function getRanking(jobId: string): {
       media: mediaBySub.get(s.id) ?? [],
       reviews: reviewsBySub.get(s.id) ?? {},
       shortlisted: s.shortlisted === true,
+      rejected: s.rejected === true,
       suggested: i < cut,
       consent: s.consent,
       flags: [...(s.flags ?? []), ...(similar.get(s.id) ?? [])],

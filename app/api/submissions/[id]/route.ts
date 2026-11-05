@@ -62,6 +62,7 @@ export async function GET(
     rank: me?.rank ?? null,
     applicants: ranking?.entries.length ?? null,
     shortlisted: sub.shortlisted === true,
+    rejected: sub.rejected === true,
     media,
     limits: { maxPhotos: 4, maxVideoSeconds: 90, maxVideoMb: 30 },
   });

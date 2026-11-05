@@ -32,11 +32,13 @@ export default function RankingList({
   initial,
   isOwner,
   criteriaLabels,
+  questions,
 }: {
   job: JobInfo;
   initial: RankedEntry[];
   isOwner: boolean;
   criteriaLabels: Record<string, Bilingual>;
+  questions: { id: string; prompt: Bilingual; mine: boolean }[];
 }) {
   const [lang] = useLang();
   const [entries, setEntries] = useState(initial);
@@ -44,12 +46,18 @@ export default function RankingList({
   const [error, setError] = useState("");
   const shortlistedCount = entries.filter((e) => e.shortlisted).length;
   // null = follow the default (shortlisted if any, otherwise everyone)
-  const [tab, setTab] = useState<"all" | "shortlisted" | null>(null);
+  const [tab, setTab] = useState<"all" | "shortlisted" | "rejected" | null>(null);
+  const rejectedCount = entries.filter((e) => e.rejected).length;
   const view = tab ?? (shortlistedCount > 0 ? "shortlisted" : "all");
   const n = (v: number) => localizeDigits(v, lang);
 
   const shown = useMemo(
-    () => (view === "shortlisted" ? entries.filter((e) => e.shortlisted) : entries),
+    () =>
+      view === "shortlisted"
+        ? entries.filter((e) => e.shortlisted)
+        : view === "rejected"
+          ? entries.filter((e) => e.rejected)
+          : entries,
     [entries, view],
   );
 
@@ -64,9 +72,38 @@ export default function RankingList({
       });
       if (!res.ok) throw new Error("save");
       setEntries((prev) =>
-        prev.map((p) => (p.submissionId === e.submissionId ? { ...p, shortlisted: !e.shortlisted } : p)),
+        prev.map((p) =>
+          p.submissionId === e.submissionId
+            ? { ...p, shortlisted: !e.shortlisted, rejected: !e.shortlisted ? false : p.rejected }
+            : p,
+        ),
       );
       // First shortlist? Open on the shortlisted view, as asked.
+      setTab(null);
+    } catch {
+      setError(x("couldNotSave", lang));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const reject = async (e: RankedEntry) => {
+    setBusy(e.submissionId);
+    setError("");
+    try {
+      const res = await fetch(`/api/submissions/${e.submissionId}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rejected: !e.rejected }),
+      });
+      if (!res.ok) throw new Error("save");
+      setEntries((prev) =>
+        prev.map((p) =>
+          p.submissionId === e.submissionId
+            ? { ...p, rejected: !e.rejected, shortlisted: !e.rejected ? false : p.shortlisted }
+            : p,
+        ),
+      );
       setTab(null);
     } catch {
       setError(x("couldNotSave", lang));
@@ -78,7 +115,7 @@ export default function RankingList({
   const fitLabel = { preferred: "fitPreferred", anywhere: "fitAnywhere", elsewhere: "fitElsewhere" } as const;
   const w = Math.round(MCQ_WEIGHT * 100);
 
-  const tabBtn = (id: "all" | "shortlisted", label: string) => (
+  const tabBtn = (id: "all" | "shortlisted" | "rejected", label: string) => (
     <button
       type="button"
       onClick={() => setTab(id)}
@@ -105,10 +142,28 @@ export default function RankingList({
         </Link>
       </div>
 
+      {isOwner && questions.length > 0 && (
+        <details className="card !p-4 text-sm">
+          <summary className="cursor-pointer font-medium">
+            {x("questionsTitle", lang, { n: n(questions.length) })}
+          </summary>
+          <p className="mt-2 text-xs text-ink-muted">{x("questionsHint", lang)}</p>
+          <ol className="mt-3 list-decimal space-y-2 pl-5 text-ink-light">
+            {questions.map((q) => (
+              <li key={q.id}>
+                {q.prompt[lang]}
+                {q.mine && <span className="badge-brand ml-2 text-[10px]">{x("mine", lang)}</span>}
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+
       {entries.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {tabBtn("shortlisted", x("tabShortlisted", lang, { n: n(shortlistedCount) }))}
           {tabBtn("all", x("tabAll", lang, { n: n(entries.length) }))}
+          {rejectedCount > 0 && tabBtn("rejected", x("tabRejected", lang, { n: n(rejectedCount) }))}
         </div>
       )}
       {view === "shortlisted" && shortlistedCount > 0 && (
@@ -123,11 +178,13 @@ export default function RankingList({
       {entries.length === 0 ? (
         <div className="card py-12 text-center text-sm text-ink-muted">{x("noApplicants", lang)}</div>
       ) : shown.length === 0 ? (
-        <div className="card py-10 text-center text-sm text-ink-muted">{x("noneShortlisted", lang)}</div>
+        <div className="card py-10 text-center text-sm text-ink-muted">
+          {view === "rejected" ? x("noneRejected", lang) : x("noneShortlisted", lang)}
+        </div>
       ) : (
         <div className="space-y-3">
           {shown.map((entry) => (
-            <div key={entry.submissionId} className={`card !p-4 ${entry.shortlisted ? "ring-1 ring-brand" : ""}`}>
+            <div key={entry.submissionId} className={`card !p-4 ${entry.shortlisted ? "ring-1 ring-brand" : ""} ${entry.rejected ? "opacity-70" : ""}`}>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-light text-xs font-bold text-brand">
@@ -140,6 +197,8 @@ export default function RankingList({
                         <Icon name="check" size={11} strokeWidth={3} />
                         {x("shortlistedBadge", lang)}
                       </span>
+                    ) : entry.rejected ? (
+                      <span className="badge-ochre text-[10px]">{x("rejectedBadge", lang)}</span>
                     ) : (
                       entry.suggested && <span className="badge-muted text-[10px]">{x("suggestedBadge", lang)}</span>
                     )}
@@ -169,6 +228,12 @@ export default function RankingList({
 
               <p className="mt-2 text-xs text-ink-muted">{entry.reason}</p>
 
+              {entry.flags.length === 0 && isOwner && (
+                <p className="mt-3 flex items-center gap-1.5 text-xs text-moss">
+                  <Icon name="check-circle" size={13} />
+                  {x("noFlags", lang)}
+                </p>
+              )}
               {entry.flags.length > 0 && (
                 <div className="mt-3 rounded-lg border border-ochre/25 bg-ochre-light p-3">
                   <p className="text-xs font-semibold text-ochre">{x("closerLook", lang)}</p>
@@ -181,6 +246,27 @@ export default function RankingList({
                   </ul>
                   <p className="mt-2 text-[10px] text-ink-muted">{x("closerLookHint", lang)}</p>
                 </div>
+              )}
+
+              {isOwner && entry.answers.length > 0 && (
+                <details className="mt-3 rounded-lg border border-rule p-3 text-sm" open={entry.flags.length > 0}>
+                  <summary className="cursor-pointer font-medium">{x("answersTitle", lang)}</summary>
+                  <ol className="mt-3 space-y-3">
+                    {questions.map((q, qi) => {
+                      const a = entry.answers.find((r) => r.scenarioId === q.id);
+                      return (
+                        <li key={q.id}>
+                          <p className="text-xs font-semibold text-ink-light">
+                            {n(qi + 1)}. {q.prompt[lang]}
+                          </p>
+                          <p className="mt-1 whitespace-pre-wrap rounded bg-paper-dark p-2 text-xs text-ink">
+                            {a?.text?.trim() || x("noAnswer", lang)}
+                          </p>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </details>
               )}
 
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -227,7 +313,7 @@ export default function RankingList({
               ) : null}
 
               {isOwner && (
-                <div className="mt-3">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => toggle(entry)}
@@ -239,6 +325,14 @@ export default function RankingList({
                       : entry.shortlisted
                         ? x("removeShortlist", lang)
                         : x("shortlist", lang)}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => reject(entry)}
+                    disabled={busy === entry.submissionId}
+                    className="btn-secondary btn-sm"
+                  >
+                    {entry.rejected ? x("undoReject", lang) : x("reject", lang)}
                   </button>
                 </div>
               )}

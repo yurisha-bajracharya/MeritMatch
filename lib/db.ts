@@ -143,6 +143,7 @@ function migrate(db: Database.Database) {
   // SUGGESTS; this flag is what candidates see and what unlocks video.
   addColumn(db, "submissions", "shortlisted", "INTEGER DEFAULT 0");
   addColumn(db, "submissions", "shortlisted_at", "TEXT DEFAULT ''");
+  addColumn(db, "submissions", "rejected", "INTEGER DEFAULT 0");
   addColumn(db, "notifications", "link", "TEXT DEFAULT ''");
 
   // Photos / video proof-of-work requested by the employer.

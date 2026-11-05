@@ -64,10 +64,13 @@ export default function TaskFlow({
   const pasteChars = useRef(0);
 
   // The questions the candidate sees (custom if set, otherwise scenarios)
-  const questions: { id: string; prompt: Record<Lang, string> }[] =
-    customQuestions.length > 0
-      ? customQuestions.map((q) => ({ id: q.id, prompt: q.prompt }))
-      : scenarios;
+  const questions: { id: string; prompt: Record<Lang, string> }[] = [
+    ...scenarios,
+    ...customQuestions.map((q) => ({
+      id: q.id,
+      prompt: { en: q.prompt.en || q.prompt.ne, ne: q.prompt.ne || q.prompt.en },
+    })),
+  ];
 
   // Load draft on mount
   useEffect(() => {
@@ -220,6 +223,21 @@ export default function TaskFlow({
                 ? `पहिले ${localizeDigits(mcq.length, lang)} छोटा छनोट प्रश्न, अनि लिखित प्रश्न। टाइमर सबैमा चल्छ।`
                 : `First ${mcq.length} quick choice questions, then the written questions. The timer covers both.`}
             </p>
+          )}
+
+          {questions.length > 0 && (
+            <details className="mt-4 rounded-lg border border-rule p-3 text-sm">
+              <summary className="cursor-pointer font-medium">
+                {lang === "ne"
+                  ? `प्रश्नहरू हेर्नुहोस् (${localizeDigits(questions.length, lang)})`
+                  : `Preview the ${questions.length} written questions`}
+              </summary>
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-ink-light">
+                {questions.map((q) => (
+                  <li key={q.id}>{q.prompt[lang]}</li>
+                ))}
+              </ol>
+            </details>
           )}
 
           <button onClick={startTask} className="btn-primary mt-6 w-full">

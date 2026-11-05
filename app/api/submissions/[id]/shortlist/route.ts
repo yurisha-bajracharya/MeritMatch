@@ -34,9 +34,10 @@ export async function POST(
     | undefined;
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  db.prepare("UPDATE submissions SET shortlisted = ?, shortlisted_at = ? WHERE id = ?").run(
+  db.prepare("UPDATE submissions SET shortlisted = ?, shortlisted_at = ?, rejected = CASE WHEN ? = 1 THEN 0 ELSE rejected END WHERE id = ?").run(
     shortlisted ? 1 : 0,
     shortlisted ? new Date().toISOString() : "",
+    shortlisted ? 1 : 0,
     id,
   );
 

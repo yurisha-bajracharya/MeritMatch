@@ -71,6 +71,10 @@ export default function DashboardPage() {
         router.push("/signup");
         return;
       }
+      if (authData.user.role === "employer") {
+        router.push("/employer/dashboard");
+        return;
+      }
       setUser(authData.user);
       setCities(authData.user.preferred_cities || []);
 
