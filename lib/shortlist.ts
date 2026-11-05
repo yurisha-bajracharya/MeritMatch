@@ -24,7 +24,10 @@ export type RankedEntry = {
   mcqCorrect: number | null;
   mcqTotal: number | null;
   writtenScore: number | null;
+  /** The employer's decision. Candidates see this; video is asked only from these. */
   shortlisted: boolean;
+  /** The top-25% rule's suggestion. Only a hint; never shown to candidates. */
+  suggested: boolean;
   consent: boolean;
   /** Review notes for the employer. Advisory only; never affects rank. */
   flags: IntegrityFlag[];
@@ -87,6 +90,7 @@ function rowToSubmission(row: any): Submission {
     tags: JSON.parse(row.tags || "[]"),
     scored_by: row.scored_by,
     consent: Boolean(row.consent),
+    shortlisted: Boolean(row.shortlisted),
     flags: parseFlags(row.flags),
     mcq_score: row.mcq_score ?? null,
     written_score: row.written_score ?? null,
@@ -196,7 +200,8 @@ export function getRanking(jobId: string): {
       fit: locationFit(job.location, cities),
       media: mediaBySub.get(s.id) ?? [],
       reviews: reviewsBySub.get(s.id) ?? {},
-      shortlisted: i < cut,
+      shortlisted: s.shortlisted === true,
+      suggested: i < cut,
       consent: s.consent,
       flags: [...(s.flags ?? []), ...(similar.get(s.id) ?? [])],
       contact:

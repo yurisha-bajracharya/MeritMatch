@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useLang } from "@/lib/useLang";
 import type { Job, Lang } from "@/lib/types";
 import { t } from "@/lib/i18n";
 import { TAG_LABELS, matchJobs } from "@/lib/tags";
@@ -81,12 +82,8 @@ const L = {
 
 const s = (k: keyof typeof L, lang: Lang) => L[k][lang];
 
-export default function ExperienceMapper({
-  lang: initialLang = "en",
-}: {
-  lang?: Lang;
-}) {
-  const [lang, setLang] = useState<Lang>(initialLang);
+export default function ExperienceMapper() {
+  const [lang, setLang] = useLang();
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [skills, setSkills] = useState<TranslatedSkill[]>([]);

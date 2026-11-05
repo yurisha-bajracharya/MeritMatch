@@ -3,12 +3,13 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "MeritMatch",
-  description: "Fair hiring through anonymous work-sample tasks",
+  description:
+    "Fair hiring through anonymous work-sample tasks. No résumé, no network, just your skills.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
-  colorScheme: "light",
+  themeColor: "#191824",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({

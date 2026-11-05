@@ -79,6 +79,7 @@ export function behaviourFlags(input: {
     flags.push({
       code: "pasted",
       note: `About ${Math.round((pasted / totalChars) * 100)}% of the text was pasted in rather than typed.`,
+      data: { pct: Math.round((pasted / totalChars) * 100) },
     });
   }
 
@@ -91,6 +92,7 @@ export function behaviourFlags(input: {
         flags.push({
           code: "fast",
           note: `${wordCount} words in ${Math.max(1, Math.round(elapsed / 60))} min (~${Math.round(wpm)} words/min), faster than usual typing plus thinking.`,
+          data: { words: wordCount, min: Math.max(1, Math.round(elapsed / 60)), wpm: Math.round(wpm) },
         });
       }
     }
@@ -101,6 +103,7 @@ export function behaviourFlags(input: {
       flags.push({
         code: "late",
         note: `Submitted ${Math.round((elapsed - limit) / 60)} min after the ${input.durationMin}-minute timer ended.`,
+        data: { over: Math.round((elapsed - limit) / 60), limit: input.durationMin },
       });
     }
   }
@@ -148,10 +151,12 @@ export function findSimilar(
       add(prepared[i].id, {
         code: "similar",
         note: `${pct}% of its wording matches ${labelOf(prepared[j].id)}.`,
+        data: { pct, other: labelOf(prepared[j].id) },
       });
       add(prepared[j].id, {
         code: "similar",
         note: `${pct}% of its wording matches ${labelOf(prepared[i].id)}.`,
+        data: { pct, other: labelOf(prepared[i].id) },
       });
     }
   }

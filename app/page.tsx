@@ -4,6 +4,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { LogoMark } from "@/components/Logo";
 import { useState } from "react";
+import { useLang } from "@/lib/useLang";
 import type { Lang } from "@/lib/types";
 import { t } from "@/lib/i18n";
 import { IconTile, type IconName } from "@/components/Icon";
@@ -80,7 +81,7 @@ const STEPS = [
 ] as const;
 
 export default function Home() {
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useLang();
 
   return (
     <>
@@ -91,9 +92,6 @@ export default function Home() {
         <div className="container-main relative py-20 sm:py-28">
           <div className="grid lg:grid-cols-[1.15fr_1fr] gap-12 items-center">
             <div className="max-w-2xl">
-              <span className="badge-brand mb-5">
-                {t("tagline", lang)}
-              </span>
               <h1 className="text-4xl sm:text-6xl font-display font-bold leading-[1.05] tracking-tight">
                 <span className="text-ink">{t("appName", lang)}</span>
               </h1>
@@ -112,7 +110,7 @@ export default function Home() {
 
             {/* The mark, at display size */}
             <div className="hidden lg:flex justify-center">
-              <LogoMark size={260} className="text-white opacity-95" />
+              <LogoMark size={260} className="text-black" />
             </div>
           </div>
         </div>
@@ -211,7 +209,7 @@ export default function Home() {
       <footer className="border-t border-rule bg-surface">
         <div className="container-main py-8 flex items-center justify-between text-xs text-ink-muted">
           <span className="flex items-center gap-2">
-            <LogoMark size={16} className="text-white opacity-70" />
+            <LogoMark size={16} className="text-black" />
             © {new Date().getFullYear()} MeritMatch · Nepal
           </span>
           <button

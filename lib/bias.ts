@@ -38,7 +38,10 @@ export function computeBias(jobId: string): BiasStats {
 
   const known = subs.filter((s) => candidates.has(s.candidate_id));
   const ranked = rankSubmissions(known);
-  const top = ranked.slice(0, shortlistSize(ranked.length));
+  // Use the employer's real shortlist once they have made one; until then,
+  // fall back to the rule-based suggestion so the dashboard is never empty.
+  const chosen = ranked.filter((s) => s.shortlisted);
+  const top = chosen.length > 0 ? chosen : ranked.slice(0, shortlistSize(ranked.length));
 
   const share = (list: Submission[], test: (c: Candidate) => boolean) =>
     pct(

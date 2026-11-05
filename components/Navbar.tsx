@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useLang } from "@/lib/useLang";
 import type { User } from "@/lib/types";
 import type { Lang } from "@/lib/types";
 import { t } from "@/lib/i18n";
@@ -10,8 +11,12 @@ import { LogoMark } from "./Logo";
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useLang();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   useEffect(() => {
     fetch("/api/auth", {
@@ -43,7 +48,7 @@ export default function Navbar() {
           className="flex items-center gap-2.5 font-display text-lg font-bold text-ink tracking-tight
                      transition-opacity hover:opacity-80"
         >
-          <LogoMark size={26} className="text-ink shrink-0" />
+          <LogoMark size={26} className="text-black shrink-0" />
           MeritMatch
         </Link>
 

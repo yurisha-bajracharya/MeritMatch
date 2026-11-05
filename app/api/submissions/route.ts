@@ -75,7 +75,7 @@ export async function POST(req: Request) {
 
     // Score answers
     const useAI = job.ai_scoring;
-    const result = await scoreAnswers(template, answers as Answer[], useAI);
+    const result = await scoreAnswers(template, answers as Answer[], useAI, language === "ne" ? "ne" : "en");
 
     // Choice questions are scored against the server-held key (no AI), then
     // blended with the written score into the one number used for ranking.

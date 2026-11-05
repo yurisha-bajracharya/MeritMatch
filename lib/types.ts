@@ -122,7 +122,10 @@ export type CriterionScore = {
  */
 export type IntegrityFlag = {
   code: "similar" | "pasted" | "fast" | "late";
+  /** English sentence, kept for older rows and as a fallback. */
   note: string;
+  /** Numbers behind the note, so the screen can write it in either language. */
+  data?: Record<string, number | string>;
 };
 
 export type Submission = {
@@ -138,6 +141,8 @@ export type Submission = {
   tags: string[];
   scored_by: "gemini" | "openai" | "fallback" | "demo";
   consent: boolean;
+  /** Set by the employer. The top-25% rule only suggests; this is the decision. */
+  shortlisted?: boolean;
   flags?: IntegrityFlag[];
   /**
    * `total` is the combined score the ranking uses. These two show where it
@@ -164,6 +169,12 @@ export type Notification = {
   title: string;
   message: string;
   job_id: string;
+  /** Where clicking it goes (the candidate's own outcome page for "shortlisted"). */
+  link?: string;
+  /** Joined from the job so the bell can write the text in either language. */
+  job_title?: string;
+  job_employer?: string;
+  job_location?: string;
   read: boolean;
   created_at: string;
 };

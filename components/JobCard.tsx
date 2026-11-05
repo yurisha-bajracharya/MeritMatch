@@ -106,7 +106,7 @@ export default function JobCard({
           {t("apply", lang)}
         </Link>
         <span className="text-xs text-ink-muted">
-          {new Date(job.created_at).toLocaleDateString()}
+          {new Date(job.created_at).toLocaleDateString(lang === "ne" ? "ne-NP" : undefined)}
         </span>
       </div>
     </div>

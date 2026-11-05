@@ -24,7 +24,7 @@ export const TAG_LABELS: Record<string, Bilingual> = {
 
 export const isKnownTag = (tag: string) => tag in TAG_LABELS;
 
-/** Aliases for fuzzy matching — maps common variants to canonical tag names */
+/** Aliases for fuzzy matching, maps common variants to canonical tag names */
 const TAG_ALIASES: Record<string, string> = {
   // English aliases
   "software engineering": "digital-literacy",

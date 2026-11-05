@@ -8,6 +8,8 @@ import Icon from "@/components/Icon";
 import Segmented from "@/components/Segmented";
 import EvidenceUploader from "@/components/EvidenceUploader";
 import ScoringExplainer from "@/components/ScoringExplainer";
+import { x } from "@/lib/i18n-extra";
+import { useLang } from "@/lib/useLang";
 import type { Lang } from "@/lib/types";
 import { t, localizeDigits } from "@/lib/i18n";
 
@@ -19,6 +21,7 @@ type Outcome = {
   mcqCorrect: number | null;
   mcqTotal: number | null;
   reason: string;
+  criteriaLabels?: Record<string, { en: string; ne: string }>;
   criteria: { id: string; score: number; max: number; reason: string }[];
   scoredBy: string;
   consent: boolean;
@@ -31,7 +34,7 @@ type Outcome = {
 export default function OutcomePage() {
   const params = useParams();
   const submissionId = params.id as string;
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useLang();
   const [token, setToken] = useState<string | null>(null);
   const [data, setData] = useState<Outcome | null>(null);
   const [missing, setMissing] = useState(false);
@@ -176,13 +179,11 @@ export default function OutcomePage() {
             }`}
           >
             {data.shortlisted && <Icon name="check-circle" size={16} />}
-            {data.shortlisted ? t("shortlisted", lang) : t("notShortlisted", lang)}
+            {data.shortlisted ? t("shortlisted", lang) : x("stillReview", lang)}
           </p>
           {!data.shortlisted && (
             <p className="mt-1 text-xs text-ink-muted">
-              {lang === "ne"
-                ? "अरू आवेदक आउँदा यो परिवर्तन हुन सक्छ।"
-                : "This can change as more people apply."}
+              {x("stillReviewHint", lang)}
             </p>
           )}
         </div>
@@ -194,7 +195,7 @@ export default function OutcomePage() {
               {data.criteria.map((c) => (
                 <li key={c.id}>
                   <div className="flex justify-between text-sm">
-                    <span className="text-ink-light">{c.id.replace(/_/g, " ")}</span>
+                    <span className="text-ink-light">{data.criteriaLabels?.[c.id]?.[lang] ?? c.id.replace(/_/g, " ")}</span>
                     <span className="font-semibold">
                       {n(c.score)}/{n(c.max)}
                     </span>

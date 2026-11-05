@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import JobCard from "@/components/JobCard";
+import { useLang } from "@/lib/useLang";
 import type { Job, Lang, Category } from "@/lib/types";
 import { CATEGORIES } from "@/lib/types";
 import { t } from "@/lib/i18n";
@@ -32,7 +33,7 @@ function JobsPageInner() {
   const tagsParam = searchParams.get("tags");
   const highlightParam = searchParams.get("highlight");
 
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useLang();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -106,7 +107,7 @@ function JobsPageInner() {
         job.category.includes(q) ||
         job.tags.some((tag) => tag.toLowerCase().includes(q));
 
-      // Fuzzy tag matching — resolve the job's tags too, not just the query
+      // Fuzzy tag matching, resolve the job's tags too, not just the query
       const resolved = resolveTag(q);
       const fuzzyMatch = resolved
         ? job.tags.some((tag) => (resolveTag(tag) ?? tag) === resolved)

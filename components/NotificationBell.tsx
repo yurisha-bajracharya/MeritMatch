@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import type { Lang } from "@/lib/types";
-import { t } from "@/lib/i18n";
+import { t, localizeDigits } from "@/lib/i18n";
+import { x } from "@/lib/i18n-extra";
+import { useLang } from "@/lib/useLang";
 
 type NotifData = {
   id: string;
@@ -11,11 +13,38 @@ type NotifData = {
   title: string;
   message: string;
   job_id: string;
+  link?: string;
+  job_title?: string;
+  job_employer?: string;
+  job_location?: string;
   read: boolean;
   created_at: string;
 };
 
-export default function NotificationBell({ lang }: { lang: Lang }) {
+/** Write the notification in the reader's language from its type and job. */
+function textOf(n: NotifData, lang: Lang): { title: string; body: string } {
+  const title = n.job_title || "";
+  const employer = n.job_employer || "";
+  if (n.type === "new_job" && title) {
+    return {
+      title: x("newJobTitle", lang, { title }),
+      body: x("newJobBody", lang, {
+        employer,
+        place: n.job_location ? ` (${n.job_location})` : "",
+      }),
+    };
+  }
+  if (n.type === "shortlisted") {
+    return {
+      title: x("shortlistedTitle", lang),
+      body: title ? x("shortlistedBody", lang, { employer, title }) : x("shortlistedMsg", lang),
+    };
+  }
+  return { title: n.title, body: n.message };
+}
+
+export default function NotificationBell(_props: { lang?: Lang }) {
+  const [lang] = useLang();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotifData[]>([]);
   const [unread, setUnread] = useState(0);
@@ -72,7 +101,7 @@ export default function NotificationBell({ lang }: { lang: Lang }) {
       <button
         onClick={() => setOpen(!open)}
         className="relative p-2 text-ink-light hover:text-ink transition-colors"
-        aria-label="Notifications"
+        aria-label={x("notificationsLabel", lang)}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -108,7 +137,7 @@ export default function NotificationBell({ lang }: { lang: Lang }) {
               notifications.map((n) => (
                 <Link
                   key={n.id}
-                  href={n.job_id ? `/jobs?highlight=${n.job_id}` : "#"}
+                  href={n.link || (n.job_id ? `/jobs?highlight=${n.job_id}` : "#")}
                   onClick={() => {
                     if (!n.read) markRead(n.id);
                     setOpen(false);
@@ -117,10 +146,10 @@ export default function NotificationBell({ lang }: { lang: Lang }) {
                     !n.read ? "bg-brand-light/30" : ""
                   }`}
                 >
-                  <div className="text-sm font-medium text-ink">{n.title}</div>
-                  <div className="text-xs text-ink-muted mt-0.5">{n.message}</div>
+                  <div className="text-sm font-medium text-ink">{textOf(n, lang).title}</div>
+                  <div className="text-xs text-ink-muted mt-0.5">{textOf(n, lang).body}</div>
                   <div className="text-[10px] text-ink-muted mt-1">
-                    {new Date(n.created_at).toLocaleDateString()}
+                    {new Date(n.created_at).toLocaleDateString(lang === "ne" ? "ne-NP" : undefined)}
                   </div>
                 </Link>
               ))

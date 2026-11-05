@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import type { Lang } from "@/lib/types";
-import { t } from "@/lib/i18n";
+import { t, localizeDigits } from "@/lib/i18n";
+import { x } from "@/lib/i18n-extra";
+import { useLang } from "@/lib/useLang";
+import Link from "next/link";
+import Icon from "./Icon";
 
 type BiasStats = {
   applicants: number;
@@ -125,11 +129,12 @@ export default function BiasDashboard({
 /** Server-side rendered version with pre-computed stats */
 export function BiasDashboardWithStats({
   stats,
-  lang = "en",
 }: {
   stats: BiasStats;
   lang?: Lang;
 }) {
+  const [lang] = useLang();
+  const n = (v: number) => localizeDigits(v, lang);
   return (
     <div className="card space-y-6 animate-fade-in">
       <div>
@@ -139,12 +144,12 @@ export function BiasDashboardWithStats({
 
       <div className="grid gap-2 text-sm">
         <div className="flex justify-between p-2 rounded bg-paper-dark">
-          <span className="text-ink-light">Total applicants</span>
-          <span className="font-semibold">{stats.applicants}</span>
+          <span className="text-ink-light">{x("totalApplicants", lang)}</span>
+          <span className="font-semibold">{n(stats.applicants)}</span>
         </div>
         <div className="flex justify-between p-2 rounded bg-paper-dark">
-          <span className="text-ink-light">Shortlisted</span>
-          <span className="font-semibold">{stats.shortlisted}</span>
+          <span className="text-ink-light">{x("shortlistedCount", lang)}</span>
+          <span className="font-semibold">{n(stats.shortlisted)}</span>
         </div>
       </div>
 
@@ -165,9 +170,36 @@ export function BiasDashboardWithStats({
 
       <div className="text-xs text-ink-muted">
         <p>
-          <strong>{t("poolShare", lang)}:</strong> Women {stats.pool.women}%, Rural {stats.pool.rural}%
+          <strong>{t("poolShare", lang)}:</strong> {x("poolLine", lang, { w: n(stats.pool.women), r: n(stats.pool.rural) })}
         </p>
       </div>
+    </div>
+  );
+}
+
+/** Page header for the fairness screen, in the reader's language. */
+export function BiasHeader({
+  jobId,
+  title,
+  employer,
+}: {
+  jobId: string;
+  title: string;
+  employer: string;
+}) {
+  const [lang] = useLang();
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="section-title">{title}</h1>
+        <p className="text-sm text-ink-light">{employer}</p>
+      </div>
+      <Link href={`/employer/jobs/${jobId}`} className="btn-secondary btn-sm">
+        <span className="inline-flex items-center gap-1">
+          <Icon name="chevron" size={14} className="rotate-180" />
+          {x("backToRankings", lang)}
+        </span>
+      </Link>
     </div>
   );
 }

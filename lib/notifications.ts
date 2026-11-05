@@ -46,7 +46,7 @@ export function notifySubscribers(job: Job) {
       newId(),
       sub.user_id,
       `New job: ${job.title}`,
-      `${job.employer_name}${job.location ? `, ${job.location}` : ""} — matches your skills`,
+      `${job.employer_name}${job.location ? `, ${job.location}` : ""}, matches your skills`,
       job.id,
       new Date().toISOString(),
     );
@@ -70,9 +70,13 @@ export function getNotifications(
   limit = 20,
 ): Notification[] {
   const db = getDb();
+  // Join the job so the screen can write the text in the reader's language
+  // instead of showing the English sentence that was stored.
   const rows = db
     .prepare(
-      "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+      `SELECT n.*, j.title AS job_title, j.employer_name AS job_employer, j.location AS job_location
+         FROM notifications n LEFT JOIN jobs j ON j.id = n.job_id
+        WHERE n.user_id = ? ORDER BY n.created_at DESC LIMIT ?`,
     )
     .all(userId, limit) as any[];
 
@@ -83,6 +87,10 @@ export function getNotifications(
     title: r.title,
     message: r.message,
     job_id: r.job_id || "",
+    link: r.link || "",
+    job_title: r.job_title || "",
+    job_employer: r.job_employer || "",
+    job_location: r.job_location || "",
     read: Boolean(r.read),
     created_at: r.created_at,
   }));

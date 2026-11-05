@@ -82,7 +82,7 @@ export default function VerifyList() {
             <div>
               <h4 className="font-medium text-sm">{job.title}</h4>
               <p className="text-xs text-ink-muted">
-                {job.employer_name} · {job.location || "—"} · {job.category}
+                {job.employer_name} · {job.location || "-"} · {job.category}
               </p>
               {job.verified && (
                 <span className="badge-moss mt-1 text-[10px]">

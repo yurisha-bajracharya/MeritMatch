@@ -3,10 +3,9 @@ import type { Lang } from "./types";
 const strings: Record<string, Record<Lang, string>> = {
   // -- App-wide --
   appName: { en: "MeritMatch", ne: "मेरिटम्याच" },
-  tagline: { en: "Nepal's merit-based hiring platform", ne: "नेपालको योग्यता-आधारित भर्ना प्लेटफर्म" },
   heroSub: {
-    en: "Fair hiring through anonymous work-sample tasks — no résumé, no network, just your skills.",
-    ne: "गुमनाम कार्य-नमूना कार्यहरू मार्फत निष्पक्ष भर्ना — बायोडाटा छैन, सिफारिस छैन, सीप मात्र।",
+    en: "Fair hiring through anonymous work-sample tasks, no résumé, no network, just your skills.",
+    ne: "गुमनाम कार्य-नमूना कार्यहरू मार्फत निष्पक्ष भर्ना, बायोडाटा छैन, सिफारिस छैन, सीप मात्र।",
   },
   getStarted: { en: "Get Started", ne: "सुरु गर्नुहोस्" },
   login: { en: "Log In", ne: "लग इन" },
@@ -57,7 +56,7 @@ const strings: Record<string, Record<Lang, string>> = {
     ne: "कुनै पनि अतलबी वा अनौपचारिक काम वर्णन गर्नुहोस् र हामी यसले प्रमाणित गर्ने सीपहरू खोज्नेछौं।",
   },
   yourSkills: { en: "Your Skills", ne: "तपाईंको सीपहरू" },
-  noSkillsYet: { en: "No skills mapped yet — try the Experience Mapper!", ne: "अहिलेसम्म सीप म्याप गरिएको छैन — अनुभव म्यापर प्रयोग गर्नुहोस्!" },
+  noSkillsYet: { en: "No skills mapped yet, try the Experience Mapper!", ne: "अहिलेसम्म सीप म्याप गरिएको छैन, अनुभव म्यापर प्रयोग गर्नुहोस्!" },
   subscriptions: { en: "Job Alerts", ne: "काम सूचना" },
   subscriptionsSub: { en: "Get notified when jobs matching your interests are posted.", ne: "तपाईंको चासोसँग मिल्ने कामहरू पोस्ट हुँदा सूचना पाउनुहोस्।" },
   noSubscriptions: { en: "No alerts set up yet.", ne: "अहिलेसम्म कुनै सूचना सेटअप गरिएको छैन।" },
@@ -71,8 +70,8 @@ const strings: Record<string, Record<Lang, string>> = {
   // -- Experience Mapper --
   experienceMapperTitle: { en: "Experience Mapper", ne: "अनुभव म्यापर" },
   experienceMapperDesc: {
-    en: "Describe what you did during any break — caregiving, farming, a family business, volunteering — and we'll map it to workplace skills employers are looking for.",
-    ne: "ब्रेकको समयमा तपाईंले के गर्नुभयो — हेरचाह, खेती, पारिवारिक व्यवसाय, स्वयंसेवा — वर्णन गर्नुहोस् र हामी यसलाई रोजगारदाताहरूले खोजिरहेका कार्यस्थल सीपहरूमा म्याप गर्नेछौं।",
+    en: "Describe what you did during any break, caregiving, farming, a family business, volunteering, and we'll map it to workplace skills employers are looking for.",
+    ne: "ब्रेकको समयमा तपाईंले के गर्नुभयो, हेरचाह, खेती, पारिवारिक व्यवसाय, स्वयंसेवा, वर्णन गर्नुहोस् र हामी यसलाई रोजगारदाताहरूले खोजिरहेका कार्यस्थल सीपहरूमा म्याप गर्नेछौं।",
   },
   describeExperience: { en: "Describe your experience…", ne: "आफ्नो अनुभव वर्णन गर्नुहोस्…" },
   mapSkills: { en: "Map My Skills", ne: "मेरो सीपहरू म्याप गर्नुहोस्" },
@@ -128,12 +127,12 @@ const strings: Record<string, Record<Lang, string>> = {
   viewOutcome: { en: "View Your Outcome", ne: "आफ्नो नतिजा हेर्नुहोस्" },
   sharedDevice: { en: "Shared phone?", ne: "साझा फोन?" },
   sharedDeviceHint: {
-    en: "Turn this on if others use this device — your answers won't be saved locally.",
-    ne: "यो अन्यले पनि प्रयोग गर्ने उपकरण हो भने यो खोल्नुहोस् — तपाईंको उत्तरहरू स्थानीय रूपमा सुरक्षित हुँदैनन्।",
+    en: "Turn this on if others use this device, your answers won't be saved locally.",
+    ne: "यो अन्यले पनि प्रयोग गर्ने उपकरण हो भने यो खोल्नुहोस्, तपाईंको उत्तरहरू स्थानीय रूपमा सुरक्षित हुँदैनन्।",
   },
 
   // -- Candidate details in task flow --
-  almostDone: { en: "Almost done — tell us a bit about yourself", ne: "लगभग सकियो — आफ्नो बारेमा थोरै बताउनुहोस्" },
+  almostDone: { en: "Almost done, tell us a bit about yourself", ne: "लगभग सकियो, आफ्नो बारेमा थोरै बताउनुहोस्" },
   detailsHint: {
     en: "This is used only for fairness statistics and to let you reveal your identity later if shortlisted. The employer sees none of it during scoring.",
     ne: "यो केवल निष्पक्षता तथ्याङ्कको लागि र छनौट भएमा पछि आफ्नो पहिचान देखाउन प्रयोग गरिन्छ। स्कोरिङमा रोजगारदाताले यो देख्दैन।",
@@ -229,11 +228,11 @@ const strings: Record<string, Record<Lang, string>> = {
   // -- Misc --
   howItWorks: { en: "How It Works", ne: "यसले कसरी काम गर्छ" },
   step1Title: { en: "Sign Up", ne: "साइन अप" },
-  step1Desc: { en: "Create your profile with basic info — no résumé needed.", ne: "आधारभूत जानकारीसहित प्रोफाइल बनाउनुहोस् — बायोडाटा चाहिँदैन।" },
+  step1Desc: { en: "Create your profile with basic info, no résumé needed.", ne: "आधारभूत जानकारीसहित प्रोफाइल बनाउनुहोस्, बायोडाटा चाहिँदैन।" },
   step2Title: { en: "Find Jobs", ne: "काम खोज्नुहोस्" },
   step2Desc: { en: "Browse jobs matched to your skills, or get notified automatically.", ne: "आफ्नो सीपसँग मिल्ने कामहरू खोज्नुहोस्, वा स्वचालित सूचना पाउनुहोस्।" },
   step3Title: { en: "Complete a Task", ne: "कार्य पूरा गर्नुहोस्" },
-  step3Desc: { en: "Do a short, anonymous work-sample — your identity stays hidden.", ne: "छोटो, गुमनाम कार्य-नमूना गर्नुहोस् — तपाईंको पहिचान लुकेको रहन्छ।" },
+  step3Desc: { en: "Do a short, anonymous work-sample, your identity stays hidden.", ne: "छोटो, गुमनाम कार्य-नमूना गर्नुहोस्, तपाईंको पहिचान लुकेको रहन्छ।" },
   step4Title: { en: "Get Ranked", ne: "रैंक पाउनुहोस्" },
   step4Desc: { en: "Your work is scored the same way for everyone. Share your identity only if you choose to.", ne: "सबैको काम उही तरिकाले जाँचिन्छ। तपाईंले चाहेमा मात्र पहिचान साझा गर्नुहोस्।" },
   forEmployers: { en: "For Employers", ne: "रोजगारदाताहरूका लागि" },

@@ -205,8 +205,8 @@ const hospitality: TaskTemplate = {
     {
       id: "h2",
       prompt: {
-        en: "You are working the morning shift alone. A delivery arrives, the phone rings, and a customer walks in — all at the same time. How do you handle it?",
-        ne: "तपाईं बिहानको शिफ्टमा एक्लै हुनुहुन्छ। डेलिभरी आउँछ, फोन बज्छ, र एक ग्राहक भित्र आउँछन् — सबै एकैपटक। कसरी सम्हाल्नुहुन्छ?",
+        en: "You are working the morning shift alone. A delivery arrives, the phone rings, and a customer walks in, all at the same time. How do you handle it?",
+        ne: "तपाईं बिहानको शिफ्टमा एक्लै हुनुहुन्छ। डेलिभरी आउँछ, फोन बज्छ, र एक ग्राहक भित्र आउँछन्, सबै एकैपटक। कसरी सम्हाल्नुहुन्छ?",
       },
     },
     {

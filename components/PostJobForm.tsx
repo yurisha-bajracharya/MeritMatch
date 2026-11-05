@@ -7,6 +7,9 @@ import { CitySelect } from "./CityPicker";
 import ScoringExplainer from "./ScoringExplainer";
 import { cityName } from "@/lib/places";
 import { DEFAULT_EVIDENCE } from "@/lib/templates";
+import { useLang } from "@/lib/useLang";
+import { x } from "@/lib/i18n-extra";
+
 import type { Category, Evidence, Lang, CustomQuestion } from "@/lib/types";
 import { CATEGORIES } from "@/lib/types";
 import { t } from "@/lib/i18n";
@@ -24,7 +27,7 @@ const CATEGORY_LABELS: Record<Category, Record<Lang, string>> = {
 };
 
 export default function PostJobForm() {
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useLang();
   const [title, setTitle] = useState("");
   const [employerName, setEmployerName] = useState("");
   const [city, setCity] = useState("");
@@ -107,7 +110,8 @@ export default function PostJobForm() {
         link: `${window.location.origin}/t/${data.id}`,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to post");
+      const m = err instanceof Error ? err.message : "Failed to post";
+      setError(/log in as an employer/i.test(m) ? x("errLoginEmployer", lang) : /choose a city/i.test(m) ? x("errChooseCity", lang) : m);
     } finally {
       setPosting(false);
     }
@@ -125,11 +129,11 @@ export default function PostJobForm() {
     return (
       <div className="card text-center animate-fade-in">
         <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-moss-light text-moss">
-          <Icon name="check-circle" size={30} label="Posted" />
+          <Icon name="check-circle" size={30} label={x("posted", lang)} />
         </div>
         <h3 className="section-title">{t("jobPosted", lang)}</h3>
         <p className="text-sm text-ink-light mt-2">
-          Share this link with candidates:
+          {x("shareLink", lang)}
         </p>
         <div className="mt-4 flex items-center gap-2 max-w-md mx-auto">
           <input className="input flex-1 text-xs" value={result.link} readOnly />
@@ -168,7 +172,7 @@ export default function PostJobForm() {
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Shop Assistant"
+            placeholder={x("phShopAssistant", lang)}
           />
         </div>
 
@@ -179,7 +183,7 @@ export default function PostJobForm() {
             required
             value={employerName}
             onChange={(e) => setEmployerName(e.target.value)}
-            placeholder="e.g. Himal Mart"
+            placeholder={x("phCompany", lang)}
           />
         </div>
 
@@ -239,7 +243,7 @@ export default function PostJobForm() {
             className="input"
             value={tags}
             onChange={(e) => setTags(e.target.value)}
-            placeholder="e.g. customer-service, numeracy"
+            placeholder={x("phTags", lang)}
           />
         </div>
 
@@ -339,7 +343,7 @@ export default function PostJobForm() {
         {customQuestions.map((q, i) => (
           <div key={q.id} className="p-4 rounded-lg bg-paper-dark space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-ink-muted">Question {i + 1}</span>
+              <span className="text-xs font-medium text-ink-muted">{x("questionN", lang, { n: i + 1 })}</span>
               <button
                 type="button"
                 onClick={() => removeQuestion(i)}

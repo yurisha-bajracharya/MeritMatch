@@ -2,7 +2,6 @@ import fs from "fs";
 import { NextResponse } from "next/server";
 import { getDb, newId } from "@/lib/db";
 import { tokenOpens } from "@/lib/access";
-import { getRanking } from "@/lib/shortlist";
 import {
   expiryFor,
   LIMITS,
@@ -81,10 +80,11 @@ export async function POST(req: Request) {
       if (seconds > LIMITS.maxVideoSeconds) {
         return fail("Video must be 90 seconds or shorter.", 400);
       }
-      const ranking = getRanking(sub.job_id);
-      const me = ranking?.entries.find((e) => e.submissionId === submissionId);
-      if (!me?.shortlisted) {
-        return fail("Video is requested only from shortlisted candidates.", 403);
+      const row = db
+        .prepare("SELECT shortlisted FROM submissions WHERE id = ?")
+        .get(submissionId) as { shortlisted: number } | undefined;
+      if (!row?.shortlisted) {
+        return fail("Video is requested only from candidates the employer has shortlisted.", 403);
       }
       const has = (
         db

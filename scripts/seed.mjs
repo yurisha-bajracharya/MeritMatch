@@ -119,6 +119,9 @@ addColumn("submissions", "mcq_score", "INTEGER");
 addColumn("submissions", "written_score", "INTEGER");
 addColumn("submissions", "access_token", "TEXT DEFAULT ''");
 addColumn("jobs", "evidence", "TEXT DEFAULT 'none'");
+addColumn("submissions", "shortlisted", "INTEGER DEFAULT 0");
+addColumn("submissions", "shortlisted_at", "TEXT DEFAULT ''");
+addColumn("notifications", "link", "TEXT DEFAULT ''");
 addColumn("users", "preferred_cities", "TEXT DEFAULT '[]'");
 db.exec(`
   CREATE TABLE IF NOT EXISTS media (

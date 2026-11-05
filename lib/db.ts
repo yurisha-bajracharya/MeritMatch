@@ -139,6 +139,12 @@ function migrate(db: Database.Database) {
   // their result, give consent and upload evidence without a login.
   addColumn(db, "submissions", "access_token", "TEXT DEFAULT ''");
 
+  // The employer's own decision to shortlist someone. The top-25% rule only
+  // SUGGESTS; this flag is what candidates see and what unlocks video.
+  addColumn(db, "submissions", "shortlisted", "INTEGER DEFAULT 0");
+  addColumn(db, "submissions", "shortlisted_at", "TEXT DEFAULT ''");
+  addColumn(db, "notifications", "link", "TEXT DEFAULT ''");
+
   // Photos / video proof-of-work requested by the employer.
   addColumn(db, "jobs", "evidence", "TEXT DEFAULT 'none'");
 

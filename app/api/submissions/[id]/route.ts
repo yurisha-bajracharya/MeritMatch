@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { tokenOpens } from "@/lib/access";
 import { getRanking, rowToJob, rowToSubmission } from "@/lib/shortlist";
+import { getTemplate } from "@/lib/templates";
 
 /**
  * The candidate's own result. Needs the secret token from their outcome link.
@@ -51,12 +52,16 @@ export async function GET(
     mcqTotal: sub.mcq?.total ?? null,
     reason: sub.reason,
     criteria: sub.criteria,
+    // Bilingual names for the scoring criteria, from the job's task template.
+    criteriaLabels: Object.fromEntries(
+      getTemplate(job.category).rubric.map((c) => [c.id, c.label]),
+    ),
     tags: sub.tags,
     scoredBy: sub.scored_by,
     consent: sub.consent,
     rank: me?.rank ?? null,
     applicants: ranking?.entries.length ?? null,
-    shortlisted: me?.shortlisted ?? false,
+    shortlisted: sub.shortlisted === true,
     media,
     limits: { maxPhotos: 4, maxVideoSeconds: 90, maxVideoMb: 30 },
   });

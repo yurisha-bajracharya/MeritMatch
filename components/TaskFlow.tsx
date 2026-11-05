@@ -8,8 +8,10 @@ import McqStep from "./McqStep";
 import Icon from "./Icon";
 import ScoringExplainer from "./ScoringExplainer";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/device";
+import { useLang } from "@/lib/useLang";
 import type { Lang, InputMode, Scenario, Criterion, CustomQuestion, PublicMcq, Evidence } from "@/lib/types";
 import { t, localizeDigits } from "@/lib/i18n";
+import { x } from "@/lib/i18n-extra";
 
 type Stage = "intro" | "mcq" | "task" | "details" | "submitting" | "done";
 
@@ -39,7 +41,7 @@ export default function TaskFlow({
   mcq = [],
   evidence = "none",
 }: Props) {
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useLang();
   const [mode, setMode] = useState<InputMode>("text");
   const [stage, setStage] = useState<Stage>("intro");
   const [index, setIndex] = useState(0);
@@ -175,7 +177,7 @@ export default function TaskFlow({
       clearDraft(jobId);
       setStage("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Submission failed");
+      setError(err instanceof Error && /already submitted/i.test(err.message) ? x("errAlready", lang) : err instanceof Error ? err.message : "Submission failed");
       setStage("details");
     }
   };
@@ -441,7 +443,7 @@ export default function TaskFlow({
   return (
     <div className="card text-center animate-fade-in">
       <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-moss-light text-moss">
-        <Icon name="check-circle" size={30} label="Done" />
+        <Icon name="check-circle" size={30} label={x("done", lang)} />
       </div>
       <h3 className="section-title">{t("taskDone", lang)}</h3>
       <p className="text-sm text-ink-light mt-2 max-w-md mx-auto">

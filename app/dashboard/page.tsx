@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import JobCard from "@/components/JobCard";
+import { useLang } from "@/lib/useLang";
 import type { Job, Lang, User } from "@/lib/types";
 import { t } from "@/lib/i18n";
+import { x } from "@/lib/i18n-extra";
 import { TAG_LABELS, matchJobs } from "@/lib/tags";
 import Link from "next/link";
 import Icon from "@/components/Icon";
@@ -45,7 +47,7 @@ const L = {
 const s = (k: keyof typeof L, lang: Lang) => L[k][lang];
 
 export default function DashboardPage() {
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useLang();
   const [user, setUser] = useState<User | null>(null);
   const [matchingJobs, setMatchingJobs] = useState<Job[]>([]);
   const [subscriptions, setSubs] = useState<SubData[]>([]);
@@ -151,7 +153,7 @@ export default function DashboardPage() {
               {t("candidateDashTitle", lang)}
             </h1>
             <p className="text-sm text-ink-light mt-1">
-              Welcome back, {user?.name || "there"}!
+              {x("welcomeBack", lang, { name: user?.name || x("there", lang) })}
             </p>
           </div>
           <button
@@ -287,7 +289,7 @@ export default function DashboardPage() {
                     onClick={() => deleteSub(sub.id)}
                     className="text-xs text-danger hover:underline ml-3"
                   >
-                    <Icon name="x" size={14} label="Remove" />
+                    <Icon name="x" size={14} label={x("remove", lang)} />
                   </button>
                 </div>
               ))}

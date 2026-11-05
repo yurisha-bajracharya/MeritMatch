@@ -3,37 +3,37 @@
 /* ============================================================
    MeritMatch dark theme
    Palette lifted from the logo: #191824 ground, coral circle.
-   Token NAMES are unchanged from the light theme on purpose —
+   Token NAMES are unchanged from the light theme on purpose -
    every component keeps working, only the values flip.
    ============================================================ */
 
 @theme {
   /* --- surfaces, darkest to lightest --- */
-  --color-sunken: #f4f4f7;      /* inputs, wells, progress tracks */
-  --color-paper: #ffffff;       /* page background */
-  --color-surface: #ffffff;     /* cards, nav, dropdowns */
-  --color-paper-dark: #f4f4f7;  /* blocks nested inside a card */
-  --color-rule: #e4e3ec;        /* borders & dividers */
+  --color-sunken: #13121c;      /* inputs, wells, progress tracks */
+  --color-paper: #191824;       /* page background (straight from the logo) */
+  --color-surface: #201f2e;     /* cards, nav, dropdowns */
+  --color-paper-dark: #272636;  /* blocks nested inside a card */
+  --color-rule: #302e42;        /* borders & dividers */
 
   /* --- text --- */
-  --color-ink: #191824;
-  --color-ink-light: #4b4a5e;
-  --color-ink-muted: #75738a;
+  --color-ink: #f3f1f8;
+  --color-ink-light: #b7b4c6;
+  --color-ink-muted: #8d8aa0;
 
   /* --- brand coral --- */
   --color-brand: #fd5e6e;
   --color-brand-hover: #ff7b88;
   --color-brand-dark: #e8384f;
-  --color-brand-light: #ffe9ec; /* light coral tint, for badge/alert grounds */
-  --color-brand-tint: #e8384f;  /* coral, for accent text */
+  --color-brand-light: #36202b; /* dark coral tint, for badge/alert grounds */
+  --color-brand-tint: #ffa3ad;  /* light coral, for accent text */
 
   /* --- supporting --- */
-  --color-ochre: #a85f00;
-  --color-ochre-light: #fff1dc;
-  --color-moss: #1b7f52;
-  --color-moss-light: #e1f5ea;
-  --color-danger: #e03247;
-  --color-danger-light: #ffe9ec;
+  --color-ochre: #ffb45c;
+  --color-ochre-light: #3a2b18;
+  --color-moss: #46dd9b;
+  --color-moss-light: #15301f;
+  --color-danger: #ff6b78;
+  --color-danger-light: #3a1c24;
 
   --font-sans: "IBM Plex Sans", "IBM Plex Sans Devanagari", system-ui, sans-serif;
   --font-display: "Fraunces", Georgia, serif;
@@ -41,7 +41,8 @@
 
 @layer base {
   html {
-    color-scheme: light;
+    /* makes native scrollbars, date pickers and autofill render dark */
+    color-scheme: dark;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -53,7 +54,7 @@
   }
 
   ::selection {
-    @apply bg-brand text-white;
+    @apply bg-brand text-paper;
   }
 
   /* Chrome autofill otherwise paints a bright yellow box */
@@ -78,7 +79,7 @@
     border: 2px solid var(--color-paper);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #c9c7d6;
+    background: #3d3a53;
   }
 }
 
@@ -87,7 +88,7 @@
 
    These MUST be @utility, not .btn/.card/.badge inside
    @layer components. Tailwind v4 can only `@apply` a class that is
-   a registered utility — applying a plain component class throws
+   a registered utility, applying a plain component class throws
    "Cannot apply unknown utility class `btn`" and the whole
    stylesheet fails to build.
    ------------------------------------------------------------ */
@@ -112,8 +113,10 @@
   }
 
   /* ---------- buttons ---------- */
+  /* Dark ink on coral: white on this coral is only ~2.9:1, ink is ~5.4:1 */
   .btn-primary {
-    @apply btn bg-brand-dark text-white hover:bg-brand;
+    @apply btn bg-brand text-paper hover:bg-brand-hover;
+    box-shadow: 0 1px 0 0 rgb(255 255 255 / 0.12) inset;
   }
 
   .btn-secondary {
@@ -125,7 +128,7 @@
   }
 
   .btn-danger {
-    @apply btn bg-danger text-white hover:brightness-110;
+    @apply btn bg-danger text-paper hover:brightness-110;
   }
 
   .btn-sm {
@@ -198,7 +201,7 @@
   }
   .toggle-dot {
     @apply inline-block h-4 w-4 rounded-full bg-white transition-transform;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
   }
   .toggle-dot-on {
     @apply translate-x-6;
@@ -216,7 +219,7 @@
   }
   .tab-active {
     @apply bg-surface text-ink;
-    box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
   }
 
   /* ---------- skeleton ---------- */
@@ -229,9 +232,9 @@
    Brand flourishes
    ============================================================ */
 
-/* Coral gradient as text — for hero headlines and numbers */
+/* Coral gradient as text, for hero headlines and numbers */
 .text-gradient {
-  background-image: linear-gradient(135deg, #fd5e6e 0%, #f03b50 60%, #d92b45 100%);
+  background-image: linear-gradient(135deg, #ffa3ad 0%, #fd5e6e 45%, #f03b50 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -248,19 +251,19 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(42rem 28rem at 78% -10%, rgb(253 94 110 / 0.14), transparent 60%),
-    radial-gradient(30rem 22rem at 8% 10%, rgb(255 180 92 / 0.10), transparent 65%);
+    radial-gradient(42rem 28rem at 78% -10%, rgb(253 94 110 / 0.20), transparent 60%),
+    radial-gradient(30rem 22rem at 8% 10%, rgb(255 180 92 / 0.07), transparent 65%);
 }
 
-/* Hairline grid, barely there — gives large dark areas some structure */
+/* Hairline grid, barely there, gives large dark areas some structure */
 .grid-field::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(to right, rgb(25 24 36 / 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(25 24 36 / 0.05) 1px, transparent 1px);
+    linear-gradient(to right, rgb(255 255 255 / 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.03) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 40%, transparent 100%);
 }

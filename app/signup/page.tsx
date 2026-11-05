@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Segmented from "@/components/Segmented";
 import { CityPicker } from "@/components/CityPicker";
+import { useLang } from "@/lib/useLang";
 import type { Lang, Role } from "@/lib/types";
 import { t } from "@/lib/i18n";
 
@@ -15,7 +16,7 @@ function SignupPageInner() {
   const searchParams = useSearchParams();
   const isLogin = searchParams.get("mode") === "login";
 
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useLang();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
