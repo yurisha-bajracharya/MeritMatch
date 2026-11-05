@@ -1,9 +1,9 @@
 /**
- * MeritMatch logo, two overlapping circles.
+ * MeritMatch logo — two overlapping circles.
  *
  * The outlined circle (ruled with wavy strands) is the candidate: textured,
  * individual, not yet filled in. The solid coral circle is the opportunity.
- * They overlap, that overlap is the match.
+ * They overlap — that overlap is the match.
  *
  * Pure SVG, no hooks, so it works in both server and client components.
  * The <defs> ids are shared across instances on purpose: every instance
@@ -51,7 +51,7 @@ export function LogoMark({
       {/* opportunity */}
       <circle cx="263" cy="150" r="128" fill="url(#mmGrad)" />
 
-      {/* candidate, wavy strands, clipped to the outlined circle */}
+      {/* candidate — wavy strands, clipped to the outlined circle */}
       <g clipPath="url(#mmClip)">
         <g
           transform="rotate(-16 134 150)"
@@ -85,7 +85,7 @@ export default function Logo({
 }) {
   return (
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
-      <LogoMark size={size} className="text-white shrink-0" />
+      <LogoMark size={size} className="text-ink shrink-0" />
       {showText && (
         <span className="font-display font-bold tracking-tight text-ink">
           MeritMatch

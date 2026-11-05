@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useLang } from "@/lib/useLang";
 import type { User } from "@/lib/types";
 import type { Lang } from "@/lib/types";
 import { t } from "@/lib/i18n";
@@ -11,12 +10,8 @@ import { LogoMark } from "./Logo";
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
-  const [lang, setLang] = useLang();
+  const [lang, setLang] = useState<Lang>("en");
   const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    document.documentElement.lang = lang;
-  }, [lang]);
 
   useEffect(() => {
     fetch("/api/auth", {
@@ -48,29 +43,41 @@ export default function Navbar() {
           className="flex items-center gap-2.5 font-display text-lg font-bold text-ink tracking-tight
                      transition-opacity hover:opacity-80"
         >
-          <LogoMark size={26} className="text-black shrink-0" />
+          <LogoMark size={26} className="text-ink shrink-0" />
           MeritMatch
         </Link>
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-4">
-          <Link href="/jobs" className="text-sm text-ink-light hover:text-ink transition-colors">
+          <Link
+            href="/jobs"
+            className="text-sm text-ink-light hover:text-ink transition-colors"
+          >
             {t("jobs", lang)}
           </Link>
 
           {user?.role === "candidate" && (
             <>
-              <Link href="/dashboard" className="text-sm text-ink-light hover:text-ink transition-colors">
+              <Link
+                href="/dashboard"
+                className="text-sm text-ink-light hover:text-ink transition-colors"
+              >
                 {t("dashboard", lang)}
               </Link>
-              <Link href="/experience-mapper" className="text-sm text-ink-light hover:text-ink transition-colors">
+              <Link
+                href="/experience-mapper"
+                className="text-sm text-ink-light hover:text-ink transition-colors"
+              >
                 {t("experienceMapper", lang)}
               </Link>
             </>
           )}
 
           {user?.role === "employer" && (
-            <Link href="/employer/post" className="text-sm text-ink-light hover:text-ink transition-colors">
+            <Link
+              href="/employer/post"
+              className="text-sm text-ink-light hover:text-ink transition-colors"
+            >
               {t("postJob", lang)}
             </Link>
           )}
@@ -93,7 +100,9 @@ export default function Navbar() {
                 <span className="w-7 h-7 rounded-full bg-brand-light text-brand border border-brand/25 flex items-center justify-center text-xs font-bold">
                   {user.name?.[0]?.toUpperCase() || "?"}
                 </span>
-                <span className="hidden sm:inline">{user.name || user.phone}</span>
+                <span className="hidden sm:inline">
+                  {user.name || user.phone}
+                </span>
               </button>
               {menuOpen && (
                 <div className="absolute right-0 top-10 bg-surface border border-rule rounded-lg shadow-xl shadow-black/40 py-1 min-w-[140px] animate-fade-in">
@@ -123,7 +132,14 @@ export default function Navbar() {
           className="md:hidden p-2 text-ink-light"
           onClick={() => setMenuOpen(!menuOpen)}
         >
-          <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <svg
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
             {menuOpen ? (
               <path d="M6 18L18 6M6 6l12 12" />
             ) : (
@@ -137,21 +153,37 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden border-t border-rule bg-surface animate-fade-in">
           <div className="container-main py-3 flex flex-col gap-2">
-            <Link href="/jobs" className="py-2 text-sm text-ink-light" onClick={() => setMenuOpen(false)}>
+            <Link
+              href="/jobs"
+              className="py-2 text-sm text-ink-light"
+              onClick={() => setMenuOpen(false)}
+            >
               {t("jobs", lang)}
             </Link>
             {user?.role === "candidate" && (
               <>
-                <Link href="/dashboard" className="py-2 text-sm text-ink-light" onClick={() => setMenuOpen(false)}>
+                <Link
+                  href="/dashboard"
+                  className="py-2 text-sm text-ink-light"
+                  onClick={() => setMenuOpen(false)}
+                >
                   {t("dashboard", lang)}
                 </Link>
-                <Link href="/experience-mapper" className="py-2 text-sm text-ink-light" onClick={() => setMenuOpen(false)}>
+                <Link
+                  href="/experience-mapper"
+                  className="py-2 text-sm text-ink-light"
+                  onClick={() => setMenuOpen(false)}
+                >
                   {t("experienceMapper", lang)}
                 </Link>
               </>
             )}
             {user?.role === "employer" && (
-              <Link href="/employer/post" className="py-2 text-sm text-ink-light" onClick={() => setMenuOpen(false)}>
+              <Link
+                href="/employer/post"
+                className="py-2 text-sm text-ink-light"
+                onClick={() => setMenuOpen(false)}
+              >
                 {t("postJob", lang)}
               </Link>
             )}
@@ -162,15 +194,26 @@ export default function Navbar() {
               {t("langToggle", lang)}
             </button>
             {user ? (
-              <button onClick={logout} className="py-2 text-sm text-danger text-left">
+              <button
+                onClick={logout}
+                className="py-2 text-sm text-danger text-left"
+              >
                 {t("logout", lang)}
               </button>
             ) : (
               <div className="flex gap-2 pt-2">
-                <Link href="/signup?mode=login" className="btn-ghost btn-sm" onClick={() => setMenuOpen(false)}>
+                <Link
+                  href="/signup?mode=login"
+                  className="btn-ghost btn-sm"
+                  onClick={() => setMenuOpen(false)}
+                >
                   {t("login", lang)}
                 </Link>
-                <Link href="/signup" className="btn-primary btn-sm" onClick={() => setMenuOpen(false)}>
+                <Link
+                  href="/signup"
+                  className="btn-primary btn-sm"
+                  onClick={() => setMenuOpen(false)}
+                >
                   {t("signUp", lang)}
                 </Link>
               </div>

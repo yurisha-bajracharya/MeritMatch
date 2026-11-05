@@ -10,14 +10,21 @@ import { t } from "@/lib/i18n";
 import { IconTile, type IconName } from "@/components/Icon";
 import ScoringExplainer from "@/components/ScoringExplainer";
 
-const FEATURES: { key: "fairHiring" | "skillFirst" | "accessibility"; icon: IconName }[] = [
+const FEATURES: {
+  key: "fairHiring" | "skillFirst" | "accessibility";
+  icon: IconName;
+}[] = [
   { key: "fairHiring", icon: "scale" },
   { key: "skillFirst", icon: "target" },
   { key: "accessibility", icon: "phone" },
 ];
 
 /** What an employer actually gets. Each line maps to something the app does. */
-const EMPLOYER_GAINS: { icon: IconName; title: Record<Lang, string>; body: Record<Lang, string> }[] = [
+const EMPLOYER_GAINS: {
+  icon: IconName;
+  title: Record<Lang, string>;
+  body: Record<Lang, string>;
+}[] = [
   {
     icon: "list-check",
     title: { en: "Compare like with like", ne: "बराबरीको तुलना" },
@@ -99,10 +106,16 @@ export default function Home() {
                 {t("heroSub", lang)}
               </p>
               <div className="flex flex-wrap gap-3 mt-9">
-                <Link href="/signup" className="btn-primary text-base px-8 py-3">
+                <Link
+                  href="/signup"
+                  className="btn-primary text-base px-8 py-3"
+                >
                   {t("getStarted", lang)}
                 </Link>
-                <Link href="/jobs" className="btn-secondary text-base px-8 py-3">
+                <Link
+                  href="/jobs"
+                  className="btn-secondary text-base px-8 py-3"
+                >
                   {t("browseAll", lang)}
                 </Link>
               </div>
@@ -124,9 +137,7 @@ export default function Home() {
               <div className="mb-3 flex justify-center">
                 <IconTile name={f.icon} size={22} />
               </div>
-              <h3 className="font-semibold text-ink">
-                {t(f.key, lang)}
-              </h3>
+              <h3 className="font-semibold text-ink">{t(f.key, lang)}</h3>
               <p className="text-sm text-ink-light mt-2">
                 {t(`${f.key}Desc`, lang)}
               </p>
@@ -185,7 +196,11 @@ export default function Home() {
             audience="public"
             aiScoring
             evidence="all"
-            title={lang === "ne" ? "कसरी अंक दिइन्छ र AI कहाँ प्रयोग हुन्छ" : "How we score, and where AI is used"}
+            title={
+              lang === "ne"
+                ? "कसरी अंक दिइन्छ र AI कहाँ प्रयोग हुन्छ"
+                : "How we score, and where AI is used"
+            }
           />
         </div>
       </section>
@@ -209,8 +224,8 @@ export default function Home() {
       <footer className="border-t border-rule bg-surface">
         <div className="container-main py-8 flex items-center justify-between text-xs text-ink-muted">
           <span className="flex items-center gap-2">
-            <LogoMark size={16} className="text-black" />
-            © {new Date().getFullYear()} MeritMatch · Nepal
+            <LogoMark size={16} className="text-black" />©{" "}
+            {new Date().getFullYear()} MeritMatch · Nepal
           </span>
           <button
             onClick={() => setLang(lang === "en" ? "ne" : "en")}
