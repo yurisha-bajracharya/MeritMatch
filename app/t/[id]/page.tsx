@@ -58,6 +58,8 @@ export default function TaskPage() {
           rubric={job.template?.rubric ?? []}
           customQuestions={job.custom_questions ?? []}
           aiScoring={job.ai_scoring}
+          mcq={job.template?.mcq ?? []}
+          evidence={job.evidence ?? "none"}
         />
       </div>
     </>

@@ -2,6 +2,11 @@ import { getRanking } from "@/lib/shortlist";
 import { notFound } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
+import Icon from "@/components/Icon";
+import ScoringExplainer from "@/components/ScoringExplainer";
+import EvidenceReview from "@/components/EvidenceReview";
+import { getSession } from "@/lib/auth";
+import { MCQ_WEIGHT } from "@/lib/mcq";
 
 export default async function EmployerJobPage({
   params,
@@ -13,6 +18,16 @@ export default async function EmployerJobPage({
   if (!result) notFound();
 
   const { job, entries } = result;
+
+  // Photos, video and the rating form are for the job's own employer only.
+  const session = await getSession();
+  const isOwner = session?.role === "employer" && session.userId === job.employer_id;
+  const fitLabel = {
+    preferred: "Wants this city",
+    anywhere: "Open to anywhere",
+    elsewhere: "Prefers another city",
+    unknown: "",
+  } as const;
 
   return (
     <>
@@ -67,6 +82,30 @@ export default async function EmployerJobPage({
                   </div>
                 </div>
 
+                {/* Where the number came from, and the city signal */}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                  {entry.mcqTotal ? (
+                    <span className="badge-muted">
+                      Choices {entry.mcqCorrect}/{entry.mcqTotal} ({Math.round(MCQ_WEIGHT * 100)}%)
+                    </span>
+                  ) : null}
+                  {entry.writtenScore !== null && (
+                    <span className="badge-muted">
+                      Written {entry.writtenScore}% ({100 - Math.round(MCQ_WEIGHT * 100)}%)
+                    </span>
+                  )}
+                  {entry.fit !== "unknown" && (
+                    <span
+                      className={`inline-flex items-center gap-1 ${
+                        entry.fit === "elsewhere" ? "badge-ochre" : "badge-moss"
+                      }`}
+                    >
+                      <Icon name="pin" size={11} />
+                      {fitLabel[entry.fit]}
+                    </span>
+                  )}
+                </div>
+
                 <p className="text-xs text-ink-muted mt-2">{entry.reason}</p>
 
                 {/* Integrity notes: advisory, never affect rank */}
@@ -78,7 +117,7 @@ export default async function EmployerJobPage({
                     <ul className="mt-1 space-y-0.5">
                       {entry.flags.map((f, i) => (
                         <li key={i} className="text-xs text-ink-light">
-                          • {f.note}
+                          {f.note}
                         </li>
                       ))}
                     </ul>
@@ -120,6 +159,21 @@ export default async function EmployerJobPage({
                   </div>
                 )}
 
+                {/* Photos / video + human rating (owner only) */}
+                {isOwner && (
+                  <EvidenceReview
+                    submissionId={entry.submissionId}
+                    media={entry.media}
+                    reviews={entry.reviews}
+                  />
+                )}
+                {!isOwner && entry.media.length > 0 && (
+                  <p className="mt-3 flex items-center gap-1.5 text-[11px] text-ink-muted">
+                    <Icon name="lock" size={12} />
+                    Photos and video are private to the employer who posted this job.
+                  </p>
+                )}
+
                 {/* Contact info (if consent given) */}
                 {entry.consent && entry.contact ? (
                   <div className="mt-3 p-2 rounded bg-moss-light text-xs text-moss">
@@ -135,6 +189,13 @@ export default async function EmployerJobPage({
             ))}
           </div>
         )}
+
+        <ScoringExplainer
+          audience="employer"
+          aiScoring={job.ai_scoring}
+          evidence={job.evidence}
+          title="How these scores were produced"
+        />
       </div>
     </>
   );

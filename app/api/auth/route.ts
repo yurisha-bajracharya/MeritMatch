@@ -44,6 +44,7 @@ export async function POST(req: Request) {
           region: row.region || "",
           skills: JSON.parse(row.skills || "[]"),
           proven_skills: proven,
+          preferred_cities: JSON.parse(row.preferred_cities || "[]"),
           experience_text: row.experience_text || "",
           created_at: row.created_at,
         },
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
     }
 
     // Login or signup
-    const { name, phone, email, role, gender, region, skills, experience_text } = body;
+    const { name, phone, email, role, gender, region, skills, preferred_cities, experience_text } = body;
     if (!phone || !role) {
       return NextResponse.json({ error: "Phone and role are required" }, { status: 400 });
     }
@@ -64,6 +65,7 @@ export async function POST(req: Request) {
       gender,
       region,
       skills,
+      preferred_cities,
       experience_text,
     });
 

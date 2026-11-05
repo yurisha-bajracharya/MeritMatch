@@ -6,6 +6,7 @@ export default function Stamp({
   size = 72,
 }: {
   ringText: string;
+  /** Text for the middle, or "check" to draw a tick mark instead of a character. */
   center: string;
   size?: number;
 }) {
@@ -34,17 +35,28 @@ export default function Stamp({
         </textPath>
       </text>
 
-      <text
-        x={r}
-        y={r}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={size * 0.22}
-        fontWeight="800"
-        fill="currentColor"
-      >
-        {center}
-      </text>
+      {center === "check" ? (
+        <path
+          d={`M ${r - size * 0.13} ${r + size * 0.01} l ${size * 0.09} ${size * 0.09} l ${size * 0.17} -${size * 0.18}`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={Math.max(2, size * 0.07)}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ) : (
+        <text
+          x={r}
+          y={r}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={size * 0.22}
+          fontWeight="800"
+          fill="currentColor"
+        >
+          {center}
+        </text>
+      )}
     </svg>
   );
 }

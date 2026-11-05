@@ -1,4 +1,5 @@
-import type { Category, TaskTemplate } from "./types";
+import { getPublicMcq } from "./mcq-bank";
+import type { Category, Evidence, TaskTemplate } from "./types";
 
 const retail: TaskTemplate = {
   category: "retail",
@@ -504,6 +505,69 @@ const itSupport: TaskTemplate = {
   ],
 };
 
+const tailoring: TaskTemplate = {
+  category: "tailoring",
+  name: { en: "Tailoring / crafts", ne: "सिलाइ / हस्तकला" },
+  durationMin: 15,
+  scenarios: [
+    {
+      id: "s1",
+      prompt: {
+        en: "A customer brings a wedding blouse that is too tight across the shoulders and wants it altered by Friday. What do you check and ask first, and what steps do you follow?",
+        ne: "एक ग्राहकले काँधमा साँघुरो भएको विवाहको चोली ल्याउँछिन् र शुक्रबारसम्म मिलाइदिन भन्छिन्। तपाईं पहिले के जाँच्नुहुन्छ र के सोध्नुहुन्छ, अनि कुन कुन चरण अपनाउनुहुन्छ?",
+      },
+    },
+    {
+      id: "s2",
+      prompt: {
+        en: "A customer says the sleeves you stitched are 2 cm too short. You measured exactly what they asked for. How do you handle the conversation and what do you do next?",
+        ne: "एक ग्राहक भन्छन् तपाईंले सिलाएको बाहुला २ सेमि छोटो भयो। तपाईंले उनले भनेकै नाप लिनुभएको थियो। कुरा कसरी सम्हाल्नुहुन्छ र अब के गर्नुहुन्छ?",
+      },
+    },
+    {
+      id: "s3",
+      prompt: {
+        en: "A school wants 4 uniforms. Each needs 2.5 metres of cloth at Rs 180 per metre, and stitching costs Rs 450 per uniform. What is the total? Show your working and explain the price to the school.",
+        ne: "एउटा विद्यालयलाई ४ वटा पोशाक चाहिन्छ। प्रत्येकलाई २.५ मिटर कपडा चाहिन्छ, प्रतिमिटर रु. १८०, र सिलाइ प्रतिपोशाक रु. ४५०। जम्मा कति हुन्छ? हिसाब देखाउनुहोस् र विद्यालयलाई मूल्य कसरी बुझाउनुहुन्छ?",
+      },
+    },
+  ],
+  rubric: [
+    {
+      id: "technique",
+      label: { en: "Craft and technique", ne: "सिलाइको सीप" },
+      description: "Measures before cutting, checks seam allowance and fit, explains a sensible method for the alteration, and names the right tools or stitches.",
+      max: 10,
+      tags: ["tailoring", "accuracy"],
+      signals: ["measure", "seam", "allowance", "fit", "chalk", "pin", "stitch", "iron", "try on", "नाप", "सिलाइ", "फिटिङ", "टाँक", "इस्त्री"],
+    },
+    {
+      id: "customer",
+      label: { en: "Customer handling", ne: "ग्राहक सम्हालाइ" },
+      description: "Listens, apologises where fair, agrees a fix and a date, and keeps the relationship.",
+      max: 10,
+      tags: ["customer-service", "communication"],
+      signals: ["sorry", "understand", "apologi", "free", "fix", "date", "माफ", "बुझ", "मिलाइ", "मिति"],
+    },
+    {
+      id: "numeracy",
+      label: { en: "Costing and accuracy", ne: "लागत र शुद्धता" },
+      description: "Correct total of Rs 3,600 (2.5 m x Rs 180 x 4 = Rs 1,800 cloth, plus 4 x Rs 450 = Rs 1,800 stitching). Working shown and explained.",
+      max: 10,
+      tags: ["numeracy", "accuracy"],
+      signals: ["3600", "3,600", "1800", "1,800", "३६००", "३,६००", "१८००", "१,८००", "cloth", "कपडा"],
+    },
+    {
+      id: "clarity",
+      label: { en: "Clear communication", ne: "स्पष्ट सञ्चार" },
+      description: "Answers are specific, in a sensible order, and easy to follow.",
+      max: 10,
+      tags: ["communication"],
+      signals: [],
+    },
+  ],
+};
+
 export const TEMPLATES: Record<Category, TaskTemplate> = {
   retail,
   admin,
@@ -513,21 +577,31 @@ export const TEMPLATES: Record<Category, TaskTemplate> = {
   driving,
   construction,
   "it-support": itSupport,
+  tailoring,
 };
 
 export function getTemplate(category: Category): TaskTemplate {
   return TEMPLATES[category];
 }
 
-/** What candidates may see: no rubric or scorer internals. */
+/**
+ * What candidates may see: scenarios and the choice questions, but never the
+ * rubric, scorer internals or the answer key.
+ */
 export function toPublicTemplate({
   category,
   name,
   durationMin,
   scenarios,
 }: TaskTemplate) {
-  return { category, name, durationMin, scenarios };
+  return { category, name, durationMin, scenarios, mcq: getPublicMcq(category) };
 }
+
+/** Which proof-of-work an employer is offered by default for a trade. */
+export const DEFAULT_EVIDENCE: Partial<Record<Category, Evidence>> = {
+  tailoring: "photos",
+  teaching: "video",
+};
 
 export type PublicTemplate = ReturnType<typeof toPublicTemplate>;
 

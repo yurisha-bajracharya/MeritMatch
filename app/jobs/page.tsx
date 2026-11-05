@@ -1,5 +1,7 @@
 "use client";
 
+import { Suspense } from "react";
+
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
@@ -7,6 +9,8 @@ import JobCard from "@/components/JobCard";
 import type { Job, Lang, Category } from "@/lib/types";
 import { CATEGORIES } from "@/lib/types";
 import { t } from "@/lib/i18n";
+import Icon from "@/components/Icon";
+import { CITIES, PROVINCES, locationFit, resolveCity, type LocationFit } from "@/lib/places";
 import { matchJobs, resolveTag } from "@/lib/tags";
 
 const CATEGORY_LABELS: Record<string, Record<Lang, string>> = {
@@ -18,9 +22,12 @@ const CATEGORY_LABELS: Record<string, Record<Lang, string>> = {
   driving: { en: "Driving", ne: "ड्राइभिङ" },
   construction: { en: "Construction", ne: "निर्माण" },
   "it-support": { en: "IT", ne: "आईटी" },
+  tailoring: { en: "Tailoring", ne: "सिलाइ" },
 };
 
-export default function JobsPage() {
+const FIT_ORDER: Record<LocationFit, number> = { preferred: 0, anywhere: 1, unknown: 2, elsewhere: 3 };
+
+function JobsPageInner() {
   const searchParams = useSearchParams();
   const tagsParam = searchParams.get("tags");
   const highlightParam = searchParams.get("highlight");
@@ -30,6 +37,24 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<Category | "">("");
+  // "" = all cities, "mine" = only my preferred cities, otherwise a city id
+  const [cityFilter, setCityFilter] = useState("");
+  const [myCities, setMyCities] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "session" }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const cities: string[] = d?.user?.preferred_cities ?? [];
+        setMyCities(cities);
+        if (cities.length > 0) setCityFilter("mine");
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch("/api/jobs")
@@ -54,12 +79,22 @@ export default function JobsPage() {
   // Mapper and the notifier use, so both sides of the comparison are resolved.
   const base = useMemo(() => {
     if (filterTags.length === 0) return jobs;
-    return matchJobs(filterTags, jobs, [], jobs.length).map((m) => m.job);
-  }, [filterTags, jobs]);
+    return matchJobs(filterTags, jobs, [], jobs.length, { cities: myCities }).map((m) => m.job);
+  }, [filterTags, jobs, myCities]);
 
-  const filtered = base.filter((job) => {
+  const fitOf = (job: Job): LocationFit => locationFit(job.location, myCities);
+
+  const filtered = base
+    .filter((job) => {
     // Category filter
     if (category && job.category !== category) return false;
+
+    // City filter
+    if (cityFilter === "mine") {
+      if (fitOf(job) === "elsewhere") return false;
+    } else if (cityFilter && resolveCity(job.location) !== cityFilter) {
+      return false;
+    }
 
     // Search filter
     if (search.trim()) {
@@ -81,7 +116,9 @@ export default function JobsPage() {
     }
 
     return true;
-  });
+    })
+    // Stable sort: the viewer's own cities first, otherwise keep the existing order.
+    .sort((a, b) => (myCities.length ? FIT_ORDER[fitOf(a)] - FIT_ORDER[fitOf(b)] : 0));
 
   // Subscribe handler
   const [subbing, setSubbing] = useState(false);
@@ -160,6 +197,36 @@ export default function JobsPage() {
           </div>
         </div>
 
+        {/* City filter */}
+        <div className="flex items-center gap-2">
+          <Icon name="pin" size={16} className="text-ink-muted" />
+          <select
+            className="input !w-auto"
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+            aria-label={lang === "ne" ? "शहर" : "City"}
+          >
+            <option value="">{lang === "ne" ? "सबै शहर" : "All cities"}</option>
+            {myCities.length > 0 && (
+              <option value="mine">{lang === "ne" ? "मेरा शहरहरू" : "My cities"}</option>
+            )}
+            {Object.entries(PROVINCES).map(([pid, label]) => (
+              <optgroup key={pid} label={label[lang]}>
+                {CITIES.filter((c) => c.province === pid).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name[lang]}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          {myCities.length === 0 && (
+            <a href="/dashboard" className="text-xs text-brand hover:underline">
+              {lang === "ne" ? "आफ्नो शहर राख्नुहोस्" : "Set your cities"}
+            </a>
+          )}
+        </div>
+
         {/* Subscribe button */}
         {(tagsParam || search || category) && (
           <button
@@ -167,7 +234,14 @@ export default function JobsPage() {
             disabled={subbing || subbed}
             className={`btn-sm ${subbed ? "btn-secondary" : "btn-primary"}`}
           >
-            {subbed ? t("subscribed", lang) : t("subscribeTo", lang)}
+            {subbed ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Icon name="check" size={14} strokeWidth={2.5} />
+                {t("subscribed", lang)}
+              </span>
+            ) : (
+              t("subscribeTo", lang)
+            )}
           </button>
         )}
 
@@ -190,11 +264,21 @@ export default function JobsPage() {
                 job={job}
                 lang={lang}
                 highlight={job.id === highlightParam}
+                fit={myCities.length ? fitOf(job) : undefined}
               />
             ))}
           </div>
         )}
       </div>
     </>
+  );
+}
+
+/** useSearchParams must sit inside a Suspense boundary for `next build`. */
+export default function JobsPage() {
+  return (
+    <Suspense fallback={null}>
+      <JobsPageInner />
+    </Suspense>
   );
 }

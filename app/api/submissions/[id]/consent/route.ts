@@ -1,24 +1,26 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { tokenOpens } from "@/lib/access";
 
+/**
+ * Only the candidate who holds the secret outcome link can share or withdraw
+ * consent. Before, anyone who knew a submission id could flip it.
+ */
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const consent = Boolean(body.consent);
 
-  const db = getDb();
-  const sub = db.prepare("SELECT id FROM submissions WHERE id = ?").get(id) as any;
-  if (!sub) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!tokenOpens(id, String(body.k ?? ""))) {
+    return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }
 
-  db.prepare("UPDATE submissions SET consent = ? WHERE id = ?").run(
-    consent ? 1 : 0,
-    id,
-  );
+  getDb()
+    .prepare("UPDATE submissions SET consent = ? WHERE id = ?")
+    .run(consent ? 1 : 0, id);
 
   return NextResponse.json({ ok: true, consent });
 }

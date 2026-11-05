@@ -2,7 +2,17 @@ import { askLLM, redact } from "./scoring";
 import { findTagsInText, isKnownTag, TAG_LABELS } from "./tags";
 import type { Bilingual, Lang } from "./types";
 
-export type TranslatedSkill = { tag: string; evidence: string };
+/**
+ * source "named"    : the person wrote the skill (or an alias) themselves.
+ * source "inferred" : we guessed it from what they described doing.
+ * The screen labels these differently so nobody is told they "said" something
+ * they didn't.
+ */
+export type TranslatedSkill = {
+  tag: string;
+  evidence: string;
+  source: "named" | "inferred";
+};
 export type TranslateResult = {
   skills: TranslatedSkill[];
   by: "gemini" | "openai" | "fallback";
@@ -86,6 +96,14 @@ const RULES: Rule[] = [
     },
   },
   {
+    keywords: ["sew", "stitch", "tailor", "embroider", "knit", "weav", "handicraft", "सिलाइ", "सिलाउ", "बुनाइ", "कढाइ", "हस्तकला", "दर्जी"],
+    tags: ["tailoring", "accuracy", "customer-service"],
+    evidence: {
+      en: "Sewing and crafts need precise measuring and careful finishing, and usually working directly with customers.",
+      ne: "सिलाइ र हस्तकलामा सही नाप, होसियार टिपाइ र प्रायः ग्राहकसँग सिधै काम गर्नुपर्छ।",
+    },
+  },
+  {
     keywords: ["record", "register", "filing", "रजिस्टर", "फारम", "अभिलेख"],
     tags: ["accuracy", "data-entry", "organization"],
     evidence: {
@@ -97,29 +115,31 @@ const RULES: Rule[] = [
 
 export function fallbackTranslate(text: string, lang: Lang): TranslatedSkill[] {
   const lower = text.toLowerCase();
-  const found = new Map<string, string>();
+  const found = new Map<string, { evidence: string; source: "named" | "inferred" }>();
 
   // 1. Named skills first: "leadership", "software engineering", "sales"...
   //    The person told us the skill directly, so it should always show up
   //    and must not be crowded out by the life-situation rules below.
   for (const { tag, phrase } of findTagsInText(text)) {
-    found.set(
-      tag,
-      lang === "ne"
-        ? `तपाईंले "${phrase}" उल्लेख गर्नुभयो।`
-        : `You mentioned "${phrase}".`,
-    );
+    found.set(tag, {
+      evidence:
+        lang === "ne"
+          ? `तपाईंले "${phrase}" उल्लेख गर्नुभयो।`
+          : `You mentioned "${phrase}".`,
+      source: "named",
+    });
   }
 
   // 2. Life situations: shop, caring, farming... (inferred skills)
   for (const rule of RULES) {
     if (!rule.keywords.some((k) => lower.includes(k.toLowerCase()))) continue;
     for (const tag of rule.tags)
-      if (!found.has(tag)) found.set(tag, rule.evidence[lang]);
+      if (!found.has(tag))
+        found.set(tag, { evidence: rule.evidence[lang], source: "inferred" });
   }
   return [...found]
     .slice(0, MAX_SKILLS)
-    .map(([tag, evidence]) => ({ tag, evidence }));
+    .map(([tag, v]) => ({ tag, evidence: v.evidence, source: v.source }));
 }
 
 const systemPrompt = (lang: Lang) =>
@@ -135,7 +155,7 @@ Rules:
 
 Respond with JSON only: {"skills":[{"tag":"<tag>","evidence":"<sentence>"}]}`;
 
-function parse(raw: string): TranslatedSkill[] {
+function parse(raw: string, named: Set<string>): TranslatedSkill[] {
   const data = JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g, "").trim());
   const seen = new Set<string>();
   const skills: TranslatedSkill[] = [];
@@ -149,6 +169,7 @@ function parse(raw: string): TranslatedSkill[] {
         .replace(/\s+/g, " ")
         .trim()
         .slice(0, 220),
+      source: named.has(tag) ? "named" : "inferred",
     });
   }
   if (skills.length === 0) throw new Error("No valid skills");
@@ -163,11 +184,12 @@ export async function translateExperience(
   try {
     const out = await askLLM(systemPrompt(lang), JSON.stringify({ description: clean }));
     if (out) {
-      const skills = parse(out.text);
+      const namedNow = findTagsInText(clean);
+      const skills = parse(out.text, new Set(namedNow.map((n) => n.tag)));
       // A skill the person named outright ("leadership") is never dropped,
       // even if the model skipped it.
       const have = new Set(skills.map((s) => s.tag));
-      for (const { tag, phrase } of findTagsInText(clean)) {
+      for (const { tag, phrase } of namedNow) {
         if (have.has(tag) || skills.length >= MAX_SKILLS) continue;
         skills.push({
           tag,
@@ -175,6 +197,7 @@ export async function translateExperience(
             lang === "ne"
               ? `तपाईंले "${phrase}" उल्लेख गर्नुभयो।`
               : `You mentioned "${phrase}".`,
+          source: "named",
         });
       }
       return { skills, by: out.by };

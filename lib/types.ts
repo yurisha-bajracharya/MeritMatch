@@ -1,4 +1,4 @@
-export type Category = "retail" | "admin" | "office" | "hospitality" | "teaching" | "driving" | "construction" | "it-support";
+export type Category = "retail" | "admin" | "office" | "hospitality" | "teaching" | "driving" | "construction" | "it-support" | "tailoring";
 export type Lang = "en" | "ne";
 export type InputMode = "text" | "voice";
 export type Bilingual = Record<Lang, string>;
@@ -6,8 +6,33 @@ export type Role = "candidate" | "employer";
 
 export const CATEGORIES: Category[] = [
   "retail", "admin", "office", "hospitality",
-  "teaching", "driving", "construction", "it-support",
+  "teaching", "driving", "construction", "it-support", "tailoring",
 ];
+
+/**
+ * What proof-of-work an employer asks for besides the written task.
+ *  - photos: up to 4 photos of finished work (sewing, cooking, carpentry...)
+ *  - video:  one short demo video, requested ONLY from shortlisted candidates
+ *            (a face on camera would otherwise break anonymity)
+ */
+export type Evidence = "none" | "photos" | "video";
+
+/** One situational multiple-choice question. `correct` never leaves the server. */
+export type McqQuestion = {
+  id: string;
+  prompt: Bilingual;
+  options: Bilingual[];
+  correct: number;
+};
+
+/** What a candidate is allowed to see: no answer key. */
+export type PublicMcq = Omit<McqQuestion, "correct">;
+
+export type McqResult = {
+  answers: { id: string; choice: number }[];
+  correct: number;
+  total: number;
+};
 
 export type Criterion = {
   id: string;
@@ -47,6 +72,7 @@ export type Job = {
   custom_questions: CustomQuestion[];
   duration_min: number;
   ai_scoring: boolean;
+  evidence: Evidence;
   verified: boolean;
   verified_at: string;
   created_at: string;
@@ -67,6 +93,8 @@ export type User = {
   skills: string[];
   /** Skills they DEMONSTRATED: tags earned by scoring well on real work tasks. */
   proven_skills?: string[];
+  /** City ids from lib/places.ts, or "anywhere". Drives job ranking and alerts. */
+  preferred_cities?: string[];
   experience_text: string;
   created_at: string;
 };
@@ -111,6 +139,13 @@ export type Submission = {
   scored_by: "gemini" | "openai" | "fallback" | "demo";
   consent: boolean;
   flags?: IntegrityFlag[];
+  /**
+   * `total` is the combined score the ranking uses. These two show where it
+   * came from. Null on submissions made before choice questions existed.
+   */
+  mcq_score?: number | null;
+  written_score?: number | null;
+  mcq?: McqResult | null;
   created_at: string;
 };
 

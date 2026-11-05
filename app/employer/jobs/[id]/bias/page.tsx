@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { BiasDashboardWithStats } from "@/components/BiasDashboard";
 import Link from "next/link";
+import Icon from "@/components/Icon";
 
 export default async function BiasPage({
   params,
@@ -31,7 +32,10 @@ export default async function BiasPage({
             href={`/employer/jobs/${id}`}
             className="btn-secondary btn-sm"
           >
-            ← Back to Rankings
+            <span className="inline-flex items-center gap-1">
+              <Icon name="chevron" size={14} className="rotate-180" />
+              Back to Rankings
+            </span>
           </Link>
         </div>
 

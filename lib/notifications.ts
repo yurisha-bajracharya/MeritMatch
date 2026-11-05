@@ -1,5 +1,6 @@
 import { getDb, newId } from "./db";
-import { matchJobs } from "./tags";
+import { locationFit } from "./places";
+import { matchJobs, resolveTags } from "./tags";
 import type { Job, Notification } from "./types";
 import { rowToJob } from "./shortlist";
 
@@ -7,11 +8,28 @@ import { rowToJob } from "./shortlist";
 export function notifySubscribers(job: Job) {
   const db = getDb();
   const subs = db.prepare("SELECT * FROM subscriptions").all() as any[];
+  const cityCache = new Map<string, string[]>();
+  const citiesOf = (userId: string): string[] => {
+    if (!cityCache.has(userId)) {
+      const u = db
+        .prepare("SELECT preferred_cities FROM users WHERE id = ?")
+        .get(userId) as any;
+      cityCache.set(userId, JSON.parse(u?.preferred_cities || "[]"));
+    }
+    return cityCache.get(userId)!;
+  };
 
   for (const sub of subs) {
     const userTags: string[] = JSON.parse(sub.tags || "[]");
-    const matches = matchJobs(userTags, [job]);
-    if (matches.length === 0) continue;
+
+    // A subscription can be to skills, to a whole category, or both.
+    const byCategory = Boolean(sub.category) && sub.category === job.category;
+    const bySkill =
+      resolveTags(userTags).length > 0 && matchJobs(userTags, [job]).length > 0;
+    if (!byCategory && !bySkill) continue;
+
+    // Respect the cities they chose. Unknown / no preference still notifies.
+    if (locationFit(job.location, citiesOf(sub.user_id)) === "elsewhere") continue;
 
     // Check if notification already exists for this user+job
     const existing = db
@@ -91,8 +109,11 @@ export function getMatchingJobs(userId: string, limit = 20): Job[] {
   const db = getDb();
 
   // Get user skills
-  const user = db.prepare("SELECT skills FROM users WHERE id = ?").get(userId) as any;
+  const user = db
+    .prepare("SELECT skills, preferred_cities FROM users WHERE id = ?")
+    .get(userId) as any;
   const userSkills: string[] = user ? JSON.parse(user.skills || "[]") : [];
+  const cities: string[] = user ? JSON.parse(user.preferred_cities || "[]") : [];
 
   // Also get subscription tags
   const subRows = db
@@ -110,6 +131,6 @@ export function getMatchingJobs(userId: string, limit = 20): Job[] {
   }
 
   const allJobs = (db.prepare("SELECT * FROM jobs ORDER BY created_at DESC").all() as any[]).map(rowToJob);
-  const matches = matchJobs(allTags, allJobs, [], limit);
+  const matches = matchJobs(allTags, allJobs, [], limit, { cities });
   return matches.map((m) => m.job);
 }

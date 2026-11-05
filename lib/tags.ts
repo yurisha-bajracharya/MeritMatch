@@ -1,3 +1,4 @@
+import { FIT_WEIGHT, locationFit, type LocationFit } from "./places";
 import type { Bilingual, Job } from "./types";
 
 /** Every skill tag used by rubrics, jobs and the Experience Mapper. */
@@ -18,6 +19,7 @@ export const TAG_LABELS: Record<string, Bilingual> = {
   driving: { en: "Driving", ne: "सवारी चालक" },
   cooking: { en: "Cooking", ne: "खाना पकाउने" },
   teaching: { en: "Teaching", ne: "शिक्षण" },
+  tailoring: { en: "Tailoring / crafts", ne: "सिलाइ / हस्तकला" },
 };
 
 export const isKnownTag = (tag: string) => tag in TAG_LABELS;
@@ -95,6 +97,21 @@ const TAG_ALIASES: Record<string, string> = {
   tutoring: "teaching",
   "heavy lifting": "physical-fitness",
   "manual labour": "physical-fitness",
+  // Tailoring and crafts
+  tailor: "tailoring",
+  tailoring: "tailoring",
+  sewing: "tailoring",
+  stitching: "tailoring",
+  seamstress: "tailoring",
+  embroidery: "tailoring",
+  knitting: "tailoring",
+  weaving: "tailoring",
+  handicraft: "tailoring",
+  handicrafts: "tailoring",
+  "सिलाइ": "tailoring",
+  "बुनाइ": "tailoring",
+  "हस्तकला": "tailoring",
+  "दर्जी": "tailoring",
   // Nepali aliases
   "सफ्टवेयर": "digital-literacy",
   "प्रोग्रामिङ": "digital-literacy",
@@ -202,15 +219,37 @@ export function resolveTags(tags: string[]): string[] {
   return [...out];
 }
 
-export type JobMatch = { job: Job; shared: string[]; score: number };
+export type JobMatch = {
+  job: Job;
+  shared: string[];
+  /** 0..1. Skill overlap, nudged by how well the city fits. */
+  score: number;
+  /** How the job's city compares to the person's preferred cities. */
+  fit: LocationFit;
+};
 
-/** Ranks jobs by fuzzy skill-tag overlap; jobs with no match are dropped. */
+export type MatchOptions = {
+  /** City ids the person wants to work in (see lib/places.ts). */
+  cities?: string[];
+  /** Drop jobs in cities the person did not choose. */
+  onlyPreferred?: boolean;
+};
+
+/** Skill is what qualifies you; location only nudges the order. */
+const LOCATION_SHARE = 0.2;
+
+/**
+ * Ranks jobs by fuzzy skill-tag overlap; jobs with no skill match are dropped.
+ * Location never creates a match by itself, it only reorders matches.
+ */
 export function matchJobs(
   userTags: string[],
   jobs: Job[],
   excludeJobIds: string[] = [],
   limit = 20,
+  opts: MatchOptions = {},
 ): JobMatch[] {
+  const cities = opts.cities ?? [];
   // Resolve BOTH sides to canonical form, so a job tagged "sales" still
   // matches a candidate skill of "customer-service".
   const resolvedUser = new Set(resolveTags(userTags));
@@ -229,14 +268,18 @@ export function matchJobs(
       // and how much of the person's skill set the job uses.
       const jobCoverage = jobTags.size ? shared.length / jobTags.size : 0;
       const skillCoverage = shared.length / resolvedUser.size;
+      const skill = (jobCoverage + skillCoverage) / 2;
 
-      return {
-        job,
-        shared,
-        score: (jobCoverage + skillCoverage) / 2,
-      };
+      const fit = locationFit(job.location, cities);
+      const score =
+        cities.length === 0
+          ? skill
+          : (1 - LOCATION_SHARE) * skill + LOCATION_SHARE * FIT_WEIGHT[fit];
+
+      return { job, shared, score, fit };
     })
     .filter((m) => m.shared.length > 0)
+    .filter((m) => !(opts.onlyPreferred && m.fit === "elsewhere"))
     .sort(
       (a, b) =>
         b.score - a.score ||

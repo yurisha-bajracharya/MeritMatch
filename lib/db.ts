@@ -116,10 +116,70 @@ function hasColumn(db: Database.Database, table: string, column: string) {
   return cols.some((c) => c.name === column);
 }
 
-function migrate(db: Database.Database) {
-  if (!hasColumn(db, "submissions", "flags")) {
-    db.exec("ALTER TABLE submissions ADD COLUMN flags TEXT DEFAULT '[]'");
+function addColumn(
+  db: Database.Database,
+  table: string,
+  column: string,
+  definition: string,
+) {
+  if (!hasColumn(db, table, column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
+}
+
+function migrate(db: Database.Database) {
+  addColumn(db, "submissions", "flags", "TEXT DEFAULT '[]'");
+
+  // Choice questions: `total` stays the single number used for ranking.
+  addColumn(db, "submissions", "mcq", "TEXT DEFAULT ''");
+  addColumn(db, "submissions", "mcq_score", "INTEGER");
+  addColumn(db, "submissions", "written_score", "INTEGER");
+
+  // Secret only the candidate holds (in their outcome link). Lets them see
+  // their result, give consent and upload evidence without a login.
+  addColumn(db, "submissions", "access_token", "TEXT DEFAULT ''");
+
+  // Photos / video proof-of-work requested by the employer.
+  addColumn(db, "jobs", "evidence", "TEXT DEFAULT 'none'");
+
+  // City ids from lib/places.ts, JSON array.
+  addColumn(db, "users", "preferred_cities", "TEXT DEFAULT '[]'");
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS media (
+      id TEXT PRIMARY KEY,
+      submission_id TEXT NOT NULL,
+      kind TEXT NOT NULL CHECK(kind IN ('photo', 'video')),
+      mime TEXT NOT NULL,
+      bytes INTEGER NOT NULL,
+      path TEXT NOT NULL,
+      caption TEXT DEFAULT '',
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_media_submission ON media(submission_id);
+
+    -- Human ratings of photos/video. Kept apart from the AI/MCQ score on
+    -- purpose: they are never merged into the ranking total.
+    CREATE TABLE IF NOT EXISTS evidence_reviews (
+      submission_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      scores TEXT NOT NULL DEFAULT '{}',
+      note TEXT DEFAULT '',
+      reviewed_at TEXT NOT NULL,
+      PRIMARY KEY (submission_id, kind)
+    );
+
+    -- Which skills the Mapper suggested vs what the person kept. Tags only,
+    -- never the text they typed. Used to measure how accurate the Mapper is.
+    CREATE TABLE IF NOT EXISTS mapper_feedback (
+      id TEXT PRIMARY KEY,
+      suggested TEXT NOT NULL DEFAULT '[]',
+      kept TEXT NOT NULL DEFAULT '[]',
+      added TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL
+    );
+  `);
 }
 
 export const newId = () => crypto.randomUUID().slice(0, 8);

@@ -1,13 +1,16 @@
 "use client";
 
+import { Suspense } from "react";
+
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Segmented from "@/components/Segmented";
+import { CityPicker } from "@/components/CityPicker";
 import type { Lang, Role } from "@/lib/types";
 import { t } from "@/lib/i18n";
 
-export default function SignupPage() {
+function SignupPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isLogin = searchParams.get("mode") === "login";
@@ -19,6 +22,7 @@ export default function SignupPage() {
   const [role, setRole] = useState<Role>("candidate");
   const [gender, setGender] = useState("");
   const [region, setRegion] = useState("");
+  const [cities, setCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -38,6 +42,7 @@ export default function SignupPage() {
           role,
           gender: isLogin ? undefined : gender,
           region: isLogin ? undefined : region,
+          preferred_cities: isLogin || role !== "candidate" ? undefined : cities,
         }),
       });
 
@@ -150,6 +155,15 @@ export default function SignupPage() {
                       ]}
                     />
                   </div>
+
+                  {role === "candidate" && (
+                    <div>
+                      <label className="label">
+                        {lang === "ne" ? "कहाँ काम गर्न चाहनुहुन्छ? (वैकल्पिक)" : "Where do you want to work? (optional)"}
+                      </label>
+                      <CityPicker value={cities} onChange={setCities} lang={lang} />
+                    </div>
+                  )}
                 </>
               )}
 
@@ -208,5 +222,14 @@ export default function SignupPage() {
         </div>
       </div>
     </>
+  );
+}
+
+/** useSearchParams must sit inside a Suspense boundary for `next build`. */
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupPageInner />
+    </Suspense>
   );
 }

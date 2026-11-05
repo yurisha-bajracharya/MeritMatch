@@ -8,6 +8,9 @@ import type { Job, Lang, User } from "@/lib/types";
 import { t } from "@/lib/i18n";
 import { TAG_LABELS, matchJobs } from "@/lib/tags";
 import Link from "next/link";
+import Icon from "@/components/Icon";
+import { CityPicker } from "@/components/CityPicker";
+import { locationFit } from "@/lib/places";
 
 type SubData = { id: string; tags: string[]; category: string };
 
@@ -27,6 +30,13 @@ const L = {
     en: "Used to suggest jobs. Employers never see these, only your task results.",
     ne: "कामहरू सुझाउन प्रयोग हुन्छ। रोजगारदाताले यी देख्दैनन्, तपाईंको कार्य नतिजा मात्र देख्छन्।",
   },
+  where: { en: "Where you want to work", ne: "तपाईं कहाँ काम गर्न चाहनुहुन्छ" },
+  whereSub: {
+    en: "Jobs in these cities are shown first, and you only get alerts for jobs here.",
+    ne: "यी शहरका काम पहिले देखिन्छन्, र सूचना पनि यहीँका कामको मात्र आउँछ।",
+  },
+  save: { en: "Save", ne: "सुरक्षित गर्नुहोस्" },
+  saved: { en: "Saved", ne: "सुरक्षित भयो" },
   noMatch: {
     en: "No open jobs match your skills yet. Turn on alerts and we'll tell you when one appears.",
     ne: "तपाईंका सीपसँग मिल्ने खुला काम अहिले छैन। सूचना खोल्नुहोस्, आएपछि खबर गर्छौं।",
@@ -40,6 +50,9 @@ export default function DashboardPage() {
   const [matchingJobs, setMatchingJobs] = useState<Job[]>([]);
   const [subscriptions, setSubs] = useState<SubData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [allJobs, setAllJobs] = useState<Job[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [citiesSaved, setCitiesSaved] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -57,12 +70,14 @@ export default function DashboardPage() {
         return;
       }
       setUser(authData.user);
+      setCities(authData.user.preferred_cities || []);
 
       // Rank jobs with the same fuzzy matcher the jobs page, Experience
       // Mapper and notifier use, so "sales" still matches "customer-service".
       // Claimed and proven skills both count for SUGGESTING jobs; neither
       // affects how an employer ranks the candidate.
-      const allJobs: Job[] = Array.isArray(jobsData) ? jobsData : [];
+      const jobList: Job[] = Array.isArray(jobsData) ? jobsData : [];
+      setAllJobs(jobList);
       const userSkills: string[] = [
         ...new Set([
           ...(authData.user.skills || []),
@@ -73,9 +88,13 @@ export default function DashboardPage() {
       if (userSkills.length > 0) {
         // Only real matches. The old code padded with unrelated jobs when
         // nothing matched, which made the recommendations look broken.
-        setMatchingJobs(matchJobs(userSkills, allJobs, [], 6).map((m) => m.job));
+        setMatchingJobs(
+          matchJobs(userSkills, jobList, [], 6, {
+            cities: authData.user.preferred_cities || [],
+          }).map((m) => m.job),
+        );
       } else {
-        setMatchingJobs(allJobs.slice(0, 6));
+        setMatchingJobs(jobList.slice(0, 6));
       }
 
       setSubs(Array.isArray(subsData) ? subsData : []);
@@ -88,6 +107,22 @@ export default function DashboardPage() {
   const deleteSub = async (subId: string) => {
     await fetch(`/api/subscribe?id=${subId}`, { method: "DELETE" });
     setSubs((prev) => prev.filter((s) => s.id !== subId));
+  };
+
+  const saveCities = async () => {
+    const res = await fetch("/api/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ preferred_cities: cities }),
+    });
+    if (!res.ok || !user) return;
+    // Re-rank the suggestions with the new cities straight away.
+    const skills = [...new Set([...(user.skills || []), ...(user.proven_skills || [])])];
+    if (skills.length > 0) {
+      setMatchingJobs(matchJobs(skills, allJobs, [], 6, { cities }).map((m) => m.job));
+    }
+    setCitiesSaved(true);
+    setTimeout(() => setCitiesSaved(false), 2000);
   };
 
   if (loading) {
@@ -141,7 +176,10 @@ export default function DashboardPage() {
               <div className="flex flex-wrap gap-2">
                 {user.proven_skills.map((skill) => (
                   <span key={skill} className="badge-moss">
-                    ✓ {TAG_LABELS[skill]?.[lang] ?? skill}
+                    <span className="inline-flex items-center gap-1">
+                      <Icon name="check" size={12} strokeWidth={2.5} />
+                      {TAG_LABELS[skill]?.[lang] ?? skill}
+                    </span>
                   </span>
                 ))}
               </div>
@@ -158,9 +196,10 @@ export default function DashboardPage() {
               </div>
               <Link
                 href="/experience-mapper"
-                className="text-sm text-brand hover:underline"
+                className="text-sm text-brand hover:underline inline-flex items-center gap-0.5"
               >
-                {t("experienceMapper", lang)} →
+                {t("experienceMapper", lang)}
+                <Icon name="chevron" size={14} />
               </Link>
             </div>
             <p className="text-xs text-ink-muted mt-0.5 mb-3">
@@ -180,18 +219,37 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Preferred cities */}
+        <div className="card">
+          <div className="flex items-center gap-2">
+            <Icon name="pin" size={16} className="text-brand" />
+            <h2 className="font-semibold">{s("where", lang)}</h2>
+          </div>
+          <p className="text-xs text-ink-muted mt-0.5 mb-3">{s("whereSub", lang)}</p>
+          <CityPicker value={cities} onChange={setCities} lang={lang} />
+          <button onClick={saveCities} className="btn-primary btn-sm mt-4">
+            {citiesSaved ? s("saved", lang) : s("save", lang)}
+          </button>
+        </div>
+
         {/* Matching Jobs */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold">{t("matchingJobs", lang)}</h2>
-            <Link href="/jobs" className="text-sm text-brand hover:underline">
-              {t("browseAll", lang)} →
+            <Link href="/jobs" className="text-sm text-brand hover:underline inline-flex items-center gap-0.5">
+              {t("browseAll", lang)}
+              <Icon name="chevron" size={14} />
             </Link>
           </div>
           {matchingJobs.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 stagger-children">
               {matchingJobs.slice(0, 6).map((job) => (
-                <JobCard key={job.id} job={job} lang={lang} />
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  lang={lang}
+                  fit={cities.length ? locationFit(job.location, cities) : undefined}
+                />
               ))}
             </div>
           ) : (
@@ -229,7 +287,7 @@ export default function DashboardPage() {
                     onClick={() => deleteSub(sub.id)}
                     className="text-xs text-danger hover:underline ml-3"
                   >
-                    ✕
+                    <Icon name="x" size={14} label="Remove" />
                   </button>
                 </div>
               ))}

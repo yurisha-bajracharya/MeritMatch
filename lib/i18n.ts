@@ -94,7 +94,7 @@ const strings: Record<string, Record<Lang, string>> = {
   aiScored: { en: "AI-Scored", ne: "AI-स्कोर" },
   verified: { en: "Verified Employer", ne: "प्रमाणित रोजगारदाता" },
   subscribeTo: { en: "Get alerts for jobs like this", ne: "यस्तै कामहरूको लागि सूचना पाउनुहोस्" },
-  subscribed: { en: "✓ Subscribed", ne: "✓ सदस्यता लिइयो" },
+  subscribed: { en: "Subscribed", ne: "सदस्यता लिइयो" },
 
   // -- Categories --
   catRetail: { en: "Retail / Shop", ne: "पसल / रिटेल" },
@@ -105,6 +105,7 @@ const strings: Record<string, Record<Lang, string>> = {
   catDriving: { en: "Driving / Delivery", ne: "ड्राइभिङ / डेलिभरी" },
   catConstruction: { en: "Construction / Labour", ne: "निर्माण / श्रम" },
   catItSupport: { en: "IT / Tech Support", ne: "आईटी / टेक सपोर्ट" },
+  catTailoring: { en: "Tailoring / Crafts", ne: "सिलाइ / हस्तकला" },
 
   // -- Task Flow --
   taskIntro: {
@@ -148,7 +149,7 @@ const strings: Record<string, Record<Lang, string>> = {
   scoredBy: { en: "Scored by", ne: "स्कोर गर्ने" },
   rank: { en: "Rank", ne: "रैंक" },
   outOf: { en: "out of", ne: "मध्ये" },
-  shortlisted: { en: "Shortlisted ✓", ne: "छनौट भयो ✓" },
+  shortlisted: { en: "Shortlisted", ne: "छनौट भयो" },
   notShortlisted: { en: "Not shortlisted this time", ne: "यस पटक छनौट भएन" },
   consentLabel: {
     en: "Share my name and phone with the employer",
@@ -234,7 +235,7 @@ const strings: Record<string, Record<Lang, string>> = {
   step3Title: { en: "Complete a Task", ne: "कार्य पूरा गर्नुहोस्" },
   step3Desc: { en: "Do a short, anonymous work-sample — your identity stays hidden.", ne: "छोटो, गुमनाम कार्य-नमूना गर्नुहोस् — तपाईंको पहिचान लुकेको रहन्छ।" },
   step4Title: { en: "Get Ranked", ne: "रैंक पाउनुहोस्" },
-  step4Desc: { en: "AI scores your work fairly. Share your identity only if shortlisted.", ne: "AI ले तपाईंको कामलाई निष्पक्ष रूपमा स्कोर गर्छ। छनौट भएमा मात्र पहिचान साझा गर्नुहोस्।" },
+  step4Desc: { en: "Your work is scored the same way for everyone. Share your identity only if you choose to.", ne: "सबैको काम उही तरिकाले जाँचिन्छ। तपाईंले चाहेमा मात्र पहिचान साझा गर्नुहोस्।" },
   forEmployers: { en: "For Employers", ne: "रोजगारदाताहरूका लागि" },
   forEmployersDesc: {
     en: "Post a job with work-sample tasks and find the best candidates based on skill, not connections.",

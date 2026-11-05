@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import Segmented from "./Segmented";
-import type { Category, Lang, CustomQuestion } from "@/lib/types";
+import Icon from "./Icon";
+import { CitySelect } from "./CityPicker";
+import ScoringExplainer from "./ScoringExplainer";
+import { cityName } from "@/lib/places";
+import { DEFAULT_EVIDENCE } from "@/lib/templates";
+import type { Category, Evidence, Lang, CustomQuestion } from "@/lib/types";
 import { CATEGORIES } from "@/lib/types";
 import { t } from "@/lib/i18n";
 
@@ -15,13 +20,17 @@ const CATEGORY_LABELS: Record<Category, Record<Lang, string>> = {
   driving: { en: "Driving / Delivery", ne: "ड्राइभिङ / डेलिभरी" },
   construction: { en: "Construction / Labour", ne: "निर्माण / श्रम" },
   "it-support": { en: "IT / Tech Support", ne: "आईटी / टेक सपोर्ट" },
+  tailoring: { en: "Tailoring / Crafts", ne: "सिलाइ / हस्तकला" },
 };
 
 export default function PostJobForm() {
   const [lang, setLang] = useState<Lang>("en");
   const [title, setTitle] = useState("");
   const [employerName, setEmployerName] = useState("");
-  const [location, setLocation] = useState("");
+  const [city, setCity] = useState("");
+  const [area, setArea] = useState("");
+  const [evidence, setEvidence] = useState<Evidence>("none");
+  const [evidenceTouched, setEvidenceTouched] = useState(false);
   const [category, setCategory] = useState<Category>("retail");
   const [tags, setTags] = useState("");
   const [durationMin, setDurationMin] = useState(15);
@@ -63,6 +72,11 @@ export default function PostJobForm() {
         prompt: { en: q.en.trim(), ne: q.ne.trim() || q.en.trim() },
       }));
 
+    // "Thamel, Kathmandu": the area is for humans, the city is what we match on.
+    const location = city
+      ? [area.trim(), cityName(city, "en")].filter(Boolean).join(", ")
+      : "";
+
     const parsedTags = tags
       .split(",")
       .map((t) => t.trim().toLowerCase().replace(/\s+/g, "-"))
@@ -81,6 +95,7 @@ export default function PostJobForm() {
           custom_questions: cq,
           duration_min: durationMin,
           ai_scoring: aiScoring,
+          evidence,
         }),
       });
 
@@ -109,7 +124,9 @@ export default function PostJobForm() {
   if (result) {
     return (
       <div className="card text-center animate-fade-in">
-        <div className="text-4xl mb-4">🎉</div>
+        <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-moss-light text-moss">
+          <Icon name="check-circle" size={30} label="Posted" />
+        </div>
         <h3 className="section-title">{t("jobPosted", lang)}</h3>
         <p className="text-sm text-ink-light mt-2">
           Share this link with candidates:
@@ -166,14 +183,30 @@ export default function PostJobForm() {
           />
         </div>
 
-        <div>
-          <label className="label">{t("location", lang)}</label>
-          <input
-            className="input"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder={t("locationPlaceholder", lang)}
-          />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="job-city">
+              {lang === "ne" ? "शहर" : "City"}
+            </label>
+            <CitySelect id="job-city" value={city} onChange={setCity} lang={lang} required />
+          </div>
+          <div>
+            <label className="label" htmlFor="job-area">
+              {lang === "ne" ? "क्षेत्र (वैकल्पिक)" : "Area (optional)"}
+            </label>
+            <input
+              id="job-area"
+              className="input"
+              value={area}
+              onChange={(e) => setArea(e.target.value)}
+              placeholder={lang === "ne" ? "जस्तै ठमेल" : "e.g. Thamel"}
+            />
+          </div>
+          <p className="text-xs text-ink-muted sm:col-span-2">
+            {lang === "ne"
+              ? "शहर छान्दा यो काम त्यही शहरमा काम खोज्ने मानिसलाई पहिले देखिन्छ।"
+              : "Choosing a city puts this job first in front of people who want to work there."}
+          </p>
         </div>
 
         <div>
@@ -183,7 +216,11 @@ export default function PostJobForm() {
               <button
                 key={cat}
                 type="button"
-                onClick={() => setCategory(cat)}
+                onClick={() => {
+                  setCategory(cat);
+                  // Trades that are judged by the finished thing get a sensible default.
+                  if (!evidenceTouched) setEvidence(DEFAULT_EVIDENCE[cat] ?? "none");
+                }}
                 className={`rounded-lg border px-3 py-2 text-sm text-left transition-colors ${
                   category === cat
                     ? "border-brand bg-brand-light text-brand-dark"
@@ -237,6 +274,56 @@ export default function PostJobForm() {
         </div>
       </div>
 
+      {/* Choice questions + proof of work */}
+      <div className="card space-y-4">
+        <div className="flex gap-3">
+          <Icon name="list-check" size={18} className="mt-0.5 text-brand" />
+          <p className="text-sm text-ink-light">
+            {lang === "ne"
+              ? "हरेक कार्यमा ३ छनोट प्रश्न (उत्तरपुस्तिकाले जाँचिने, AI होइन) र लिखित उत्तर स्वतः समावेश हुन्छ। छनोटले ३०% र लिखितले ७०% अंक बनाउँछ।"
+              : "Every task automatically includes 3 choice questions (marked against an answer key, no AI) plus written answers. Choice is 30% of the score, written is 70%."}
+          </p>
+        </div>
+        <div>
+          <label className="label">
+            {lang === "ne" ? "कामको प्रमाण (वैकल्पिक)" : "Proof of work (optional)"}
+          </label>
+          <Segmented
+            name="evidence"
+            value={evidence}
+            onChange={(v) => {
+              setEvidence(v);
+              setEvidenceTouched(true);
+            }}
+            options={[
+              { value: "none", label: lang === "ne" ? "आवश्यक छैन" : "None" },
+              { value: "photos", label: lang === "ne" ? "कामका फोटो" : "Photos of work" },
+              { value: "video", label: lang === "ne" ? "छोटो भिडियो" : "Short video" },
+            ]}
+          />
+          <p className="mt-2 text-xs text-ink-muted">
+            {evidence === "photos"
+              ? lang === "ne"
+                ? "सिलाइ, खाना, काठको काम जस्ता कामका लागि। उम्मेदवारले ४ वटासम्म फोटो थप्छन्; तपाईं आफैं हेरेर अंक दिनुहुन्छ।"
+                : "For trades like sewing, cooking or carpentry. Candidates add up to 4 photos; you rate them yourself. Photos are private to you."
+              : evidence === "video"
+                ? lang === "ne"
+                  ? "छनौट भएका उम्मेदवारसँग मात्र ९० सेकेन्डसम्मको भिडियो माग्छौं, ताकि अनुहारले पहिलो चरण प्रभावित नगरोस्। तपाईं आफैं हेरेर अंक दिनुहुन्छ; AI प्रयोग हुँदैन।"
+                  : "Asked only from shortlisted candidates (up to 90 seconds), so faces never affect the first round. You rate it yourself; no AI is used on video."
+                : lang === "ne"
+                  ? "लिखित र छनोट प्रश्न मात्र।"
+                  : "Written and choice questions only."}
+          </p>
+          {evidence !== "none" && (
+            <p className="mt-1 text-xs text-ochre">
+              {lang === "ne"
+                ? "फोटो/भिडियो हेर्न तपाईंले रोजगारदाताको रूपमा लगइन गरेको हुनुपर्छ।"
+                : "You need to be logged in as an employer to view photos or video."}
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Custom Questions */}
       <div className="card space-y-4">
         <div className="flex items-center justify-between">
@@ -276,6 +363,14 @@ export default function PostJobForm() {
           </div>
         ))}
       </div>
+
+      <ScoringExplainer
+        lang={lang}
+        audience="employer"
+        aiScoring={aiScoring}
+        evidence={evidence}
+        title={lang === "ne" ? "उम्मेदवारले के देख्छन् र कसरी अंक दिइन्छ" : "What candidates are told, and how scoring works"}
+      />
 
       {error && (
         <div className="p-3 rounded-lg bg-danger-light text-sm text-danger">

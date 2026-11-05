@@ -1,12 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Job, Lang } from "@/lib/types";
 import { t } from "@/lib/i18n";
-import { TAG_LABELS, matchJobs, type JobMatch } from "@/lib/tags";
+import { TAG_LABELS, matchJobs } from "@/lib/tags";
 import JobCard from "@/components/JobCard";
+import Icon from "@/components/Icon";
 
-type TranslatedSkill = { tag: string; evidence: string };
+type TranslatedSkill = {
+  tag: string;
+  evidence: string;
+  /** named: the person wrote it. inferred: we guessed it. added: they picked it by hand. */
+  source: "named" | "inferred" | "added";
+};
+
+/** Starter sentences so nobody faces a blank box. Tapping one fills it in. */
+const STARTERS: Record<Lang, string[]> = {
+  en: [
+    "I ran my family's grocery shop and kept the accounts",
+    "I looked after my grandmother and handled her medicines and doctor visits",
+    "I did sewing and tailoring for neighbours and customers",
+    "I managed a team of 5 and did software engineering",
+  ],
+  ne: [
+    "मैले परिवारको किराना पसल चलाएँ र हिसाबकिताब राखेँ",
+    "मैले हजुरआमाको हेरचाह गरेँ, औषधि र डाक्टर भेट्ने काम सम्हालेँ",
+    "मैले छिमेकी र ग्राहकहरूका लागि सिलाइ र टेलरिङ गरेँ",
+    "मैले ५ जनाको टोली सम्हालेँ र सफ्टवेयर इन्जिनियरिङ गरेँ",
+  ],
+};
 
 /** Strings used only here, kept local so lib/i18n.ts does not need editing. */
 const L = {
@@ -23,7 +45,22 @@ const L = {
   matchesOn: { en: "Matches on", ne: "मिल्ने सीप" },
   seeAll: { en: "See all matching jobs", ne: "सबै मिल्ने कामहरू हेर्नुहोस्" },
   notifyMe: { en: "Notify me about jobs like these", ne: "यस्ता काम आए खबर गर्नुहोस्" },
-  notified: { en: "✓ You'll be notified", ne: "✓ खबर गरिनेछ" },
+  notified: { en: "You'll be notified", ne: "खबर गरिनेछ" },
+  saved: { en: "Saved", ne: "सुरक्षित भयो" },
+  youSaid: { en: "Skills you named", ne: "तपाईंले आफैं भनेका सीप" },
+  inferred: { en: "Skills we inferred from what you did", ne: "तपाईंले गरेको कामबाट हामीले अनुमान गरेका सीप" },
+  addedByYou: { en: "Skills you added", ne: "तपाईंले थपेका सीप" },
+  tapHint: {
+    en: "Tap a skill to remove it, or add one we missed. Only the skills you keep are used.",
+    ne: "हटाउन सीपमा थिच्नुहोस्, वा हामीले छुटाएको सीप थप्नुहोस्। तपाईंले राखेका सीप मात्र प्रयोग हुन्छन्।",
+  },
+  addSkill: { en: "Add a skill we missed", ne: "छुटेको सीप थप्नुहोस्" },
+  tryOne: { en: "Not sure what to write? Tap an example:", ne: "के लेख्ने थाहा छैन? एउटा उदाहरण थिच्नुहोस्:" },
+  nothingKept: {
+    en: "No skills selected. Tap a skill above to bring it back, or add one.",
+    ne: "कुनै सीप छानिएको छैन। माथिको सीपमा थिचेर फर्काउनुहोस्, वा थप्नुहोस्।",
+  },
+  inCity: { en: "Showing your cities first", ne: "तपाईंका शहर पहिले देखाइँदैछ" },
   nothingFound: {
     en: "We couldn't find a skill in that. Try saying what you actually did, for example: “I managed a team of 5 at a call centre” or “I built websites for small businesses”.",
     ne: "त्यसमा कुनै सीप भेटिएन। आफूले के गर्नुभयो भन्ने लेख्नुहोस्, जस्तै: “मैले कल सेन्टरमा ५ जनाको टोली सम्हालेँ” वा “मैले साना व्यवसायका लागि वेबसाइट बनाएँ”।",
@@ -53,33 +90,48 @@ export default function ExperienceMapper({
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [skills, setSkills] = useState<TranslatedSkill[]>([]);
+  // Tags the person has switched OFF. Everything else counts as kept.
+  const [off, setOff] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
-  // Which engine produced the result, and whether a mapping has run at all,
-  // so an empty result can say so instead of showing nothing.
   const [by, setBy] = useState<string>("");
   const [mapped, setMapped] = useState(false);
 
-  // --- job recommendations ---
-  const [matches, setMatches] = useState<JobMatch[]>([]);
+  // --- jobs, fetched once, re-ranked locally as skills change ---
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [jobsLoading, setJobsLoading] = useState(false);
+  const [myCities, setMyCities] = useState<string[]>([]);
   const [subbing, setSubbing] = useState(false);
   const [subbed, setSubbed] = useState(false);
 
-  /** Pull every open job and rank it against the mapped skill tags. */
-  const loadMatches = async (tags: string[]) => {
-    if (tags.length === 0) {
-      setMatches([]);
-      return;
-    }
+  useEffect(() => {
+    fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "session" }),
+    })
+      .then((r) => r.json())
+      .then((d) => setMyCities(d?.user?.preferred_cities ?? []))
+      .catch(() => {});
+  }, []);
+
+  const kept = useMemo(() => skills.filter((x) => !off.has(x.tag)), [skills, off]);
+  const keptTags = useMemo(() => kept.map((x) => x.tag), [kept]);
+
+  // Recomputed instantly whenever a skill is switched on or off.
+  const matches = useMemo(
+    () => matchJobs(keptTags, jobs, [], 12, { cities: myCities }),
+    [keptTags, jobs, myCities],
+  );
+
+  const loadJobs = async () => {
     setJobsLoading(true);
     try {
       const res = await fetch("/api/jobs");
       const data = await res.json();
-      const jobs: Job[] = Array.isArray(data) ? data : [];
-      setMatches(matchJobs(tags, jobs, [], 12));
+      setJobs(Array.isArray(data) ? data : []);
     } catch {
-      setMatches([]);
+      setJobs([]);
     } finally {
       setJobsLoading(false);
     }
@@ -89,7 +141,7 @@ export default function ExperienceMapper({
     setLoading(true);
     setError("");
     setSkills([]);
-    setMatches([]);
+    setOff(new Set());
     setSaved(false);
     setSubbed(false);
     setMapped(false);
@@ -103,11 +155,10 @@ export default function ExperienceMapper({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
 
-      const found: TranslatedSkill[] = data.skills || [];
-      setSkills(found);
+      setSkills(data.skills || []);
       setBy(data.by || "");
       setMapped(true);
-      await loadMatches(found.map((x) => x.tag));
+      if ((data.skills || []).length > 0) await loadJobs();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
     } finally {
@@ -115,8 +166,26 @@ export default function ExperienceMapper({
     }
   };
 
+  const toggle = (tag: string) => {
+    setSaved(false);
+    setSubbed(false);
+    setOff((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+  };
+
+  const addSkill = (tag: string) => {
+    if (!tag || skills.some((x) => x.tag === tag)) return;
+    setSaved(false);
+    setSubbed(false);
+    setSkills((prev) => [...prev, { tag, evidence: "", source: "added" }]);
+    if (jobs.length === 0) loadJobs();
+  };
+
   const saveToProfile = async () => {
-    const tags = skills.map((x) => x.tag);
     setError("");
     try {
       const res = await fetch("/api/auth", {
@@ -130,17 +199,29 @@ export default function ExperienceMapper({
         return;
       }
 
-      await fetch("/api/auth", {
+      const save = await fetch("/api/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: session.user.name,
-          phone: session.user.phone,
-          role: session.user.role,
-          skills: [...new Set([...(session.user.skills ?? []), ...tags])],
+          skills: [...new Set([...(session.user.skills ?? []), ...keptTags])],
           experience_text: text,
         }),
       });
+      if (!save.ok) throw new Error("save");
+
+      // Anonymous accuracy signal: which suggestions people actually keep.
+      // Skill tags only, never the text they wrote.
+      const suggested = skills.filter((x) => x.source !== "added").map((x) => x.tag);
+      fetch("/api/mapper-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          suggested,
+          kept: keptTags.filter((tg) => suggested.includes(tg)),
+          added: skills.filter((x) => x.source === "added" && !off.has(x.tag)).map((x) => x.tag),
+        }),
+      }).catch(() => {});
+
       setSaved(true);
     } catch {
       setError("Failed to save");
@@ -154,10 +235,7 @@ export default function ExperienceMapper({
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tags: skills.map((x) => x.tag),
-          category: "",
-        }),
+        body: JSON.stringify({ tags: keptTags, category: "" }),
       });
       if (res.status === 401) {
         setError(s("loginFirst", lang));
@@ -172,17 +250,23 @@ export default function ExperienceMapper({
     }
   };
 
-  // Group skills by the evidence sentence they came from
-  const grouped = skills.reduce<Record<string, TranslatedSkill[]>>(
-    (acc, skill) => {
-      const key = skill.evidence.slice(0, 40);
-      (acc[key] ??= []).push(skill);
-      return acc;
-    },
-    {},
-  );
+  const allTags = keptTags.join(",");
+  const groups: { key: TranslatedSkill["source"]; title: keyof typeof L }[] = [
+    { key: "named", title: "youSaid" },
+    { key: "inferred", title: "inferred" },
+    { key: "added", title: "addedByYou" },
+  ];
+  const addable = Object.keys(TAG_LABELS).filter((tg) => !skills.some((x) => x.tag === tg));
 
-  const allTags = skills.map((x) => x.tag).join(",");
+  const doneLabel = (done: boolean, label: string, doneText: string) =>
+    done ? (
+      <span className="inline-flex items-center justify-center gap-1.5">
+        <Icon name="check" size={14} strokeWidth={2.5} />
+        {doneText}
+      </span>
+    ) : (
+      label
+    );
 
   return (
     <div className="space-y-6">
@@ -209,6 +293,24 @@ export default function ExperienceMapper({
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
+
+        {text.trim().length === 0 && (
+          <div className="mt-3">
+            <p className="text-xs text-ink-muted mb-2">{s("tryOne", lang)}</p>
+            <div className="flex flex-wrap gap-2">
+              {STARTERS[lang].map((ex) => (
+                <button
+                  key={ex}
+                  type="button"
+                  onClick={() => setText(ex)}
+                  className="rounded-full border border-rule px-3 py-1.5 text-left text-xs text-ink-light transition-colors hover:border-brand/60 hover:text-ink"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <button
           onClick={handleMap}
@@ -237,49 +339,96 @@ export default function ExperienceMapper({
         </div>
       )}
 
-      {/* ---------- skills found ---------- */}
-      {skills.length > 0 && (
+      {/* ---------- skills found: editable ---------- */}
+      {mapped && skills.length > 0 && (
         <div className="card animate-fade-in">
           <h3 className="font-semibold">{t("skillsFound", lang)}</h3>
-          <p className="text-xs text-ink-muted mt-1 mb-4 leading-relaxed">
-            {s("claimNote", lang)}
-          </p>
+          <p className="text-xs text-ink-muted mt-1 leading-relaxed">{s("tapHint", lang)}</p>
 
-          <div className="space-y-4">
-            {Object.entries(grouped).map(([key, group]) => (
-              <div key={key} className="p-4 rounded-lg bg-paper-dark">
-                <p className="text-sm text-ink-light italic mb-2">
-                  {t("evidence", lang)}: {group[0].evidence}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {group.map((x) => (
-                    <span key={x.tag} className="badge-brand">
-                      {TAG_LABELS[x.tag]?.[lang] ?? x.tag}
-                    </span>
-                  ))}
+          <div className="mt-4 space-y-4">
+            {groups.map(({ key, title }) => {
+              const group = skills.filter((x) => x.source === key);
+              if (group.length === 0) return null;
+              return (
+                <div key={key} className="p-4 rounded-lg bg-paper-dark">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted mb-2">
+                    {s(title, lang)}
+                  </p>
+                  <ul className="space-y-2">
+                    {group.map((x) => {
+                      const on = !off.has(x.tag);
+                      return (
+                        <li key={x.tag}>
+                          <button
+                            type="button"
+                            onClick={() => toggle(x.tag)}
+                            aria-pressed={on}
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                              on
+                                ? "border-brand bg-brand-light text-brand"
+                                : "border-rule text-ink-muted line-through"
+                            }`}
+                          >
+                            <Icon name={on ? "check" : "plus"} size={13} strokeWidth={2.5} />
+                            {TAG_LABELS[x.tag]?.[lang] ?? x.tag}
+                          </button>
+                          {x.evidence && (
+                            <p className="mt-1 pl-1 text-xs italic text-ink-muted">{x.evidence}</p>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          <div className="flex gap-3 mt-6">
+          <div className="mt-4">
+            <label className="label" htmlFor="add-skill">
+              {s("addSkill", lang)}
+            </label>
+            <select
+              id="add-skill"
+              className="input"
+              value=""
+              onChange={(e) => addSkill(e.target.value)}
+            >
+              <option value="">{lang === "ne" ? "सीप छान्नुहोस्" : "Choose a skill"}</option>
+              {addable.map((tg) => (
+                <option key={tg} value={tg}>
+                  {TAG_LABELS[tg][lang]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <p className="text-xs text-ink-muted mt-4 leading-relaxed">{s("claimNote", lang)}</p>
+
+          <div className="flex gap-3 mt-4">
             <button
               onClick={saveToProfile}
-              disabled={saved}
+              disabled={saved || keptTags.length === 0}
               className="btn-primary flex-1"
             >
-              {saved ? "✓ Saved" : t("saveToProfile", lang)}
+              {doneLabel(saved, t("saveToProfile", lang), s("saved", lang))}
             </button>
           </div>
         </div>
       )}
 
-      {/* ---------- recommended jobs ---------- */}
-      {skills.length > 0 && (
+      {/* ---------- recommended jobs: follows the skills you keep ---------- */}
+      {mapped && skills.length > 0 && (
         <div className="card animate-fade-in">
           <div className="mb-4">
             <h3 className="font-semibold">{s("recommended", lang)}</h3>
             <p className="section-sub text-sm">{s("recommendedSub", lang)}</p>
+            {myCities.length > 0 && (
+              <p className="mt-1 inline-flex items-center gap-1 text-xs text-moss">
+                <Icon name="pin" size={12} />
+                {s("inCity", lang)}
+              </p>
+            )}
           </div>
 
           {jobsLoading ? (
@@ -288,6 +437,8 @@ export default function ExperienceMapper({
                 <div key={i} className="skeleton h-40 rounded-xl" />
               ))}
             </div>
+          ) : keptTags.length === 0 ? (
+            <p className="py-6 text-center text-sm text-ink-muted">{s("nothingKept", lang)}</p>
           ) : matches.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm text-ink-muted mb-4">
@@ -298,7 +449,7 @@ export default function ExperienceMapper({
                 disabled={subbing || subbed}
                 className={subbed ? "btn-secondary" : "btn-primary"}
               >
-                {subbed ? s("notified", lang) : s("notifyMe", lang)}
+                {doneLabel(subbed, s("notifyMe", lang), s("notified", lang))}
               </button>
             </div>
           ) : (
@@ -306,7 +457,7 @@ export default function ExperienceMapper({
               <div className="grid gap-4 sm:grid-cols-2 stagger-children">
                 {matches.map((m) => (
                   <div key={m.job.id} className="space-y-1.5">
-                    <JobCard job={m.job} lang={lang} />
+                    <JobCard job={m.job} lang={lang} fit={myCities.length ? m.fit : undefined} />
                     <p className="text-xs text-ink-muted px-1">
                       {s("matchesOn", lang)}:{" "}
                       {m.shared
@@ -329,7 +480,7 @@ export default function ExperienceMapper({
                   disabled={subbing || subbed}
                   className={`flex-1 ${subbed ? "btn-secondary" : "btn-primary"}`}
                 >
-                  {subbed ? s("notified", lang) : s("notifyMe", lang)}
+                  {doneLabel(subbed, s("notifyMe", lang), s("notified", lang))}
                 </button>
               </div>
             </>
