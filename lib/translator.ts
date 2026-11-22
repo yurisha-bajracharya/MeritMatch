@@ -16,6 +16,8 @@ export type TranslatedSkill = {
 export type TranslateResult = {
   skills: TranslatedSkill[];
   by: "gemini" | "openai" | "fallback";
+  /** Why keywords were used: no key set, or the AI call failed. */
+  aiError?: "no_key" | "failed";
 };
 
 const MAX_SKILLS = 6;
@@ -181,9 +183,11 @@ export async function translateExperience(
   lang: Lang,
 ): Promise<TranslateResult> {
   const clean = redact(text);
+  let by: "gemini" | "openai" | null = null;
   try {
     const out = await askLLM(systemPrompt(lang), JSON.stringify({ description: clean }));
     if (out) {
+      by = out.by;
       const namedNow = findTagsInText(clean);
       const skills = parse(out.text, new Set(namedNow.map((n) => n.tag)));
       // A skill the person named outright ("leadership") is never dropped,
@@ -203,10 +207,13 @@ export async function translateExperience(
       return { skills, by: out.by };
     }
   } catch (err) {
-    console.error(
-      "Experience Mapper LLM failed, using fallback:",
-      err instanceof Error ? err.message : err,
-    );
+    const msg = err instanceof Error ? err.message : String(err);
+    // The AI answered but found no skill on the list: not an error.
+    if (by && msg === "No valid skills") {
+      return { skills: fallbackTranslate(clean, lang), by };
+    }
+    console.error("Experience Mapper LLM failed, using fallback:", msg);
+    return { skills: fallbackTranslate(clean, lang), by: "fallback", aiError: "failed" };
   }
-  return { skills: fallbackTranslate(clean, lang), by: "fallback" };
+  return { skills: fallbackTranslate(clean, lang), by: "fallback", aiError: "no_key" };
 }

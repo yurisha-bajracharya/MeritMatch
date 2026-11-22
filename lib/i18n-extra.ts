@@ -54,6 +54,10 @@ const S = {
     en: "Submitted {over} min after the {limit}-minute timer ended.",
     ne: "{limit} मिनेटको टाइमर सकिएको {over} मिनेटपछि पेश गरियो।",
   },
+  flagAi: {
+    en: "An AI detector rated this text {pct}% likely to be AI-written. Detectors often wrongly flag people writing in a second language, so ask about it rather than reject.",
+    ne: "एआई जाँचकले यो पाठ {pct}% सम्भावनाले एआईले लेखेको भन्यो। दोस्रो भाषामा लेख्नेलाई यस्ता जाँचकले प्रायः गलत ठम्याउँछन्, त्यसैले अस्वीकार गर्नुभन्दा उनलाई सोध्नुहोस्।",
+  },
   flagSimilar: {
     en: "{pct}% of its wording matches {other}.",
     ne: "यसको {pct}% शब्दावली {other} सँग मिल्छ।",
@@ -199,8 +203,8 @@ export function flagText(
 ): string {
   const d = flag.data;
   if (!d) return flag.note;
-  const key = ({ pasted: "flagPasted", fast: "flagFast", late: "flagLate", similar: "flagSimilar" } as const)[
-    flag.code as "pasted" | "fast" | "late" | "similar"
+  const key = ({ pasted: "flagPasted", fast: "flagFast", late: "flagLate", similar: "flagSimilar", ai: "flagAi" } as const)[
+    flag.code as "pasted" | "fast" | "late" | "similar" | "ai"
   ];
   return key ? x(key, lang, d as Record<string, string | number>) : flag.note;
 }

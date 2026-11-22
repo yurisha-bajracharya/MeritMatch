@@ -121,7 +121,7 @@ export type CriterionScore = {
  * proof, and they never change a score or remove anyone from the ranking.
  */
 export type IntegrityFlag = {
-  code: "similar" | "pasted" | "fast" | "late";
+  code: "similar" | "pasted" | "fast" | "late" | "ai";
   /** English sentence, kept for older rows and as a fallback. */
   note: string;
   /** Numbers behind the note, so the screen can write it in either language. */

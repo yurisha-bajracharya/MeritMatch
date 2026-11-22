@@ -67,8 +67,12 @@ const L = {
     ne: "त्यसमा कुनै सीप भेटिएन। आफूले के गर्नुभयो भन्ने लेख्नुहोस्, जस्तै: “मैले कल सेन्टरमा ५ जनाको टोली सम्हालेँ” वा “मैले साना व्यवसायका लागि वेबसाइट बनाएँ”।",
   },
   keywordMode: {
-    en: "Mapped by keywords. Add a GEMINI_API_KEY to .env for smarter mapping.",
-    ne: "किवर्डबाट मिलाइएको। राम्रो नतिजाका लागि .env मा GEMINI_API_KEY थप्नुहोस्।",
+    en: "Mapped by keywords. Add a GEMINI_API_KEY to .env.local for smarter mapping.",
+    ne: "किवर्डबाट मिलाइएको। राम्रो नतिजाका लागि .env.local मा GEMINI_API_KEY थप्नुहोस्।",
+  },
+  aiFailed: {
+    en: "The AI mapper could not be reached, so keywords were used. The terminal running the app shows the reason.",
+    ne: "एआई म्यापरमा पुग्न सकिएन, त्यसैले किवर्ड प्रयोग गरियो। एप चलिरहेको टर्मिनलमा कारण देखिन्छ।",
   },
   claimNote: {
     en: "These are skills you described, not yet proven. They're used only to suggest jobs. You prove them by doing a job's short task, and employers only ever see those results.",
@@ -92,6 +96,7 @@ export default function ExperienceMapper() {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [by, setBy] = useState<string>("");
+  const [aiError, setAiError] = useState<string>("");
   const [mapped, setMapped] = useState(false);
 
   // --- jobs, fetched once, re-ranked locally as skills change ---
@@ -154,6 +159,7 @@ export default function ExperienceMapper() {
 
       setSkills(data.skills || []);
       setBy(data.by || "");
+      setAiError(data.aiError || "");
       setMapped(true);
       if ((data.skills || []).length > 0) await loadJobs();
     } catch (err) {
@@ -330,8 +336,11 @@ export default function ExperienceMapper() {
           <p className="text-sm text-ink-light leading-relaxed">
             {s("nothingFound", lang)}
           </p>
-          {by === "fallback" && (
+          {aiError === "no_key" && (
             <p className="text-xs text-ink-muted mt-3">{s("keywordMode", lang)}</p>
+          )}
+          {aiError === "failed" && (
+            <p className="text-xs text-ink-muted mt-3">{s("aiFailed", lang)}</p>
           )}
         </div>
       )}

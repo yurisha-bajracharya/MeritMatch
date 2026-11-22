@@ -90,7 +90,8 @@ async function callGemini(
   user: string,
   key: string,
 ): Promise<string> {
-  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  // gemini-2.0-flash was shut down on 1 June 2026; 3.6 Flash is its replacement.
+  const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
@@ -107,7 +108,15 @@ async function callGemini(
       signal: AbortSignal.timeout(25_000),
     },
   );
-  if (!res.ok) throw new Error(`Gemini ${res.status}`);
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 200);
+    if (res.status === 404) {
+      throw new Error(
+        `Gemini model "${model}" not found (it may be retired). Set GEMINI_MODEL=gemini-3.6-flash in .env.local. ${detail}`,
+      );
+    }
+    throw new Error(`Gemini ${res.status}: ${detail}`);
+  }
   const body = await res.json();
   return body.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 }

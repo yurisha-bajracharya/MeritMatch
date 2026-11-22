@@ -3,6 +3,7 @@ import { getDb, newId } from "@/lib/db";
 import { getTemplate } from "@/lib/templates";
 import { scoreAnswers } from "@/lib/scoring";
 import { behaviourFlags } from "@/lib/integrity";
+import { aiWritingFlag } from "@/lib/aidetect";
 import { rowToJob } from "@/lib/shortlist";
 import { combineScores, scoreMcq } from "@/lib/mcq";
 import { randomBytes } from "crypto";
@@ -107,6 +108,9 @@ export async function POST(req: Request) {
       elapsedSec: elapsed_sec,
       pasteChars: paste_chars,
     });
+    // Optional AI-writing check (off without SAPLING_API_KEY). Advisory only.
+    const aiFlag = await aiWritingFlag(answers as Answer[], language);
+    if (aiFlag) flags.push(aiFlag);
 
     const subId = newId();
     db.prepare(
