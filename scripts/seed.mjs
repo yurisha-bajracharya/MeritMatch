@@ -122,6 +122,9 @@ addColumn("jobs", "evidence", "TEXT DEFAULT 'none'");
 addColumn("submissions", "shortlisted", "INTEGER DEFAULT 0");
 addColumn("submissions", "shortlisted_at", "TEXT DEFAULT ''");
 addColumn("submissions", "rejected", "INTEGER DEFAULT 0");
+addColumn("submissions", "interview", "INTEGER DEFAULT 0");
+addColumn("submissions", "interview_note", "TEXT DEFAULT ''");
+db.exec("CREATE TABLE IF NOT EXISTS unlocks (submission_id TEXT PRIMARY KEY, employer_id TEXT NOT NULL, amount INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)");
 addColumn("notifications", "link", "TEXT DEFAULT ''");
 addColumn("users", "preferred_cities", "TEXT DEFAULT '[]'");
 db.exec(`

@@ -41,6 +41,10 @@ export async function POST(
     id,
   );
 
+  if (!shortlisted) {
+    db.prepare("UPDATE submissions SET interview = 0, interview_note = '' WHERE id = ?").run(id);
+  }
+
   // Link candidates to accounts by phone number, the same way the dashboard does.
   const user = db
     .prepare("SELECT id FROM users WHERE phone = ? AND role = 'candidate'")
@@ -73,7 +77,7 @@ export async function POST(
       // Taking it back removes the notification, so nobody is left with a
       // stale "you're shortlisted" that is no longer true.
       db.prepare(
-        "DELETE FROM notifications WHERE user_id = ? AND job_id = ? AND type = 'shortlisted'",
+        "DELETE FROM notifications WHERE user_id = ? AND job_id = ? AND type IN ('shortlisted', 'interview')",
       ).run(user.id, row.job_id);
     }
   }

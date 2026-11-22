@@ -10,6 +10,19 @@ import type {
   Submission,
 } from "./types";
 import { locationFit, type LocationFit } from "./places";
+import { getTemplate } from "./templates";
+import type { Bilingual } from "./types";
+
+/** What this person has already shown on OTHER jobs. Anonymous: no employer or job names. */
+export type TrackRecord = {
+  tasks: number;
+  average: number;
+  /** Skills earned on scored tasks, most repeated first. */
+  proven: { tag: string; count: number }[];
+  /** Skills they only described themselves (not yet shown on a task). */
+  claimed: string[];
+  recent: { name: Bilingual; total: number }[];
+};
 
 export type RankedEntry = {
   submissionId: string;
@@ -27,6 +40,11 @@ export type RankedEntry = {
   /** The employer's decision. Candidates see this; video is asked only from these. */
   shortlisted: boolean;
   rejected: boolean;
+  interview: boolean;
+  interviewNote: string;
+  /** Employer paid (or was exempt) to see the contact details. */
+  unlocked: boolean;
+  track: TrackRecord;
   /** The top-25% rule's suggestion. Only a hint; never shown to candidates. */
   suggested: boolean;
   consent: boolean;
@@ -95,6 +113,8 @@ function rowToSubmission(row: any): Submission {
     consent: Boolean(row.consent),
     shortlisted: Boolean(row.shortlisted),
     rejected: Boolean(row.rejected),
+    interview: Boolean(row.interview),
+    interview_note: row.interview_note || "",
     flags: parseFlags(row.flags),
     mcq_score: row.mcq_score ?? null,
     written_score: row.written_score ?? null,
@@ -154,12 +174,63 @@ export function getRanking(jobId: string): {
   // Location fit is shown per applicant. It reads only the city they chose,
   // never a name or contact detail, so it doesn't break anonymity. It does
   // NOT affect rank: the employer decides how much it matters.
+  const userRows = db
+    .prepare("SELECT phone, preferred_cities, skills FROM users WHERE role = 'candidate'")
+    .all() as any[];
   const cityByPhone = new Map<string, string[]>(
+    userRows.map((u) => [u.phone, JSON.parse(u.preferred_cities || "[]")]),
+  );
+  const claimedByPhone = new Map<string, string[]>(
+    userRows.map((u) => [u.phone, JSON.parse(u.skills || "[]")]),
+  );
+
+  // Track record: the same person's scored work on OTHER jobs, matched by
+  // phone. Only numbers, skills and the kind of work are used; never another
+  // employer's name or the person's identity.
+  const phones = [...new Set(candidates.size ? [...candidates.values()].map((c) => c.phone) : [])];
+  const otherByPhone = new Map<string, { total: number; tags: string[]; category: string; at: string }[]>();
+  if (phones.length) {
+    const rows = db
+      .prepare(
+        `SELECT c.phone AS phone, s.total AS total, s.tags AS tags, j.category AS category, s.created_at AS at
+           FROM submissions s
+           JOIN candidates c ON c.id = s.candidate_id
+           JOIN jobs j ON j.id = s.job_id
+          WHERE s.job_id != ? AND c.phone NOT LIKE 'anon-%'`,
+      )
+      .all(jobId) as any[];
+    for (const r of rows) {
+      const list = otherByPhone.get(r.phone) ?? [];
+      list.push({ total: r.total, tags: JSON.parse(r.tags || "[]"), category: r.category, at: r.at });
+      otherByPhone.set(r.phone, list);
+    }
+  }
+  const trackFor = (phone: string | undefined): TrackRecord => {
+    const list = phone ? (otherByPhone.get(phone) ?? []) : [];
+    const counts = new Map<string, number>();
+    for (const t of list.flatMap((l) => l.tags)) counts.set(t, (counts.get(t) ?? 0) + 1);
+    const proven = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([tag, count]) => ({ tag, count }));
+    const provenSet = new Set(counts.keys());
+    return {
+      tasks: list.length,
+      average: list.length ? Math.round(list.reduce((a, l) => a + l.total, 0) / list.length) : 0,
+      proven,
+      claimed: (phone ? (claimedByPhone.get(phone) ?? []) : []).filter((t) => !provenSet.has(t)).slice(0, 6),
+      recent: [...list]
+        .sort((a, b) => b.at.localeCompare(a.at))
+        .slice(0, 3)
+        .map((l) => ({ name: getTemplate(l.category as any).name, total: l.total })),
+    };
+  };
+
+  const unlockedIds = new Set<string>(
     (
       db
-        .prepare("SELECT phone, preferred_cities FROM users WHERE role = 'candidate'")
-        .all() as any[]
-    ).map((u) => [u.phone, JSON.parse(u.preferred_cities || "[]")]),
+        .prepare(
+          "SELECT submission_id FROM unlocks WHERE submission_id IN (SELECT id FROM submissions WHERE job_id = ?)",
+        )
+        .all(jobId) as any[]
+    ).map((u) => u.submission_id),
   );
 
   const mediaBySub = new Map<string, RankedEntry["media"]>();
@@ -207,11 +278,19 @@ export function getRanking(jobId: string): {
       reviews: reviewsBySub.get(s.id) ?? {},
       shortlisted: s.shortlisted === true,
       rejected: s.rejected === true,
+      interview: s.interview === true,
+      interviewNote: s.interview_note ?? "",
+      unlocked: unlockedIds.has(s.id),
+      track: trackFor(c?.phone),
       suggested: i < cut,
       consent: s.consent,
       flags: [...(s.flags ?? []), ...(similar.get(s.id) ?? [])],
+      // Identity is shown only when ALL of these hold: the employer shortlisted
+      // the person, the person agreed, and the employer unlocked the contact.
       contact:
-        s.consent && c ? { name: c.name, phone: c.phone } : undefined,
+        s.consent && s.shortlisted && unlockedIds.has(s.id) && c
+          ? { name: c.name, phone: c.phone }
+          : undefined,
     };
   });
 

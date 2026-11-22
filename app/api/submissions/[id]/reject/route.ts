@@ -28,13 +28,13 @@ export async function POST(
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   if (rejected) {
-    db.prepare("UPDATE submissions SET rejected = 1, shortlisted = 0, shortlisted_at = '' WHERE id = ?").run(id);
+    db.prepare("UPDATE submissions SET rejected = 1, shortlisted = 0, shortlisted_at = '', interview = 0, interview_note = '' WHERE id = ?").run(id);
     const user = db
       .prepare("SELECT id FROM users WHERE phone = ? AND role = 'candidate'")
       .get(row.phone) as { id: string } | undefined;
     if (user) {
       db.prepare(
-        "DELETE FROM notifications WHERE user_id = ? AND job_id = ? AND type = 'shortlisted'",
+        "DELETE FROM notifications WHERE user_id = ? AND job_id = ? AND type IN ('shortlisted', 'interview')",
       ).run(user.id, row.job_id);
     }
   } else {

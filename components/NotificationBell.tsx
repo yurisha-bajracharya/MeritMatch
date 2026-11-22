@@ -34,6 +34,12 @@ function textOf(n: NotifData, lang: Lang): { title: string; body: string } {
       }),
     };
   }
+  if (n.type === "interview") {
+    return {
+      title: x("interviewTitle", lang),
+      body: `${title ? x("interviewBody", lang, { employer, title }) : ""} ${n.message}`.trim(),
+    };
+  }
   if (n.type === "shortlisted") {
     return {
       title: x("shortlistedTitle", lang),

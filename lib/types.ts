@@ -145,6 +145,9 @@ export type Submission = {
   shortlisted?: boolean;
   /** Set by the employer: not moving forward. Never set automatically. */
   rejected?: boolean;
+  /** Employer invited this shortlisted person to an interview. */
+  interview?: boolean;
+  interview_note?: string;
   flags?: IntegrityFlag[];
   /**
    * `total` is the combined score the ranking uses. These two show where it

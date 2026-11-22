@@ -9,6 +9,10 @@ type Item = { id: string; kind: "photo" | "video"; caption?: string };
 const T = {
   photosTitle: { en: "Photos of your work", ne: "तपाईंको कामका फोटो" },
   videoTitle: { en: "Short demo video", ne: "छोटो डेमो भिडियो" },
+  noFace: {
+    en: "Tip: photograph the work itself. Please keep faces out of the photos.",
+    ne: "सुझाव: कामकै फोटो खिच्नुहोस्। फोटोमा अनुहार नपारिदिनुहोला।",
+  },
   photosHint: {
     en: "Add up to 4 clear photos of finished work. Only this employer can see them. Location and camera details are removed before upload.",
     ne: "सकिएको कामका ४ वटासम्म स्पष्ट फोटो थप्नुहोस्। यो रोजगारदाताले मात्र हेर्न सक्छन्। अपलोड अघि स्थान र क्यामेराको विवरण हटाइन्छ।",
@@ -129,6 +133,7 @@ export default function EvidenceUploader({
       <p className="mt-1 text-xs leading-relaxed text-ink-muted">
         {isPhoto ? T.photosHint[lang] : T.videoHint[lang]}
       </p>
+      {isPhoto && <p className="mt-1 text-xs font-medium text-ochre">{T.noFace[lang]}</p>}
 
       {mine.length > 0 && (
         <ul className={`mt-4 grid gap-3 ${isPhoto ? "grid-cols-2" : "grid-cols-1"}`}>

@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import RankingList from "@/components/RankingList";
 import { getSession } from "@/lib/auth";
 import { getTemplate } from "@/lib/templates";
+import { UNLOCK_PRICE_NPR, isFreeEmployer } from "@/lib/unlock";
 import type { Bilingual } from "@/lib/types";
 
 export default async function EmployerJobPage({
@@ -49,6 +50,7 @@ export default async function EmployerJobPage({
         initial={isOwner ? entries : entries.map((e) => ({ ...e, answers: [] }))}
         questions={isOwner ? questions : []}
         isOwner={isOwner}
+        unlock={{ price: UNLOCK_PRICE_NPR, free: isOwner && session ? isFreeEmployer(session.userId) : false }}
         criteriaLabels={criteriaLabels}
       />
     </>

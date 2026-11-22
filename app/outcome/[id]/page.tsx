@@ -29,6 +29,8 @@ type Outcome = {
   applicants: number | null;
   shortlisted: boolean;
   rejected?: boolean;
+  interview?: boolean;
+  interviewNote?: string;
   media: { id: string; kind: "photo" | "video"; caption?: string }[];
 };
 
@@ -186,6 +188,16 @@ export default function OutcomePage() {
             <p className="mt-1 text-xs text-ink-muted">
               {x("stillReviewHint", lang)}
             </p>
+          )}
+          {data.interview && (
+            <div className="mt-3 rounded-lg border border-moss/30 bg-moss-light p-3 text-sm text-moss">
+              <p className="flex items-center gap-1.5 font-semibold">
+                <Icon name="phone" size={14} />
+                {x("interviewCardTitle", lang)}
+              </p>
+              <p className="mt-1 text-xs">{x("interviewCardBody", lang)}</p>
+              {data.interviewNote && <p className="mt-1 text-xs font-medium">{data.interviewNote}</p>}
+            </div>
           )}
         </div>
 

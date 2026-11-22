@@ -33,17 +33,21 @@ export default function RankingList({
   isOwner,
   criteriaLabels,
   questions,
+  unlock,
 }: {
   job: JobInfo;
   initial: RankedEntry[];
   isOwner: boolean;
   criteriaLabels: Record<string, Bilingual>;
   questions: { id: string; prompt: Bilingual; mine: boolean }[];
+  unlock: { price: number; free: boolean };
 }) {
   const [lang] = useLang();
   const [entries, setEntries] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [inviting, setInviting] = useState<string | null>(null);
+  const [note, setNote] = useState("");
   const shortlistedCount = entries.filter((e) => e.shortlisted).length;
   // null = follow the default (shortlisted if any, otherwise everyone)
   const [tab, setTab] = useState<"all" | "shortlisted" | "rejected" | null>(null);
@@ -74,7 +78,7 @@ export default function RankingList({
       setEntries((prev) =>
         prev.map((p) =>
           p.submissionId === e.submissionId
-            ? { ...p, shortlisted: !e.shortlisted, rejected: !e.shortlisted ? false : p.rejected }
+            ? { ...p, shortlisted: !e.shortlisted, rejected: !e.shortlisted ? false : p.rejected, interview: e.shortlisted ? false : p.interview }
             : p,
         ),
       );
@@ -100,11 +104,49 @@ export default function RankingList({
       setEntries((prev) =>
         prev.map((p) =>
           p.submissionId === e.submissionId
-            ? { ...p, rejected: !e.rejected, shortlisted: !e.rejected ? false : p.shortlisted }
+            ? { ...p, rejected: !e.rejected, shortlisted: !e.rejected ? false : p.shortlisted, interview: !e.rejected ? false : p.interview }
             : p,
         ),
       );
       setTab(null);
+    } catch {
+      setError(x("couldNotSave", lang));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const patch = (id: string, change: Partial<RankedEntry>) =>
+    setEntries((prev) => prev.map((p) => (p.submissionId === id ? { ...p, ...change } : p)));
+
+  const invite = async (e: RankedEntry, on: boolean) => {
+    setBusy(e.submissionId);
+    setError("");
+    try {
+      const res = await fetch(`/api/submissions/${e.submissionId}/interview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invited: on, note: on ? note : "" }),
+      });
+      if (!res.ok) throw new Error("save");
+      patch(e.submissionId, { interview: on, interviewNote: on ? note.trim() : "" });
+      setInviting(null);
+      setNote("");
+    } catch {
+      setError(x("couldNotSave", lang));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const unlockContact = async (e: RankedEntry) => {
+    setBusy(e.submissionId);
+    setError("");
+    try {
+      const res = await fetch(`/api/submissions/${e.submissionId}/unlock`, { method: "POST" });
+      if (!res.ok) throw new Error("save");
+      const d = await res.json();
+      patch(e.submissionId, { unlocked: true, contact: d.contact });
     } catch {
       setError(x("couldNotSave", lang));
     } finally {
@@ -228,6 +270,53 @@ export default function RankingList({
 
               <p className="mt-2 text-xs text-ink-muted">{entry.reason}</p>
 
+              {isOwner && (
+                <div className="mt-3 rounded-lg border border-rule p-3">
+                  <p className="text-xs font-semibold text-ink-light">{x("trackTitle", lang)}</p>
+                  {entry.track.tasks === 0 ? (
+                    <p className="mt-1 text-xs text-ink-muted">{x("trackNone", lang)}</p>
+                  ) : (
+                    <>
+                      <p className="mt-1 text-xs">
+                        {x("trackSummary", lang, { n: n(entry.track.tasks), avg: n(entry.track.average) })}
+                      </p>
+                      {entry.track.recent.length > 0 && (
+                        <p className="mt-1 text-[11px] text-ink-muted">
+                          {x("trackRecent", lang)}:{" "}
+                          {entry.track.recent.map((r) => `${r.name[lang]} ${n(r.total)}%`).join(", ")}
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {entry.track.proven.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-[10px] uppercase tracking-wide text-ink-muted">{x("trackProven", lang)}</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {entry.track.proven.map((p) => (
+                          <span key={p.tag} className="badge-moss text-[10px]">
+                            {TAG_LABELS[p.tag]?.[lang] ?? p.tag}
+                            {p.count > 1 ? ` x${n(p.count)}` : ""}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {entry.track.claimed.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-[10px] uppercase tracking-wide text-ink-muted">{x("trackClaimed", lang)}</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {entry.track.claimed.map((tag) => (
+                          <span key={tag} className="badge-muted text-[10px]">
+                            {TAG_LABELS[tag]?.[lang] ?? tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <p className="mt-2 text-[10px] text-ink-muted">{x("trackAnon", lang)}</p>
+                </div>
+              )}
+
               {entry.flags.length === 0 && isOwner && (
                 <p className="mt-3 flex items-center gap-1.5 text-xs text-moss">
                   <Icon name="check-circle" size={13} />
@@ -303,14 +392,40 @@ export default function RankingList({
                 </p>
               )}
 
-              {entry.consent && entry.contact ? (
+              {entry.interview && (
+                <p className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-moss">
+                  <Icon name="check-circle" size={13} />
+                  <span className="font-semibold">{x("interviewInvitedBadge", lang)}</span>
+                  {entry.interviewNote && <span className="text-ink-light">: {entry.interviewNote}</span>}
+                </p>
+              )}
+
+              {entry.contact ? (
                 <div className="mt-3 rounded bg-moss-light p-2 text-xs text-moss">
                   <span className="font-semibold">{x("identityRevealed", lang)}:</span> {entry.contact.name} ·{" "}
                   {entry.contact.phone}
                 </div>
+              ) : entry.shortlisted && entry.consent && isOwner ? (
+                <div className="mt-3 rounded bg-paper-dark p-2 text-xs">
+                  <p className="text-ink-light">{x("agreedLocked", lang)}</p>
+                  <button
+                    type="button"
+                    onClick={() => unlockContact(entry)}
+                    disabled={busy === entry.submissionId}
+                    className="btn-primary btn-sm mt-2"
+                  >
+                    {busy === entry.submissionId
+                      ? x("unlocking", lang)
+                      : unlock.free
+                        ? x("unlockFree", lang)
+                        : x("unlockContact", lang, { price: n(unlock.price) })}
+                  </button>
+                </div>
               ) : entry.shortlisted ? (
                 <p className="mt-2 text-[10px] italic text-ink-muted">{x("waitingConsent", lang)}</p>
-              ) : null}
+              ) : (
+                <p className="mt-2 text-[10px] italic text-ink-muted">{x("needShortlistFirst", lang)}</p>
+              )}
 
               {isOwner && (
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -333,6 +448,47 @@ export default function RankingList({
                     className="btn-secondary btn-sm"
                   >
                     {entry.rejected ? x("undoReject", lang) : x("reject", lang)}
+                  </button>
+                  {entry.shortlisted &&
+                    (entry.interview ? (
+                      <button
+                        type="button"
+                        onClick={() => invite(entry, false)}
+                        disabled={busy === entry.submissionId}
+                        className="btn-secondary btn-sm"
+                      >
+                        {x("cancelInvite", lang)}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInviting(inviting === entry.submissionId ? null : entry.submissionId);
+                          setNote("");
+                        }}
+                        className="btn-secondary btn-sm"
+                      >
+                        {x("inviteInterview", lang)}
+                      </button>
+                    ))}
+                </div>
+              )}
+              {isOwner && inviting === entry.submissionId && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <input
+                    value={note}
+                    onChange={(ev) => setNote(ev.target.value)}
+                    maxLength={200}
+                    placeholder={x("interviewNotePh", lang)}
+                    className="input min-w-0 flex-1 text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => invite(entry, true)}
+                    disabled={busy === entry.submissionId}
+                    className="btn-primary btn-sm"
+                  >
+                    {x("sendInvite", lang)}
                   </button>
                 </div>
               )}

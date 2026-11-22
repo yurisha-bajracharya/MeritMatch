@@ -144,6 +144,9 @@ function migrate(db: Database.Database) {
   addColumn(db, "submissions", "shortlisted", "INTEGER DEFAULT 0");
   addColumn(db, "submissions", "shortlisted_at", "TEXT DEFAULT ''");
   addColumn(db, "submissions", "rejected", "INTEGER DEFAULT 0");
+  // Interview invitation (only for shortlisted people) and its note.
+  addColumn(db, "submissions", "interview", "INTEGER DEFAULT 0");
+  addColumn(db, "submissions", "interview_note", "TEXT DEFAULT ''");
   addColumn(db, "notifications", "link", "TEXT DEFAULT ''");
 
   // Photos / video proof-of-work requested by the employer.
@@ -151,6 +154,17 @@ function migrate(db: Database.Database) {
 
   // City ids from lib/places.ts, JSON array.
   addColumn(db, "users", "preferred_cities", "TEXT DEFAULT '[]'");
+
+  // Contact details stay hidden until the employer unlocks them. Payment is
+  // a mock for now (amount recorded, nothing charged).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS unlocks (
+      submission_id TEXT PRIMARY KEY,
+      employer_id TEXT NOT NULL,
+      amount INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+  `);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS media (

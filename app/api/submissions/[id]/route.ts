@@ -63,6 +63,8 @@ export async function GET(
     applicants: ranking?.entries.length ?? null,
     shortlisted: sub.shortlisted === true,
     rejected: sub.rejected === true,
+    interview: sub.interview === true,
+    interviewNote: sub.interview_note ?? "",
     media,
     limits: { maxPhotos: 4, maxVideoSeconds: 90, maxVideoMb: 30 },
   });
