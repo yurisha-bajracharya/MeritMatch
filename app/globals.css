@@ -1,43 +1,56 @@
 @import "tailwindcss";
 
 /* ============================================================
-   MeritMatch dark theme
-   Palette lifted from the logo: #191824 ground, coral circle.
-   Token NAMES are unchanged from the light theme on purpose —
-   every component keeps working, only the values flip.
+   MeritMatch, white theme.
+   Token NAMES are kept from earlier themes so every component keeps
+   working; only values change. Contrast notes are against white.
    ============================================================ */
 
 @theme {
-  /* --- surfaces, darkest to lightest --- */
-  --color-sunken: #f4f4f7; /* inputs, wells, progress tracks */
-  --color-paper: #ffffff; /* page background */
-  --color-surface: #ffffff; /* cards, nav, dropdowns */
-  --color-paper-dark: #f4f4f7; /* blocks nested inside a card */
-  --color-rule: #e4e3ec; /* borders & dividers */
+  /* --- surfaces --- */
+  --color-paper: #ffffff;       /* page background */
+  --color-surface: #ffffff;     /* cards, nav, menus */
+  --color-paper-dark: #f8f8fa;  /* subtle section / nested block */
+  --color-sunken: #f1f0f4;      /* progress tracks, wells */
+  --color-rule: #e7e5ec;        /* borders and dividers */
+  --color-field: #8a899c;       /* input borders: 3.4:1, visible to everyone */
 
   /* --- text --- */
-  --color-ink: #191824;
-  --color-ink-light: #4b4a5e;
-  --color-ink-muted: #75738a;
+  --color-ink: #20202d;         /* 16:1 */
+  --color-ink-light: #55566a;   /* 7.2:1 */
+  --color-ink-muted: #6b6c80;   /* 5.1:1, still AA for small text */
 
   /* --- brand coral --- */
-  --color-brand: #fd5e6e;
-  --color-brand-hover: #ff7b88;
-  --color-brand-dark: #e8384f;
-  --color-brand-light: #ffe9ec; /* light coral tint, for badge/alert grounds */
-  --color-brand-tint: #e8384f; /* coral, for accent text */
+  --color-brand: #f04459;       /* accents, active marks, focus, logo */
+  --color-brand-hover: #d92f49; /* primary button fill: white text 4.7:1 */
+  --color-brand-dark: #c4283f;  /* button hover */
+  --color-brand-ink: #c4283f;   /* coral TEXT on white: 5.6:1 */
+  --color-brand-light: #fdecee; /* coral tint ground */
+  --color-brand-tint: #c4283f;
 
   /* --- supporting --- */
-  --color-ochre: #a85f00;
-  --color-ochre-light: #fff1dc;
-  --color-moss: #1b7f52;
-  --color-moss-light: #e1f5ea;
-  --color-danger: #e03247;
-  --color-danger-light: #ffe9ec;
+  --color-ochre: #8a5200;
+  --color-ochre-light: #fff4e5;
+  --color-moss: #146e4a;        /* demonstrated / verified */
+  --color-moss-light: #e8f5ee;
+  --color-success: #18865a;
+  --color-danger: #b42318;
+  --color-danger-light: #fef0ee;
 
-  --font-sans:
-    "IBM Plex Sans", "IBM Plex Sans Devanagari", system-ui, sans-serif;
-  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "DM Sans", "Noto Sans Devanagari", system-ui, sans-serif;
+  --font-display: "Lora", "Noto Sans Devanagari", Georgia, serif;
+
+  /* --- type scale (body 17px) --- */
+  --text-xs: 0.8125rem;    --text-xs--line-height: 1.45;    /* 13 labels */
+  --text-sm: 0.9375rem;    --text-sm--line-height: 1.55;    /* 15 secondary, buttons */
+  --text-base: 1.0625rem;  --text-base--line-height: 1.65;  /* 17 body */
+  --text-lg: 1.1875rem;    --text-lg--line-height: 1.55;    /* 19 */
+  --text-xl: 1.3125rem;    --text-xl--line-height: 1.45;    /* 21 card headings */
+  --text-2xl: 1.75rem;     --text-2xl--line-height: 1.3;    /* 28 section headings */
+  --text-3xl: 2.125rem;    --text-3xl--line-height: 1.2;    /* 34 page headings */
+  --text-4xl: 2.5rem;      --text-4xl--line-height: 1.15;
+  --text-5xl: 3.25rem;     --text-5xl--line-height: 1.08;   /* 52 */
+  --text-6xl: 3.875rem;    --text-6xl--line-height: 1.05;   /* 62 */
 }
 
 @layer base {
@@ -46,40 +59,43 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+  /* Devanagari reads small at the same pixel size and needs taller lines. */
+  html[lang="ne"] {
+    font-size: 106.25%;
+  }
+  html[lang="ne"] body {
+    line-height: 1.8;
+  }
+  html[lang="ne"] h1,
+  html[lang="ne"] h2,
+  html[lang="ne"] h3 {
+    line-height: 1.4;
+  }
 
   body {
     @apply bg-paper text-ink font-sans;
-    font-size: 16px;
-    line-height: 1.6;
+    font-size: var(--text-base);
+    line-height: 1.65;
+  }
+
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+    overflow-wrap: anywhere;
   }
 
   ::selection {
-    @apply bg-brand text-white;
+    background: var(--color-brand-light);
+    color: var(--color-ink);
   }
 
-  /* Chrome autofill otherwise paints a bright yellow box */
-  input:-webkit-autofill,
-  input:-webkit-autofill:hover,
-  input:-webkit-autofill:focus {
-    -webkit-text-fill-color: var(--color-ink);
-    -webkit-box-shadow: 0 0 0 1000px var(--color-sunken) inset;
-    caret-color: var(--color-ink);
-  }
-
-  ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-  ::-webkit-scrollbar-track {
-    background: var(--color-paper);
-  }
-  ::-webkit-scrollbar-thumb {
-    background: var(--color-rule);
-    border-radius: 999px;
-    border: 2px solid var(--color-paper);
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #c9c7d6;
+  /* One focus style everywhere, only for keyboard users. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-dark);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 }
 
@@ -88,72 +104,95 @@
 
    These MUST be @utility, not .btn/.card/.badge inside
    @layer components. Tailwind v4 can only `@apply` a class that is
-   a registered utility — applying a plain component class throws
+   a registered utility, applying a plain component class throws
    "Cannot apply unknown utility class `btn`" and the whole
    stylesheet fails to build.
    ------------------------------------------------------------ */
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 cursor-pointer;
-  @apply focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-paper;
-  @apply disabled:opacity-40 disabled:cursor-not-allowed;
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-5 py-2.5 text-sm font-semibold transition-colors duration-150 cursor-pointer select-none;
+  min-height: 44px;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
 @utility card {
-  @apply bg-surface rounded-xl border border-rule p-6;
+  @apply bg-surface rounded-lg border border-rule p-6;
+}
+
+@utility alert {
+  @apply rounded-md border p-4 text-sm;
 }
 
 @utility badge {
-  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  @apply inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium;
 }
 
 @layer components {
   .container-main {
-    @apply mx-auto max-w-5xl px-4 sm:px-6;
+    @apply mx-auto max-w-6xl px-4 sm:px-6 lg:px-8;
   }
 
   /* ---------- buttons ---------- */
   .btn-primary {
-    @apply btn bg-brand-dark text-white hover:bg-brand;
+    @apply btn bg-brand-hover text-white hover:bg-brand-dark;
   }
-
   .btn-secondary {
-    @apply btn bg-surface text-ink border border-rule hover:border-ink-muted hover:bg-paper-dark;
+    @apply btn bg-white text-ink border border-field/60 hover:border-ink hover:bg-paper-dark;
   }
-
   .btn-ghost {
     @apply btn text-ink-light hover:bg-paper-dark hover:text-ink;
   }
-
   .btn-danger {
     @apply btn bg-danger text-white hover:brightness-110;
   }
-
   .btn-sm {
-    @apply px-3 py-1.5 text-xs;
+    @apply px-3.5 py-1.5 text-sm;
+    min-height: 38px;
+  }
+  .btn-lg {
+    @apply px-7 py-3 text-base;
+    min-height: 52px;
+  }
+  .link {
+    @apply font-medium text-brand-ink underline-offset-4 hover:underline;
   }
 
   /* ---------- surfaces ---------- */
   .card-hover {
-    @apply card transition-all duration-200 hover:border-ink-muted/40;
-    @apply hover:-translate-y-0.5;
+    @apply card transition-colors duration-150 hover:border-field/60;
+  }
+  .panel {
+    @apply rounded-lg bg-paper-dark p-5;
+  }
+  .menu {
+    @apply rounded-lg border border-rule bg-white py-1;
+    box-shadow: 0 10px 30px -12px rgb(32 32 45 / 0.22);
   }
 
   /* ---------- forms ---------- */
   .input {
-    @apply w-full rounded-lg border border-rule bg-sunken px-4 py-2.5 text-sm text-ink
+    @apply w-full rounded-md border border-field/70 bg-white px-4 py-3 text-base text-ink
            placeholder:text-ink-muted
-           focus:outline-none focus:ring-2 focus:ring-brand/60 focus:border-brand
+           focus:outline-none focus:border-brand-dark focus:ring-2 focus:ring-brand/25
            transition-colors;
+    min-height: 48px;
   }
-
+  textarea.input {
+    @apply leading-relaxed;
+  }
+  select.input {
+    @apply pr-9;
+  }
   .label {
-    @apply block text-sm font-medium text-ink-light mb-1.5;
+    @apply block text-sm font-semibold text-ink mb-1.5;
+  }
+  .hint {
+    @apply mt-1.5 text-sm text-ink-muted;
   }
 
   /* ---------- badges ---------- */
   .badge-brand {
-    @apply badge bg-brand-light text-brand;
+    @apply badge bg-brand-light text-brand-ink;
   }
   .badge-ochre {
     @apply badge bg-ochre-light text-ochre;
@@ -162,18 +201,25 @@
     @apply badge bg-moss-light text-moss;
   }
   .badge-muted {
-    @apply badge bg-paper-dark text-ink-muted;
+    @apply badge bg-paper-dark text-ink-light border border-rule;
   }
 
   /* ---------- type ---------- */
+  .page-title {
+    @apply text-3xl font-display font-semibold text-ink tracking-tight;
+  }
   .section-title {
-    @apply text-2xl font-bold text-ink font-display tracking-tight;
+    @apply text-2xl font-display font-semibold text-ink tracking-tight;
   }
-
   .section-sub {
-    @apply text-ink-light mt-1;
+    @apply text-base text-ink-light mt-2;
   }
-
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted;
+  }
+  html[lang="ne"] .eyebrow {
+    @apply normal-case tracking-normal text-sm;
+  }
   .divider {
     @apply border-t border-rule;
   }
@@ -183,8 +229,7 @@
     @apply h-2 rounded-full bg-sunken overflow-hidden;
   }
   .progress-bar-fill {
-    @apply h-full rounded-full transition-all duration-500;
-    background-image: linear-gradient(90deg, #f2707c, #f03b50);
+    @apply h-full rounded-full bg-brand transition-all duration-500;
   }
 
   /* ---------- toggle ---------- */
@@ -192,14 +237,14 @@
     @apply relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer;
   }
   .toggle-on {
-    @apply bg-brand;
+    @apply bg-brand-hover;
   }
   .toggle-off {
-    @apply bg-rule;
+    @apply bg-field/60;
   }
   .toggle-dot {
     @apply inline-block h-4 w-4 rounded-full bg-white transition-transform;
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
   }
   .toggle-dot-on {
     @apply translate-x-6;
@@ -210,82 +255,44 @@
 
   /* ---------- tabs / segmented ---------- */
   .tab-list {
-    @apply flex gap-1 rounded-lg bg-sunken p-1 border border-rule;
+    @apply flex gap-1 rounded-md bg-paper-dark p-1 border border-rule;
   }
   .tab {
-    @apply flex-1 rounded-md px-3 py-2 text-sm font-medium text-ink-muted transition-colors cursor-pointer;
+    @apply flex-1 rounded px-3 py-2 text-sm font-medium text-ink-light transition-colors cursor-pointer;
+    min-height: 40px;
   }
   .tab-active {
-    @apply bg-surface text-ink;
-    box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+    @apply bg-white text-ink;
+    box-shadow: 0 1px 2px rgb(32 32 45 / 0.12);
+  }
+
+  /* ---------- chips (filters, selectable options) ---------- */
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-md border border-rule bg-white px-3 py-1.5 text-sm text-ink-light transition-colors cursor-pointer hover:border-field hover:text-ink;
+    min-height: 38px;
+  }
+  .chip-on {
+    @apply border-ink bg-ink text-white hover:text-white hover:border-ink;
+  }
+
+  /* ---------- feedback ---------- */
+  .alert-error {
+    @apply alert border-danger/30 bg-danger-light text-danger;
+  }
+  .alert-ok {
+    @apply alert border-moss/25 bg-moss-light text-moss;
+  }
+  .alert-note {
+    @apply alert border-ochre/25 bg-ochre-light text-ink;
+  }
+  .empty {
+    @apply rounded-lg border border-dashed border-field/50 px-6 py-12 text-center text-ink-light;
   }
 
   /* ---------- skeleton ---------- */
   .skeleton {
-    @apply bg-paper-dark rounded animate-pulse;
+    @apply bg-sunken rounded animate-pulse;
   }
-}
-
-/* ============================================================
-   Brand flourishes
-   ============================================================ */
-
-/* Coral gradient as text — for hero headlines and numbers */
-.text-gradient {
-  background-image: linear-gradient(
-    135deg,
-    #fd5e6e 0%,
-    #f03b50 60%,
-    #d92b45 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.bg-brand-gradient {
-  background-image: linear-gradient(
-    135deg,
-    #f2707c 0%,
-    #f65f6f 45%,
-    #f03b50 100%
-  );
-}
-
-/* Soft coral bloom, echoing the logo's filled circle. Sits behind content. */
-.glow::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      42rem 28rem at 78% -10%,
-      rgb(253 94 110 / 0.14),
-      transparent 60%
-    ),
-    radial-gradient(
-      30rem 22rem at 8% 10%,
-      rgb(255 180 92 / 0.1),
-      transparent 65%
-    );
-}
-
-/* Hairline grid, barely there — gives large dark areas some structure */
-.grid-field::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(to right, rgb(25 24 36 / 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(25 24 36 / 0.05) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(
-    ellipse 70% 60% at 50% 0%,
-    #000 40%,
-    transparent 100%
-  );
 }
 
 /* ============================================================
@@ -293,65 +300,26 @@
    ============================================================ */
 
 @keyframes bell-shake {
-  0%,
-  100% {
-    transform: rotate(0);
-  }
-  25% {
-    transform: rotate(15deg);
-  }
-  50% {
-    transform: rotate(-10deg);
-  }
-  75% {
-    transform: rotate(5deg);
-  }
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(15deg); }
+  50% { transform: rotate(-10deg); }
+  75% { transform: rotate(5deg); }
 }
 .bell-ring {
   animation: bell-shake 0.5s ease-in-out;
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out forwards;
 }
 
+/* Kept as a no-op so markup using it still renders: no entrance motion. */
 .stagger-children > * {
-  opacity: 0;
-  animation: fadeIn 0.4s ease-out forwards;
-}
-.stagger-children > *:nth-child(1) {
-  animation-delay: 0.05s;
-}
-.stagger-children > *:nth-child(2) {
-  animation-delay: 0.1s;
-}
-.stagger-children > *:nth-child(3) {
-  animation-delay: 0.15s;
-}
-.stagger-children > *:nth-child(4) {
-  animation-delay: 0.2s;
-}
-.stagger-children > *:nth-child(5) {
-  animation-delay: 0.25s;
-}
-.stagger-children > *:nth-child(6) {
-  animation-delay: 0.3s;
-}
-.stagger-children > *:nth-child(7) {
-  animation-delay: 0.35s;
-}
-.stagger-children > *:nth-child(8) {
-  animation-delay: 0.4s;
+  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

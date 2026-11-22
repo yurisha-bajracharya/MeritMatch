@@ -87,7 +87,7 @@ const L = {
 const s = (k: keyof typeof L, lang: Lang) => L[k][lang];
 
 export default function ExperienceMapper() {
-  const [lang, setLang] = useLang();
+  const [lang] = useLang();
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [skills, setSkills] = useState<TranslatedSkill[]>([]);
@@ -271,226 +271,219 @@ export default function ExperienceMapper() {
       label
     );
 
-  return (
-    <div className="space-y-6">
-      {/* ---------- input ---------- */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="section-title">{t("experienceMapperTitle", lang)}</h2>
-            <p className="section-sub text-sm">
-              {t("experienceMapperDesc", lang)}
-            </p>
-          </div>
-          <button
-            onClick={() => setLang(lang === "en" ? "ne" : "en")}
-            className="text-sm text-ink-muted hover:text-ink"
-          >
-            {t("langToggle", lang)}
-          </button>
-        </div>
+  const ne = lang === "ne";
+  const SOURCE_TAG: Record<TranslatedSkill["source"], string> = {
+    named: ne ? "तपाईंले भन्नुभयो" : "You said this",
+    inferred: ne ? "तपाईंको कामबाट" : "From what you did",
+    added: ne ? "तपाईंले थप्नुभयो" : "Added by you",
+  };
 
+  return (
+    <div>
+      {/* ---------- header ---------- */}
+      <header className="max-w-2xl">
+        <p className="eyebrow">{t("experienceMapperTitle", lang)}</p>
+        <h1 className="page-title mt-2">
+          {ne ? "तपाईंले गरेको कामको मूल्य छ, जागिर नभए पनि।" : "What you have done counts, even if it was never a job."}
+        </h1>
+        <p className="section-sub">
+          {ne
+            ? "परिवारको हेरचाह, खेती, पसल, सिलाइ, स्वयंसेवा, जे गर्नुभयो आफ्नै शब्दमा लेख्नुहोस्। हामी त्यसलाई रोजगारदाताले खोज्ने सीपमा बदल्छौं र मिल्ने काम देखाउँछौं।"
+            : "Caring for family, farming, a shop, sewing, volunteering: write what you did in your own words. We turn it into skills employers look for, and show jobs that fit."}
+        </p>
+      </header>
+
+      {/* ---------- input ---------- */}
+      <section className="mt-8 max-w-2xl">
+        <label htmlFor="experience" className="label text-base">
+          {ne ? "आफ्नै शब्दमा लेख्नुहोस्" : "Tell us in your own words"}
+        </label>
         <textarea
-          className="input min-h-[120px] resize-y"
-          placeholder={t("describeExperience", lang)}
+          id="experience"
+          className="input min-h-[170px] resize-y !text-lg"
+          placeholder={
+            ne
+              ? "जस्तै: मैले तीन वर्ष हजुरआमाको हेरचाह गरेँ र शनिबार काकाको पसलमा सघाएँ।"
+              : "For example: I looked after my grandmother for three years and helped in my uncle's shop on weekends."
+          }
           value={text}
           onChange={(e) => setText(e.target.value)}
+          aria-describedby="experience-hint"
         />
+        <p id="experience-hint" className="hint">
+          {ne ? "नेपाली वा अंग्रेजीमा लेख्न सक्नुहुन्छ। एक दुई वाक्य पुग्छ।" : "Nepali or English is fine. A sentence or two is enough."}
+        </p>
 
         {text.trim().length === 0 && (
-          <div className="mt-3">
-            <p className="text-xs text-ink-muted mb-2">{s("tryOne", lang)}</p>
-            <div className="flex flex-wrap gap-2">
+          <div className="mt-6">
+            <p className="text-sm font-semibold text-ink">{ne ? "वा एउटा उदाहरणबाट सुरु गर्नुहोस्" : "Or start from an example"}</p>
+            <ul className="mt-2 divide-y divide-rule border-y border-rule">
               {STARTERS[lang].map((ex) => (
-                <button
-                  key={ex}
-                  type="button"
-                  onClick={() => setText(ex)}
-                  className="rounded-full border border-rule px-3 py-1.5 text-left text-xs text-ink-light transition-colors hover:border-brand/60 hover:text-ink"
-                >
-                  {ex}
-                </button>
+                <li key={ex}>
+                  <button
+                    type="button"
+                    onClick={() => setText(ex)}
+                    className="group flex w-full items-center justify-between gap-4 py-3 text-left text-base text-ink-light hover:text-ink"
+                  >
+                    <span>{ex}</span>
+                    <span className="shrink-0 text-sm font-medium text-brand-ink opacity-70 group-hover:opacity-100">
+                      {ne ? "यो प्रयोग गर्नुहोस्" : "Use this"}
+                    </span>
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         )}
 
         <button
+          type="button"
           onClick={handleMap}
           disabled={loading || text.trim().length < 5}
-          className="btn-primary mt-4 w-full"
+          className="btn-primary btn-lg mt-6 w-full sm:w-auto"
         >
           {loading ? t("mapping", lang) : t("mapSkills", lang)}
+          {!loading && <Icon name="arrow-right" size={18} />}
         </button>
 
-        {error && (
-          <div className="mt-3 p-3 rounded-lg bg-danger-light text-sm text-danger">
-            {error}
-          </div>
-        )}
-      </div>
+        {error && <div className="alert-error mt-4" role="alert">{error}</div>}
+      </section>
 
-      {/* ---------- nothing found: say so instead of showing nothing ---------- */}
+      {/* ---------- nothing found ---------- */}
       {mapped && skills.length === 0 && !error && (
-        <div className="card animate-fade-in border-ochre/30">
-          <p className="text-sm text-ink-light leading-relaxed">
-            {s("nothingFound", lang)}
-          </p>
-          {aiError === "no_key" && (
-            <p className="text-xs text-ink-muted mt-3">{s("keywordMode", lang)}</p>
-          )}
-          {aiError === "failed" && (
-            <p className="text-xs text-ink-muted mt-3">{s("aiFailed", lang)}</p>
-          )}
+        <div className="alert-note mt-8 max-w-2xl" role="status">
+          <p className="text-base">{s("nothingFound", lang)}</p>
+          {aiError === "no_key" && <p className="mt-2 text-sm text-ink-muted">{s("keywordMode", lang)}</p>}
+          {aiError === "failed" && <p className="mt-2 text-sm text-ink-muted">{s("aiFailed", lang)}</p>}
         </div>
       )}
 
-      {/* ---------- skills found: editable ---------- */}
+      {/* ---------- results ---------- */}
       {mapped && skills.length > 0 && (
-        <div className="card animate-fade-in">
-          <h3 className="font-semibold">{t("skillsFound", lang)}</h3>
-          <p className="text-xs text-ink-muted mt-1 leading-relaxed">{s("tapHint", lang)}</p>
+        <div className="mt-12 border-t border-rule pt-10">
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.3fr] lg:gap-14">
+            {/* 1 + 2: what you said, and the skills in it */}
+            <section aria-labelledby="skills-found">
+              <p className="eyebrow">{ne ? "तपाईंले लेख्नुभयो" : "You wrote"}</p>
+              <blockquote className="mt-2 border-l-2 border-rule pl-4 font-display text-lg leading-relaxed text-ink">
+                {text}
+              </blockquote>
 
-          <div className="mt-4 space-y-4">
-            {groups.map(({ key, title }) => {
-              const group = skills.filter((x) => x.source === key);
-              if (group.length === 0) return null;
-              return (
-                <div key={key} className="p-4 rounded-lg bg-paper-dark">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted mb-2">
-                    {s(title, lang)}
-                  </p>
-                  <ul className="space-y-2">
-                    {group.map((x) => {
-                      const on = !off.has(x.tag);
+              <h2 id="skills-found" className="section-title mt-8">
+                {t("skillsFound", lang)}
+              </h2>
+              <p className="mt-1 text-sm text-ink-light">{s("tapHint", lang)}</p>
+
+              <ul className="mt-5 divide-y divide-rule border-y border-rule">
+                {groups.flatMap(({ key }) =>
+                  skills
+                    .filter((sk) => sk.source === key)
+                    .map((sk) => {
+                      const on = !off.has(sk.tag);
+                      const id = `skill-${sk.tag}`;
                       return (
-                        <li key={x.tag}>
-                          <button
-                            type="button"
-                            onClick={() => toggle(x.tag)}
-                            aria-pressed={on}
-                            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                              on
-                                ? "border-brand bg-brand-light text-brand"
-                                : "border-rule text-ink-muted line-through"
-                            }`}
-                          >
-                            <Icon name={on ? "check" : "plus"} size={13} strokeWidth={2.5} />
-                            {TAG_LABELS[x.tag]?.[lang] ?? x.tag}
-                          </button>
-                          {x.evidence && (
-                            <p className="mt-1 pl-1 text-xs italic text-ink-muted">{x.evidence}</p>
-                          )}
+                        <li key={sk.tag} className="py-3.5">
+                          <label htmlFor={id} className="flex cursor-pointer items-start gap-3">
+                            <input
+                              id={id}
+                              type="checkbox"
+                              checked={on}
+                              onChange={() => toggle(sk.tag)}
+                              className="mt-1 h-5 w-5 shrink-0 accent-[#d92f49]"
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="flex flex-wrap items-baseline justify-between gap-x-3">
+                                <span className={`text-base font-semibold ${on ? "text-ink" : "text-ink-muted line-through"}`}>
+                                  {TAG_LABELS[sk.tag]?.[lang] ?? sk.tag}
+                                </span>
+                                <span className="text-xs text-ink-muted">{SOURCE_TAG[sk.source]}</span>
+                              </span>
+                              {sk.evidence && <span className="mt-0.5 block text-sm text-ink-light">{sk.evidence}</span>}
+                            </span>
+                          </label>
                         </li>
                       );
-                    })}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
+                    }),
+                )}
+              </ul>
 
-          <div className="mt-4">
-            <label className="label" htmlFor="add-skill">
-              {s("addSkill", lang)}
-            </label>
-            <select
-              id="add-skill"
-              className="input"
-              value=""
-              onChange={(e) => addSkill(e.target.value)}
-            >
-              <option value="">{lang === "ne" ? "सीप छान्नुहोस्" : "Choose a skill"}</option>
-              {addable.map((tg) => (
-                <option key={tg} value={tg}>
-                  {TAG_LABELS[tg][lang]}
-                </option>
-              ))}
-            </select>
-          </div>
+              <div className="mt-5">
+                <label className="label" htmlFor="add-skill">
+                  {s("addSkill", lang)}
+                </label>
+                <select id="add-skill" className="input" value="" onChange={(e) => addSkill(e.target.value)}>
+                  <option value="">{ne ? "सीप छान्नुहोस्" : "Choose a skill"}</option>
+                  {addable.map((tg) => (
+                    <option key={tg} value={tg}>
+                      {TAG_LABELS[tg][lang]}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <p className="text-xs text-ink-muted mt-4 leading-relaxed">{s("claimNote", lang)}</p>
-
-          <div className="flex gap-3 mt-4">
-            <button
-              onClick={saveToProfile}
-              disabled={saved || keptTags.length === 0}
-              className="btn-primary flex-1"
-            >
-              {doneLabel(saved, t("saveToProfile", lang), s("saved", lang))}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ---------- recommended jobs: follows the skills you keep ---------- */}
-      {mapped && skills.length > 0 && (
-        <div className="card animate-fade-in">
-          <div className="mb-4">
-            <h3 className="font-semibold">{s("recommended", lang)}</h3>
-            <p className="section-sub text-sm">{s("recommendedSub", lang)}</p>
-            {myCities.length > 0 && (
-              <p className="mt-1 inline-flex items-center gap-1 text-xs text-moss">
-                <Icon name="pin" size={12} />
-                {s("inCity", lang)}
-              </p>
-            )}
-          </div>
-
-          {jobsLoading ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="skeleton h-40 rounded-xl" />
-              ))}
-            </div>
-          ) : keptTags.length === 0 ? (
-            <p className="py-6 text-center text-sm text-ink-muted">{s("nothingKept", lang)}</p>
-          ) : matches.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-sm text-ink-muted mb-4">
-                {s("noMatches", lang)}
-              </p>
+              <p className="mt-5 text-sm text-ink-muted">{s("claimNote", lang)}</p>
               <button
-                onClick={subscribe}
-                disabled={subbing || subbed}
-                className={subbed ? "btn-secondary" : "btn-primary"}
+                type="button"
+                onClick={saveToProfile}
+                disabled={saved || keptTags.length === 0}
+                className="btn-primary mt-4 w-full sm:w-auto"
               >
-                {doneLabel(subbed, s("notifyMe", lang), s("notified", lang))}
+                {doneLabel(saved, t("saveToProfile", lang), s("saved", lang))}
               </button>
-            </div>
-          ) : (
-            <>
-              <div className="grid gap-4 sm:grid-cols-2 stagger-children">
-                {matches.map((m) => (
-                  <div key={m.job.id} className="space-y-1.5">
-                    <JobCard job={m.job} lang={lang} fit={myCities.length ? m.fit : undefined} />
-                    <p className="text-xs text-ink-muted px-1">
-                      {s("matchesOn", lang)}:{" "}
-                      {m.shared
-                        .map((tg) => TAG_LABELS[tg]?.[lang] ?? tg)
-                        .join(", ")}
-                    </p>
-                  </div>
-                ))}
-              </div>
+            </section>
 
-              <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <a
-                  href={`/jobs?tags=${encodeURIComponent(allTags)}`}
-                  className="btn-secondary flex-1 text-center"
-                >
-                  {s("seeAll", lang)}
-                </a>
-                <button
-                  onClick={subscribe}
-                  disabled={subbing || subbed}
-                  className={`flex-1 ${subbed ? "btn-secondary" : "btn-primary"}`}
-                >
-                  {doneLabel(subbed, s("notifyMe", lang), s("notified", lang))}
-                </button>
+            {/* 3: where those skills transfer */}
+            <section aria-labelledby="where-fit">
+              <h2 id="where-fit" className="section-title">
+                {ne ? "यी सीप कहाँ काम लाग्छन्" : "Where these skills fit"}
+              </h2>
+              <p className="mt-1 text-sm text-ink-light">
+                {s("recommendedSub", lang)}
+                {myCities.length > 0 && ` ${s("inCity", lang)}.`}
+              </p>
+
+              <div className="mt-5">
+                {jobsLoading ? (
+                  <div className="space-y-4" aria-hidden>
+                    {[1, 2].map((i) => (
+                      <div key={i} className="skeleton h-36 rounded-lg" />
+                    ))}
+                  </div>
+                ) : keptTags.length === 0 ? (
+                  <div className="empty">{s("nothingKept", lang)}</div>
+                ) : matches.length === 0 ? (
+                  <div className="empty">
+                    <p>{s("noMatches", lang)}</p>
+                    <button type="button" onClick={subscribe} disabled={subbing || subbed} className="btn-secondary btn-sm mt-4">
+                      {doneLabel(subbed, s("notifyMe", lang), s("notified", lang))}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-5">
+                      {matches.map((m) => (
+                        <div key={m.job.id}>
+                          <JobCard job={m.job} lang={lang} fit={myCities.length ? m.fit : undefined} />
+                          <p className="mt-1.5 px-1 text-sm text-ink-light">
+                            <span className="text-ink-muted">{s("matchesOn", lang)}: </span>
+                            {m.shared.map((tg) => TAG_LABELS[tg]?.[lang] ?? tg).join(", ")}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-6 flex flex-wrap gap-3">
+                      <a href={`/jobs?tags=${encodeURIComponent(allTags)}`} className="btn-secondary">
+                        {s("seeAll", lang)}
+                      </a>
+                      <button type="button" onClick={subscribe} disabled={subbing || subbed} className="btn-ghost text-brand-ink">
+                        {doneLabel(subbed, s("notifyMe", lang), s("notified", lang))}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
-            </>
-          )}
+            </section>
+          </div>
         </div>
       )}
     </div>

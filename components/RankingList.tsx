@@ -162,19 +162,17 @@ export default function RankingList({
       type="button"
       onClick={() => setTab(id)}
       aria-pressed={view === id}
-      className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
-        view === id ? "border-brand bg-brand-light text-brand" : "border-rule text-ink-light hover:border-brand/50"
-      }`}
+      className={`chip ${view === id ? "chip-on" : ""}`}
     >
       {label}
     </button>
   );
 
   return (
-    <div className="container-main mx-auto max-w-3xl space-y-6 py-8">
+    <div className="container-main mx-auto max-w-4xl space-y-6 py-10">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="section-title">{job.title}</h1>
+          <h1 className="page-title">{job.title}</h1>
           <p className="text-sm text-ink-light">
             {job.employer_name} · {job.location} · {x("applicantsCount", lang, { n: n(entries.length) })}
           </p>
@@ -194,7 +192,7 @@ export default function RankingList({
             {questions.map((q) => (
               <li key={q.id}>
                 {q.prompt[lang]}
-                {q.mine && <span className="badge-brand ml-2 text-[10px]">{x("mine", lang)}</span>}
+                {q.mine && <span className="badge-brand ml-2 text-xs">{x("mine", lang)}</span>}
               </li>
             ))}
           </ol>
@@ -229,27 +227,27 @@ export default function RankingList({
             <div key={entry.submissionId} className={`card !p-4 ${entry.shortlisted ? "ring-1 ring-brand" : ""} ${entry.rejected ? "opacity-70" : ""}`}>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-light text-xs font-bold text-brand">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-light text-xs font-bold text-brand-ink">
                     #{n(entry.rank)}
                   </span>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="font-mono text-sm font-semibold">{entry.label}</span>
                     {entry.shortlisted ? (
-                      <span className="badge-moss inline-flex items-center gap-1 text-[10px]">
+                      <span className="badge-moss inline-flex items-center gap-1 text-xs">
                         <Icon name="check" size={11} strokeWidth={3} />
                         {x("shortlistedBadge", lang)}
                       </span>
                     ) : entry.rejected ? (
-                      <span className="badge-ochre text-[10px]">{x("rejectedBadge", lang)}</span>
+                      <span className="badge-ochre text-xs">{x("rejectedBadge", lang)}</span>
                     ) : (
-                      entry.suggested && <span className="badge-muted text-[10px]">{x("suggestedBadge", lang)}</span>
+                      entry.suggested && <span className="badge-muted text-xs">{x("suggestedBadge", lang)}</span>
                     )}
                   </div>
                 </div>
-                <span className="text-lg font-bold text-brand">{n(entry.total)}%</span>
+                <span className="text-lg font-bold text-brand-ink">{n(entry.total)}%</span>
               </div>
 
-              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
                 {entry.mcqTotal ? (
                   <span className="badge-muted">
                     {x("choices", lang, { a: n(entry.mcqCorrect ?? 0), b: n(entry.mcqTotal), w: n(w) })}
@@ -281,7 +279,7 @@ export default function RankingList({
                         {x("trackSummary", lang, { n: n(entry.track.tasks), avg: n(entry.track.average) })}
                       </p>
                       {entry.track.recent.length > 0 && (
-                        <p className="mt-1 text-[11px] text-ink-muted">
+                        <p className="mt-1 text-xs text-ink-muted">
                           {x("trackRecent", lang)}:{" "}
                           {entry.track.recent.map((r) => `${r.name[lang]} ${n(r.total)}%`).join(", ")}
                         </p>
@@ -290,10 +288,10 @@ export default function RankingList({
                   )}
                   {entry.track.proven.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-[10px] uppercase tracking-wide text-ink-muted">{x("trackProven", lang)}</p>
+                      <p className="text-xs uppercase tracking-wide text-ink-muted">{x("trackProven", lang)}</p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {entry.track.proven.map((p) => (
-                          <span key={p.tag} className="badge-moss text-[10px]">
+                          <span key={p.tag} className="badge-moss text-xs">
                             {TAG_LABELS[p.tag]?.[lang] ?? p.tag}
                             {p.count > 1 ? ` x${n(p.count)}` : ""}
                           </span>
@@ -303,17 +301,17 @@ export default function RankingList({
                   )}
                   {entry.track.claimed.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-[10px] uppercase tracking-wide text-ink-muted">{x("trackClaimed", lang)}</p>
+                      <p className="text-xs uppercase tracking-wide text-ink-muted">{x("trackClaimed", lang)}</p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {entry.track.claimed.map((tag) => (
-                          <span key={tag} className="badge-muted text-[10px]">
+                          <span key={tag} className="badge-muted text-xs">
                             {TAG_LABELS[tag]?.[lang] ?? tag}
                           </span>
                         ))}
                       </div>
                     </div>
                   )}
-                  <p className="mt-2 text-[10px] text-ink-muted">{x("trackAnon", lang)}</p>
+                  <p className="mt-2 text-xs text-ink-muted">{x("trackAnon", lang)}</p>
                 </div>
               )}
 
@@ -333,7 +331,7 @@ export default function RankingList({
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-2 text-[10px] text-ink-muted">{x("closerLookHint", lang)}</p>
+                  <p className="mt-2 text-xs text-ink-muted">{x("closerLookHint", lang)}</p>
                 </div>
               )}
 
@@ -367,7 +365,7 @@ export default function RankingList({
                         {n(c.score)}/{n(c.max)}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-[10px] text-ink-muted">{c.reason}</p>
+                    <p className="mt-0.5 text-xs text-ink-muted">{c.reason}</p>
                   </div>
                 ))}
               </div>
@@ -375,7 +373,7 @@ export default function RankingList({
               {entry.tags.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {entry.tags.map((tag) => (
-                    <span key={tag} className="badge-brand text-[10px]">
+                    <span key={tag} className="badge-brand text-xs">
                       {TAG_LABELS[tag]?.[lang] ?? tag}
                     </span>
                   ))}
@@ -386,7 +384,7 @@ export default function RankingList({
                 <EvidenceReview submissionId={entry.submissionId} media={entry.media} reviews={entry.reviews} />
               )}
               {!isOwner && entry.media.length > 0 && (
-                <p className="mt-3 flex items-center gap-1.5 text-[11px] text-ink-muted">
+                <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-muted">
                   <Icon name="lock" size={12} />
                   {x("privateMedia", lang)}
                 </p>
@@ -422,9 +420,9 @@ export default function RankingList({
                   </button>
                 </div>
               ) : entry.shortlisted ? (
-                <p className="mt-2 text-[10px] italic text-ink-muted">{x("waitingConsent", lang)}</p>
+                <p className="mt-2 text-xs italic text-ink-muted">{x("waitingConsent", lang)}</p>
               ) : (
-                <p className="mt-2 text-[10px] italic text-ink-muted">{x("needShortlistFirst", lang)}</p>
+                <p className="mt-2 text-xs italic text-ink-muted">{x("needShortlistFirst", lang)}</p>
               )}
 
               {isOwner && (

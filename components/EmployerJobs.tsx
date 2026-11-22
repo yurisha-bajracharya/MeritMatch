@@ -32,10 +32,10 @@ export default function EmployerJobs({ name, jobs }: { name: string; jobs: Emplo
   };
 
   return (
-    <div className="container-main mx-auto max-w-3xl space-y-6 py-8">
+    <div className="container-main mx-auto max-w-4xl space-y-6 py-10">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="section-title">{x("myJobsTitle", lang)}</h1>
+          <h1 className="page-title">{x("myJobsTitle", lang)}</h1>
           <p className="text-sm text-ink-light">{x("welcomeBack", lang, { name })}</p>
         </div>
         <Link href="/employer/post" className="btn-primary btn-sm shrink-0">
@@ -76,7 +76,7 @@ export default function EmployerJobs({ name, jobs }: { name: string; jobs: Emplo
                     </div>
                   ))}
                 </div>
-                <button type="button" onClick={() => copy(j.id)} className="mt-3 inline-flex items-center gap-1.5 text-xs text-brand hover:underline">
+                <button type="button" onClick={() => copy(j.id)} className="mt-3 inline-flex items-center gap-1.5 text-xs text-brand-ink hover:underline">
                   <Icon name={copied === j.id ? "check" : "upload"} size={12} />
                   {copied === j.id ? x("done", lang) : x("shareTaskLink", lang)}
                 </button>

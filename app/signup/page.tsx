@@ -10,6 +10,7 @@ import { CityPicker } from "@/components/CityPicker";
 import { useLang } from "@/lib/useLang";
 import type { Lang, Role } from "@/lib/types";
 import { t } from "@/lib/i18n";
+import { x } from "@/lib/i18n-extra";
 
 function SignupPageInner() {
   const router = useRouter();
@@ -48,9 +49,17 @@ function SignupPageInner() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
+      if (!res.ok) {
+        throw new Error(
+          data.code === "no_account"
+            ? x("errNoAccount", lang)
+            : data.code === "role_taken"
+              ? x(data.existingRole === "employer" ? "errRoleTakenEmployer" : "errRoleTakenCandidate", lang)
+              : data.error || "Failed",
+        );
+      }
 
-      // Redirect based on role
+      // Redirect based on the account's own role
       if (data.user?.role === "employer") {
         router.push("/employer/dashboard");
       } else {
@@ -70,7 +79,7 @@ function SignupPageInner() {
         <div className="w-full max-w-md">
           <div className="card animate-fade-in">
             <div className="text-center mb-6">
-              <h1 className="section-title">
+              <h1 className="page-title">
                 {isLogin ? t("loginTitle", lang) : t("signupTitle", lang)}
               </h1>
               <p className="section-sub text-sm mt-1">
@@ -168,21 +177,6 @@ function SignupPageInner() {
                 </>
               )}
 
-              {isLogin && (
-                <div>
-                  <label className="label">{t("iAmA", lang)}</label>
-                  <Segmented
-                    name="role-login"
-                    value={role}
-                    onChange={setRole}
-                    options={[
-                      { value: "candidate", label: t("jobSeeker", lang) },
-                      { value: "employer", label: t("employer", lang) },
-                    ]}
-                  />
-                </div>
-              )}
-
               {error && (
                 <div className="p-3 rounded-lg bg-danger-light text-sm text-danger">
                   {error}
@@ -206,14 +200,14 @@ function SignupPageInner() {
               {isLogin ? (
                 <>
                   {t("noAccount", lang)}{" "}
-                  <a href="/signup" className="text-brand hover:underline">
+                  <a href="/signup" className="text-brand-ink hover:underline">
                     {t("signUp", lang)}
                   </a>
                 </>
               ) : (
                 <>
                   {t("alreadyHaveAccount", lang)}{" "}
-                  <a href="/signup?mode=login" className="text-brand hover:underline">
+                  <a href="/signup?mode=login" className="text-brand-ink hover:underline">
                     {t("login", lang)}
                   </a>
                 </>

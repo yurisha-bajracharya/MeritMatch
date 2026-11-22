@@ -6,13 +6,13 @@ import Navbar from "@/components/Navbar";
 import JobCard from "@/components/JobCard";
 import { useLang } from "@/lib/useLang";
 import type { Job, Lang, User } from "@/lib/types";
-import { t } from "@/lib/i18n";
+import { t, localizeDigits } from "@/lib/i18n";
 import { x } from "@/lib/i18n-extra";
 import { TAG_LABELS, matchJobs } from "@/lib/tags";
 import Link from "next/link";
 import Icon from "@/components/Icon";
 import { CityPicker } from "@/components/CityPicker";
-import { locationFit } from "@/lib/places";
+import { cityName, locationFit } from "@/lib/places";
 
 type SubData = { id: string; tags: string[]; category: string };
 
@@ -47,7 +47,7 @@ const L = {
 const s = (k: keyof typeof L, lang: Lang) => L[k][lang];
 
 export default function DashboardPage() {
-  const [lang, setLang] = useLang();
+  const [lang] = useLang();
   const [user, setUser] = useState<User | null>(null);
   const [matchingJobs, setMatchingJobs] = useState<Job[]>([]);
   const [subscriptions, setSubs] = useState<SubData[]>([]);
@@ -55,6 +55,7 @@ export default function DashboardPage() {
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [citiesSaved, setCitiesSaved] = useState(false);
+  const [editingCities, setEditingCities] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -131,15 +132,39 @@ export default function DashboardPage() {
     setTimeout(() => setCitiesSaved(false), 2000);
   };
 
+  const ne = lang === "ne";
+  const described = user?.skills ?? [];
+  const proven = user?.proven_skills ?? [];
+  const chosenCities = cities.filter((c) => c !== "anywhere");
+  const steps = [
+    {
+      done: described.length > 0,
+      label: ne ? "आफ्नो अनुभव लेख्नुहोस्" : "Describe your experience",
+      href: "/experience-mapper",
+    },
+    {
+      done: cities.length > 0,
+      label: ne ? "काम गर्न चाहेको शहर रोज्नुहोस्" : "Choose where you want to work",
+      href: "#cities",
+    },
+    {
+      done: proven.length > 0,
+      label: ne ? "पहिलो कार्य पूरा गर्नुहोस्" : "Complete your first task",
+      href: matchingJobs[0] ? `/t/${matchingJobs[0].id}` : "/jobs",
+    },
+  ];
+  const doneCount = steps.filter((st) => st.done).length;
+  const next = steps.find((st) => !st.done);
+
   if (loading) {
     return (
       <>
         <Navbar />
-        <div className="container-main py-12">
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="skeleton h-32 w-full rounded-xl" />
-            ))}
+        <div className="container-main py-12" aria-busy="true">
+          <div className="skeleton h-10 w-72" />
+          <div className="mt-8 grid gap-6 lg:grid-cols-[1.7fr_1fr]">
+            <div className="skeleton h-64" />
+            <div className="skeleton h-64" />
           </div>
         </div>
       </>
@@ -149,160 +174,204 @@ export default function DashboardPage() {
   return (
     <>
       <Navbar />
-      <div className="container-main py-8 space-y-8">
-        {/* Welcome */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="section-title">
-              {t("candidateDashTitle", lang)}
-            </h1>
-            <p className="text-sm text-ink-light mt-1">
-              {x("welcomeBack", lang, { name: user?.name || x("there", lang) })}
-            </p>
-          </div>
-          <button
-            onClick={() => setLang(lang === "en" ? "ne" : "en")}
-            className="text-sm text-ink-muted hover:text-ink"
-          >
-            {t("langToggle", lang)}
-          </button>
-        </div>
+      <main className="container-main py-10">
+        <header>
+          <h1 className="page-title">{x("welcomeBack", lang, { name: user?.name?.split(" ")[0] || x("there", lang) })}</h1>
+          <p className="section-sub">
+            {proven.length > 0
+              ? ne
+                ? `तपाईंले ${localizeDigits(proven.length, lang)} वटा सीप कार्यबाट प्रमाणित गर्नुभएको छ।`
+                : `You have proven ${proven.length} ${proven.length === 1 ? "skill" : "skills"} through your work.`
+              : ne
+                ? "छोटो कार्य गरेर आफ्नो सीप देखाउनुहोस्। CV चाहिँदैन।"
+                : "Show what you can do with a short task. No CV needed."}
+          </p>
+        </header>
 
-        {/* Skills: proven (earned) vs claimed (described) */}
-        <div className="card space-y-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-moss" />
-              <h2 className="font-semibold">{s("proven", lang)}</h2>
-            </div>
-            <p className="text-xs text-ink-muted mt-0.5 mb-3">
-              {s("provenSub", lang)}
-            </p>
-            {user?.proven_skills && user.proven_skills.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {user.proven_skills.map((skill) => (
-                  <span key={skill} className="badge-moss">
-                    <span className="inline-flex items-center gap-1">
-                      <Icon name="check" size={12} strokeWidth={2.5} />
-                      {TAG_LABELS[skill]?.[lang] ?? skill}
-                    </span>
-                  </span>
-                ))}
+        {/* Getting started: only while something is left to do */}
+        {next && (
+          <section className="mt-8 rounded-lg border border-rule p-6" aria-labelledby="next-step">
+            <div className="flex flex-wrap items-start justify-between gap-6">
+              <div>
+                <p className="eyebrow">{ne ? `सुरुवात: ${localizeDigits(doneCount, lang)}/३ पूरा` : `Getting started: ${doneCount} of 3 done`}</p>
+                <h2 id="next-step" className="mt-2 text-xl font-semibold text-ink">
+                  {ne ? "अर्को कदम: " : "Next: "}
+                  {next.label}
+                </h2>
               </div>
-            ) : (
-              <p className="text-sm text-ink-muted">{s("noneProven", lang)}</p>
-            )}
-          </div>
-
-          <div className="divider pt-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full border border-ink-muted" />
-                <h2 className="font-semibold">{s("claimed", lang)}</h2>
-              </div>
-              <Link
-                href="/experience-mapper"
-                className="text-sm text-brand hover:underline inline-flex items-center gap-0.5"
-              >
-                {t("experienceMapper", lang)}
-                <Icon name="chevron" size={14} />
+              <Link href={next.href} className="btn-primary">
+                {next.label}
+                <Icon name="arrow-right" size={18} />
               </Link>
             </div>
-            <p className="text-xs text-ink-muted mt-0.5 mb-3">
-              {s("claimedSub", lang)}
-            </p>
-            {user?.skills && user.skills.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {user.skills.map((skill) => (
-                  <span key={skill} className="badge-muted">
-                    {TAG_LABELS[skill]?.[lang] ?? skill}
-                  </span>
-                ))}
+            <div className="progress-bar mt-5" role="progressbar" aria-valuemin={0} aria-valuemax={3} aria-valuenow={doneCount}>
+              <div className="progress-bar-fill" style={{ width: `${(doneCount / 3) * 100}%` }} />
+            </div>
+            <ol className="mt-4 grid gap-2 sm:grid-cols-3">
+              {steps.map((st) => (
+                <li key={st.label} className={`flex items-center gap-2 text-sm ${st.done ? "text-moss" : "text-ink-light"}`}>
+                  <Icon name={st.done ? "check-circle" : "clock"} size={18} />
+                  {st.label}
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+
+        <div className="mt-10 grid gap-10 lg:grid-cols-[1.7fr_1fr] lg:gap-12">
+          {/* Main column: jobs */}
+          <section aria-labelledby="matches">
+            <div className="flex items-end justify-between gap-4 border-b border-rule pb-3">
+              <div>
+                <h2 id="matches" className="section-title">{t("matchingJobs", lang)}</h2>
+                <p className="mt-1 text-sm text-ink-muted">
+                  {ne
+                    ? "तपाईंले भनेका र प्रमाणित सीप, अनि रोजेका शहरका आधारमा।"
+                    : "Based on your described and proven skills, and your cities."}
+                </p>
               </div>
-            ) : (
-              <p className="text-sm text-ink-muted">{t("noSkillsYet", lang)}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Preferred cities */}
-        <div className="card">
-          <div className="flex items-center gap-2">
-            <Icon name="pin" size={16} className="text-brand" />
-            <h2 className="font-semibold">{s("where", lang)}</h2>
-          </div>
-          <p className="text-xs text-ink-muted mt-0.5 mb-3">{s("whereSub", lang)}</p>
-          <CityPicker value={cities} onChange={setCities} lang={lang} />
-          <button onClick={saveCities} className="btn-primary btn-sm mt-4">
-            {citiesSaved ? s("saved", lang) : s("save", lang)}
-          </button>
-        </div>
-
-        {/* Matching Jobs */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">{t("matchingJobs", lang)}</h2>
-            <Link href="/jobs" className="text-sm text-brand hover:underline inline-flex items-center gap-0.5">
-              {t("browseAll", lang)}
-              <Icon name="chevron" size={14} />
-            </Link>
-          </div>
-          {matchingJobs.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 stagger-children">
-              {matchingJobs.slice(0, 6).map((job) => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  lang={lang}
-                  fit={cities.length ? locationFit(job.location, cities) : undefined}
-                />
-              ))}
+              <Link href="/jobs" className="link shrink-0 text-sm">
+                {t("browseAll", lang)}
+              </Link>
             </div>
-          ) : (
-            <div className="card text-center text-sm text-ink-muted py-8">
-              {user?.skills?.length || user?.proven_skills?.length
-                ? s("noMatch", lang)
-                : t("noJobs", lang)}
-            </div>
-          )}
-        </div>
-
-        {/* Subscriptions */}
-        <div className="card">
-          <h2 className="font-semibold mb-1">{t("subscriptions", lang)}</h2>
-          <p className="text-xs text-ink-muted mb-4">{t("subscriptionsSub", lang)}</p>
-
-          {subscriptions.length > 0 ? (
-            <div className="space-y-2">
-              {subscriptions.map((sub) => (
-                <div
-                  key={sub.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-paper-dark"
-                >
-                  <div className="flex flex-wrap gap-1">
-                    {sub.tags.map((tag) => (
-                      <span key={tag} className="badge-brand text-[10px]">
-                        {TAG_LABELS[tag]?.[lang] ?? tag}
-                      </span>
-                    ))}
-                    {sub.category && (
-                      <span className="badge-muted text-[10px]">{sub.category}</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => deleteSub(sub.id)}
-                    className="text-xs text-danger hover:underline ml-3"
-                  >
-                    <Icon name="x" size={14} label={x("remove", lang)} />
-                  </button>
+            <div className="mt-5 space-y-4">
+              {matchingJobs.length > 0 ? (
+                matchingJobs.slice(0, 6).map((job) => (
+                  <JobCard key={job.id} job={job} lang={lang} fit={cities.length ? locationFit(job.location, cities) : undefined} />
+                ))
+              ) : (
+                <div className="empty">
+                  <p>{described.length || proven.length ? s("noMatch", lang) : t("noJobs", lang)}</p>
+                  <Link href="/jobs" className="btn-secondary btn-sm mt-4">
+                    {t("browseAll", lang)}
+                  </Link>
                 </div>
-              ))}
+              )}
             </div>
-          ) : (
-            <p className="text-sm text-ink-muted">{t("noSubscriptions", lang)}</p>
-          )}
+          </section>
+
+          {/* Side column: profile facts */}
+          <aside className="space-y-10">
+            <section aria-labelledby="skills">
+              <h2 id="skills" className="text-xl font-semibold text-ink">
+                {ne ? "तपाईंका सीप" : "Your skills"}
+              </h2>
+
+              <div className="mt-4 rounded-lg border border-moss/25 bg-moss-light/60 p-5">
+                <p className="flex items-center gap-2 text-base font-semibold text-moss">
+                  <Icon name="check-circle" size={18} />
+                  {s("proven", lang)}
+                </p>
+                <p className="mt-1 text-sm text-ink-light">{s("provenSub", lang)}</p>
+                {proven.length > 0 ? (
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {proven.map((skill) => (
+                      <li key={skill} className="rounded-md bg-white px-2.5 py-1 text-sm font-medium text-moss ring-1 ring-moss/25">
+                        {TAG_LABELS[skill]?.[lang] ?? skill}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-3 text-sm text-ink">{s("noneProven", lang)}</p>
+                )}
+              </div>
+
+              <div className="mt-4 rounded-lg border border-dashed border-field/50 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-base font-semibold text-ink">{s("claimed", lang)}</p>
+                  <Link href="/experience-mapper" className="link shrink-0 text-sm">
+                    {described.length ? (ne ? "बदल्नुहोस्" : "Edit") : ne ? "थप्नुहोस्" : "Add"}
+                  </Link>
+                </div>
+                <p className="mt-1 text-sm text-ink-light">{s("claimedSub", lang)}</p>
+                {described.length > 0 ? (
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {described.map((skill) => (
+                      <li key={skill} className="rounded-md border border-rule bg-white px-2.5 py-1 text-sm text-ink-light">
+                        {TAG_LABELS[skill]?.[lang] ?? skill}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-3 text-sm text-ink-muted">{t("noSkillsYet", lang)}</p>
+                )}
+              </div>
+            </section>
+
+            <section id="cities" aria-labelledby="cities-h" className="scroll-mt-24">
+              <div className="flex items-start justify-between gap-3">
+                <h2 id="cities-h" className="text-xl font-semibold text-ink">{s("where", lang)}</h2>
+                {!editingCities && (
+                  <button type="button" className="link shrink-0 text-sm" onClick={() => setEditingCities(true)}>
+                    {ne ? "बदल्नुहोस्" : "Change"}
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 text-sm text-ink-light">{s("whereSub", lang)}</p>
+              {editingCities ? (
+                <div className="mt-4">
+                  <CityPicker value={cities} onChange={setCities} lang={lang} />
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await saveCities();
+                        setEditingCities(false);
+                      }}
+                      className="btn-primary btn-sm"
+                    >
+                      {s("save", lang)}
+                    </button>
+                    <button type="button" onClick={() => setEditingCities(false)} className="btn-ghost btn-sm">
+                      {ne ? "रद्द" : "Cancel"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 flex flex-wrap items-center gap-2 text-base text-ink">
+                  <Icon name="pin" size={18} className="text-ink-muted" />
+                  {cities.includes("anywhere")
+                    ? cityName("anywhere", lang)
+                    : chosenCities.length
+                      ? chosenCities.map((c) => cityName(c, lang)).join(", ")
+                      : ne
+                        ? "अहिलेसम्म रोजिएको छैन"
+                        : "Not chosen yet"}
+                  {citiesSaved && <span className="text-sm text-moss">{s("saved", lang)}</span>}
+                </p>
+              )}
+            </section>
+
+            <section aria-labelledby="alerts-h">
+              <h2 id="alerts-h" className="text-xl font-semibold text-ink">{t("subscriptions", lang)}</h2>
+              <p className="mt-1 text-sm text-ink-light">{t("subscriptionsSub", lang)}</p>
+              {subscriptions.length > 0 ? (
+                <ul className="mt-3 divide-y divide-rule border-y border-rule">
+                  {subscriptions.map((sub) => (
+                    <li key={sub.id} className="flex items-center justify-between gap-3 py-2.5">
+                      <span className="text-sm text-ink">
+                        {[...sub.tags.map((tag) => TAG_LABELS[tag]?.[lang] ?? tag), sub.category].filter(Boolean).join(", ")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => deleteSub(sub.id)}
+                        className="flex h-9 w-9 items-center justify-center rounded-md text-ink-muted hover:bg-paper-dark hover:text-danger"
+                      >
+                        <Icon name="x" size={16} label={x("remove", lang)} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-sm text-ink-muted">
+                  {t("noSubscriptions", lang)}{" "}
+                  {ne ? "काम खोज्दा “सूचना पाउनुहोस्” थिच्नुहोस्।" : "Use “Get alerts” on the jobs page."}
+                </p>
+              )}
+            </section>
+          </aside>
         </div>
-      </div>
+      </main>
     </>
   );
 }

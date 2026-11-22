@@ -79,13 +79,15 @@ export async function loginOrCreate(data: {
       : cleanCityIds(data.preferred_cities);
 
   if (existing) {
-    // Update name/role if changed
+    // Never change the role of an existing account. Before this, logging in
+    // with the "Job seeker" toggle left on silently turned an employer into
+    // a candidate, which is why recruiters landed on the candidate dashboard.
     db.prepare(
       "UPDATE users SET name = ?, role = ?, gender = ?, region = ?, skills = ?, preferred_cities = ?, email = ?, experience_text = ? WHERE id = ?",
     ).run(
       // Logging in sends no name; keep the one on file instead of blanking it.
       data.name || existing.name,
-      data.role,
+      existing.role,
       data.gender ?? existing.gender,
       data.region ?? existing.region,
       JSON.stringify(data.skills ?? JSON.parse(existing.skills || "[]")),

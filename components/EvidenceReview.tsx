@@ -94,7 +94,7 @@ function Block({
       <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink-light">
         <Icon name={kind === "photo" ? "camera" : "video"} size={14} />
         {kind === "photo" ? x("photosOfWork", lang) : x("demoVideo", lang)}
-        <span className="badge-brand ml-1 text-[10px]">{x("humanReview", lang)}</span>
+        <span className="badge-brand ml-1 text-xs">{x("humanReview", lang)}</span>
       </p>
       {children}
       <div className="mt-3 space-y-1.5">
@@ -114,7 +114,7 @@ function Block({
                   }}
                   className={`h-7 w-7 rounded-md border text-xs font-semibold ${
                     scores[k] === n
-                      ? "border-brand bg-brand-light text-brand"
+                      ? "border-brand bg-brand-light text-brand-ink"
                       : "border-rule text-ink-muted hover:border-brand/50"
                   }`}
                 >
@@ -135,7 +135,7 @@ function Block({
             x("saveRating", lang)
           )}
         </button>
-        <span className="text-[11px] text-ink-muted">{x("notInScore", lang)}</span>
+        <span className="text-xs text-ink-muted">{x("notInScore", lang)}</span>
       </div>
       {error && <p className="mt-2 text-xs text-danger">{error}</p>}
     </div>

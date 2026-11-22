@@ -28,58 +28,88 @@ export function CityPicker({
     }
   };
 
-  const byProvince = Object.entries(PROVINCES).map(([pid, label]) => ({
-    pid,
-    label,
-    cities: CITIES.filter((c) => c.province === pid),
-  }));
+  const chosen = value.filter((v) => v !== ANYWHERE);
+  const full = chosen.length >= max;
+  const ne = lang === "ne";
 
-  const chip = (selected: boolean) =>
-    `inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors ${
-      selected
-        ? "border-brand bg-brand-light text-brand"
-        : "border-rule text-ink-light hover:border-brand/50"
-    }`;
-
+  // Compact on purpose: chosen cities as removable chips plus one dropdown,
+  // instead of every city in Nepal laid out at once.
   return (
-    <div className="space-y-3">
-      <button
-        type="button"
-        onClick={() => toggle(ANYWHERE)}
-        aria-pressed={anywhere}
-        className={chip(anywhere)}
-      >
-        {anywhere && <Icon name="check" size={12} strokeWidth={3} />}
-        {cityName(ANYWHERE, lang)}
-      </button>
+    <div className="space-y-4">
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          checked={anywhere}
+          onChange={() => toggle(ANYWHERE)}
+          className="mt-1 h-5 w-5 shrink-0 accent-[#d92f49]"
+        />
+        <span>
+          <span className="block text-base font-medium text-ink">{cityName(ANYWHERE, lang)}</span>
+          <span className="block text-sm text-ink-muted">
+            {ne ? "कुनै पनि शहरको काम उत्तिकै देखाइन्छ।" : "Jobs in every city are shown equally."}
+          </span>
+        </span>
+      </label>
 
-      {byProvince.map(({ pid, label, cities }) => (
-        <div key={pid}>
-          <p className="mb-1.5 text-[11px] uppercase tracking-wide text-ink-muted">{label[lang]}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {cities.map((c) => {
-              const selected = value.includes(c.id);
-              return (
+      <div>
+        <p className="label">{ne ? `रोजेका शहर (${chosen.length}/${max})` : `Your cities (${chosen.length} of ${max})`}</p>
+        {chosen.length > 0 ? (
+          <ul className="flex flex-wrap gap-2">
+            {chosen.map((id) => (
+              <li key={id}>
                 <button
-                  key={c.id}
                   type="button"
-                  onClick={() => toggle(c.id)}
-                  aria-pressed={selected}
-                  className={chip(selected)}
+                  onClick={() => toggle(id)}
+                  className="chip !border-ink/30 !text-ink"
+                  aria-label={ne ? `${cityName(id, lang)} हटाउनुहोस्` : `Remove ${cityName(id, lang)}`}
                 >
-                  {selected && <Icon name="check" size={12} strokeWidth={3} />}
-                  {c.name[lang]}
+                  {cityName(id, lang)}
+                  <Icon name="x" size={14} className="text-ink-muted" />
                 </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-      <p className="text-[11px] text-ink-muted">
-        {lang === "ne"
-          ? `बढीमा ${max} शहर रोज्न सकिन्छ। यसले तपाईंलाई नजिकका काम पहिले देखाउँछ; अन्य ठाउँका काम लुकाइँदैन जबसम्म तपाईंले फिल्टर नलगाउनुहुन्छ।`
-          : `Pick up to ${max} cities. Nearby jobs are shown first; jobs elsewhere are not hidden unless you filter.`}
-      </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-ink-muted">{ne ? "अहिलेसम्म कुनै शहर रोजिएको छैन।" : "No cities chosen yet."}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="sr-only" htmlFor="add-city">
+          {ne ? "शहर थप्नुहोस्" : "Add a city"}
+        </label>
+        <select
+          id="add-city"
+          className="input"
+          value=""
+          disabled={full}
+          onChange={(e) => e.target.value && toggle(e.target.value)}
+        >
+          <option value="">
+            {full
+              ? ne
+                ? `बढीमा ${max} शहर रोजिसक्नुभयो`
+                : `You have chosen ${max} cities`
+              : ne
+                ? "+ शहर थप्नुहोस्"
+                : "+ Add a city"}
+          </option>
+          {Object.entries(PROVINCES).map(([pid, label]) => (
+            <optgroup key={pid} label={label[lang]}>
+              {CITIES.filter((c) => c.province === pid && !value.includes(c.id)).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name[lang]}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <p className="hint">
+          {ne
+            ? "तपाईंका शहरका काम पहिले देखिन्छन्; अन्य ठाउँका काम लुकाइँदैन।"
+            : "Jobs in your cities are shown first; jobs elsewhere are not hidden."}
+        </p>
+      </div>
     </div>
   );
 }

@@ -151,6 +151,22 @@ const PATHS: Record<string, ReactNode> = {
   ),
   plus: <path d="M12 5v14M5 12h14" />,
   chevron: <path d="M9 6l6 6-6 6" />,
+  "chevron-down": <path d="M6 9l6 6 6-6" />,
+  "arrow-right": <path d="M5 12h14M13 6l6 6-6 6" />,
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="M20 20l-4.2-4.2" />
+    </>
+  ),
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9s1.3-6.4 3.8-9z" />
+    </>
+  ),
+  menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  logout: <path d="M14 4h4a2 2 0 012 2v12a2 2 0 01-2 2h-4M10 16l-4-4 4-4M6 12h10" />,
   image: (
     <>
       <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
@@ -210,14 +226,14 @@ export function IconTile({
   className?: string;
 }) {
   const tones = {
-    brand: "bg-brand-light text-brand",
+    brand: "bg-brand-light text-brand-ink",
     moss: "bg-moss-light text-moss",
     ochre: "bg-ochre-light text-ochre",
     muted: "bg-paper-dark text-ink-light",
   } as const;
   return (
     <span
-      className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${tones[tone]} ${className}`}
+      className={`inline-flex h-10 w-10 items-center justify-center rounded-lg ${tones[tone]} ${className}`}
     >
       <Icon name={name} size={size} />
     </span>

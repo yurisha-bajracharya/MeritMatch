@@ -127,7 +127,7 @@ export default function EvidenceUploader({
   return (
     <section className="card text-left">
       <h3 className="flex items-center gap-2 text-base font-semibold">
-        <Icon name={isPhoto ? "camera" : "video"} size={18} className="text-brand" />
+        <Icon name={isPhoto ? "camera" : "video"} size={18} className="text-brand-ink" />
         {isPhoto ? T.photosTitle[lang] : T.videoTitle[lang]}
       </h3>
       <p className="mt-1 text-xs leading-relaxed text-ink-muted">

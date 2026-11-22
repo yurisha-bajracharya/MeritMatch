@@ -57,9 +57,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Phone and role are required" }, { status: 400 });
     }
 
+    const cleanPhone = String(phone).trim();
+    const { getDb } = await import("@/lib/db");
+    const existing = getDb()
+      .prepare("SELECT role FROM users WHERE phone = ?")
+      .get(cleanPhone) as { role: Role } | undefined;
+    const isLogin = !name;
+
+    // Log in: the account decides the role, whatever the toggle said.
+    if (isLogin && !existing) {
+      return NextResponse.json(
+        { error: "No account with this phone number. Sign up first.", code: "no_account" },
+        { status: 404 },
+      );
+    }
+    // Sign up with a number that already belongs to the other kind of account.
+    if (!isLogin && existing && existing.role !== role) {
+      return NextResponse.json(
+        {
+          error: `This phone number is already registered as ${existing.role === "employer" ? "an employer" : "a job seeker"}. Log in instead, or use a different number.`,
+          code: "role_taken",
+          existingRole: existing.role,
+        },
+        { status: 409 },
+      );
+    }
+
     const user = await loginOrCreate({
       name: name || "",
-      phone: String(phone).trim(),
+      phone: cleanPhone,
       email,
       role: role as Role,
       gender,

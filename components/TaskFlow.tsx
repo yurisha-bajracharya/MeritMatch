@@ -190,14 +190,14 @@ export default function TaskFlow({
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="card">
-          <h2 className="section-title">{jobTitle}</h2>
+          <h1 className="page-title">{jobTitle}</h1>
           <p className="text-sm text-ink-light mt-1">{employerName}</p>
 
           <p className="text-sm text-ink mt-4">{t("taskIntro", lang)}</p>
 
-          <div className="mt-4 p-3 rounded-lg bg-brand-light text-sm text-brand">
+          <div className="mt-4 p-3 rounded-lg bg-brand-light text-sm text-brand-ink">
             {t("minuteTask", lang, { min: String(durationMin) })}
-            {aiScoring && <span className="ml-2 badge-ochre text-[10px]">{t("aiScored", lang)}</span>}
+            {aiScoring && <span className="ml-2 badge-ochre text-xs">{t("aiScored", lang)}</span>}
           </div>
 
           <div className="mt-5 space-y-4">
@@ -471,7 +471,7 @@ export default function TaskFlow({
       {result && (
         <div className="mt-6 p-4 rounded-lg bg-paper-dark text-left max-w-sm mx-auto">
           <p className="text-sm font-medium">
-            {t("totalScore", lang)}: <span className="text-brand font-bold">{result.total}%</span>
+            {t("totalScore", lang)}: <span className="text-brand-ink font-bold">{result.total}%</span>
           </p>
           {result.mcqTotal > 0 && (
             <p className="text-xs text-ink-light mt-1">

@@ -55,7 +55,7 @@ function Bar({
             className="h-full rounded bg-brand transition-all duration-1000 ease-out flex items-center px-2"
             style={{ width: animate ? `${merit}%` : "0%" }}
           >
-            <span className="text-[10px] font-bold text-paper whitespace-nowrap">
+            <span className="text-xs font-bold text-paper whitespace-nowrap">
               {merit}%
             </span>
           </div>
@@ -65,7 +65,7 @@ function Bar({
             className="h-full rounded bg-ink-muted/30 transition-all duration-1000 ease-out flex items-center px-2"
             style={{ width: animate ? `${resume}%` : "0%" }}
           >
-            <span className="text-[10px] font-bold text-ink-light whitespace-nowrap">
+            <span className="text-xs font-bold text-ink-light whitespace-nowrap">
               {resume}%
             </span>
           </div>
@@ -191,7 +191,7 @@ export function BiasHeader({
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h1 className="section-title">{title}</h1>
+        <h1 className="page-title">{title}</h1>
         <p className="text-sm text-ink-light">{employer}</p>
       </div>
       <Link href={`/employer/jobs/${jobId}`} className="btn-secondary btn-sm">

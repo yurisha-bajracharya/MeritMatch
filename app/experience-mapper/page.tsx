@@ -7,9 +7,9 @@ export default function ExperienceMapperPage() {
   return (
     <>
       <Navbar />
-      <div className="container-main py-8 max-w-2xl mx-auto">
+      <main className="container-main py-10">
         <ExperienceMapper />
-      </div>
+      </main>
     </>
   );
 }

@@ -48,7 +48,7 @@ export default function TaskPage() {
   return (
     <>
       <Navbar />
-      <div className="container-main py-8 max-w-2xl mx-auto">
+      <div className="container-main py-10 max-w-2xl mx-auto">
         <TaskFlow
           jobId={job.id}
           jobTitle={job.title}

@@ -85,7 +85,7 @@ export default function VerifyList() {
                 {job.employer_name} · {job.location || "-"} · {job.category}
               </p>
               {job.verified && (
-                <span className="badge-moss mt-1 text-[10px]">
+                <span className="badge-moss mt-1 text-xs">
                   Verified {job.verified_at && `on ${new Date(job.verified_at).toLocaleDateString()}`}
                 </span>
               )}

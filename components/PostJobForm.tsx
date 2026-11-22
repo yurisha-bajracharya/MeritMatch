@@ -27,7 +27,7 @@ const CATEGORY_LABELS: Record<Category, Record<Lang, string>> = {
 };
 
 export default function PostJobForm() {
-  const [lang, setLang] = useLang();
+  const [lang] = useLang();
   const [title, setTitle] = useState("");
   const [employerName, setEmployerName] = useState("");
   const [city, setCity] = useState("");
@@ -154,16 +154,7 @@ export default function PostJobForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
       <div className="card space-y-5">
-        <div className="flex items-center justify-between">
-          <h2 className="section-title">{t("postJob", lang)}</h2>
-          <button
-            type="button"
-            onClick={() => setLang(lang === "en" ? "ne" : "en")}
-            className="text-sm text-ink-muted hover:text-ink"
-          >
-            {t("langToggle", lang)}
-          </button>
-        </div>
+        <h1 className="page-title">{t("postJob", lang)}</h1>
 
         <div>
           <label className="label">{t("jobTitle", lang)}</label>
@@ -281,7 +272,7 @@ export default function PostJobForm() {
       {/* Choice questions + proof of work */}
       <div className="card space-y-4">
         <div className="flex gap-3">
-          <Icon name="list-check" size={18} className="mt-0.5 text-brand" />
+          <Icon name="list-check" size={18} className="mt-0.5 text-brand-ink" />
           <p className="text-sm text-ink-light">
             {lang === "ne"
               ? "हरेक कार्यमा ३ छनोट प्रश्न (उत्तरपुस्तिकाले जाँचिने, AI होइन) र लिखित उत्तर स्वतः समावेश हुन्छ। छनोटले ३०% र लिखितले ७०% अंक बनाउँछ।"

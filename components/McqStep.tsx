@@ -102,7 +102,7 @@ export default function McqStep({
                   }`}
                 >
                   <span
-                    className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold ${
+                    className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
                       selected ? "border-brand bg-brand text-paper" : "border-rule"
                     }`}
                   >

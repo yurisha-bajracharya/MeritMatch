@@ -4,10 +4,10 @@ import Link from "next/link";
 import Icon from "./Icon";
 import type { LocationFit } from "@/lib/places";
 import type { Job, Lang } from "@/lib/types";
-import { t } from "@/lib/i18n";
+import { t, localizeDigits } from "@/lib/i18n";
 import { TAG_LABELS } from "@/lib/tags";
 
-const CATEGORY_LABELS: Record<string, Record<Lang, string>> = {
+export const CATEGORY_LABELS: Record<string, Record<Lang, string>> = {
   retail: { en: "Retail / Shop", ne: "पसल / रिटेल" },
   admin: { en: "Office / Admin", ne: "कार्यालय / प्रशासन" },
   office: { en: "Data / Clerical", ne: "डेटा / क्लेरिकल" },
@@ -19,6 +19,11 @@ const CATEGORY_LABELS: Record<string, Record<Lang, string>> = {
   tailoring: { en: "Tailoring / Crafts", ne: "सिलाइ / हस्तकला" },
 };
 
+/**
+ * One job as a row: what it is, where, how long the task takes, which skills
+ * it tests, then the one action. Badges only for facts that change whether
+ * someone applies (AI scoring, photo/video asked, their city, verified).
+ */
 export default function JobCard({
   job,
   lang,
@@ -31,84 +36,88 @@ export default function JobCard({
   /** How this job's city compares to the viewer's preferred cities. */
   fit?: LocationFit;
 }) {
+  const skills = job.tags.slice(0, 4).map((tag) => TAG_LABELS[tag]?.[lang] ?? tag);
+  const more = job.tags.length - skills.length;
+  const posted = new Date(job.created_at).toLocaleDateString(lang === "ne" ? "ne-NP" : "en-GB", {
+    day: "numeric",
+    month: "short",
+  });
+
   return (
-    <div
-      className={`card-hover ${highlight ? "ring-2 ring-brand" : ""}`}
+    <article
+      className={`grid gap-4 rounded-lg border bg-white p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-8 sm:p-6 ${
+        highlight ? "border-brand ring-2 ring-brand/30" : "border-rule"
+      }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-ink truncate">{job.title}</h3>
-          <p className="text-sm text-ink-light mt-0.5 flex items-center gap-1 flex-wrap">
-            <span>{job.employer_name}</span>
-            {job.location && (
-              <span className="inline-flex items-center gap-1 text-ink-muted">
-                <Icon name="pin" size={13} />
-                {job.location}
+      <div className="min-w-0">
+        <p className="text-sm text-ink-muted">{CATEGORY_LABELS[job.category]?.[lang] ?? job.category}</p>
+        <h3 className="mt-0.5 text-xl font-semibold text-ink">
+          <Link href={`/t/${job.id}`} className="hover:underline underline-offset-4">
+            {job.title}
+          </Link>
+        </h3>
+        <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-ink-light">
+          <span className="inline-flex items-center gap-1.5">
+            <Icon name="building" size={16} className="text-ink-muted" />
+            {job.employer_name}
+            {job.verified && (
+              <span className="inline-flex items-center text-moss" title={t("verified", lang)}>
+                <Icon name="check-circle" size={16} label={t("verified", lang)} />
               </span>
             )}
-          </p>
-        </div>
-        {job.verified && (
-          <span className="badge-moss shrink-0">
-            {t("verified", lang)}
           </span>
-        )}
-      </div>
-
-      <div className="flex flex-wrap gap-1.5 mt-3">
-        <span className="badge-brand">
-          {CATEGORY_LABELS[job.category]?.[lang] ?? job.category}
-        </span>
-        {fit === "preferred" && (
-          <span className="badge-moss inline-flex items-center gap-1">
-            <Icon name="pin" size={11} />
-            {lang === "ne" ? "तपाईंको शहरमा" : "In your city"}
-          </span>
-        )}
-        {job.ai_scoring && (
-          <span className="badge-ochre">{t("aiScored", lang)}</span>
-        )}
-        {job.evidence === "photos" && (
-          <span className="badge-muted inline-flex items-center gap-1">
-            <Icon name="camera" size={11} />
-            {lang === "ne" ? "फोटो" : "Photos"}
-          </span>
-        )}
-        {job.evidence === "video" && (
-          <span className="badge-muted inline-flex items-center gap-1">
-            <Icon name="video" size={11} />
-            {lang === "ne" ? "भिडियो" : "Video"}
-          </span>
-        )}
-        <span className="badge-muted">
-          {t("minuteTask", lang, { min: String(job.duration_min) })}
-        </span>
-      </div>
-
-      {job.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {job.tags.slice(0, 5).map((tag) => (
-            <span key={tag} className="text-xs text-ink-muted bg-paper-dark rounded px-1.5 py-0.5">
-              {TAG_LABELS[tag]?.[lang] ?? tag}
+          {job.location && (
+            <span className="inline-flex items-center gap-1.5">
+              <Icon name="pin" size={16} className="text-ink-muted" />
+              {job.location}
             </span>
-          ))}
-          {job.tags.length > 5 && (
-            <span className="text-xs text-ink-muted">+{job.tags.length - 5}</span>
           )}
-        </div>
-      )}
+          <span className="inline-flex items-center gap-1.5">
+            <Icon name="clock" size={16} className="text-ink-muted" />
+            {lang === "ne"
+              ? `${localizeDigits(job.duration_min, lang)} मिनेटको कार्य`
+              : `${job.duration_min}-minute task`}
+          </span>
+        </p>
 
-      <div className="mt-4 flex items-center gap-2">
-        <Link
-          href={`/t/${job.id}`}
-          className="btn-primary btn-sm"
-        >
-          {t("apply", lang)}
-        </Link>
-        <span className="text-xs text-ink-muted">
-          {new Date(job.created_at).toLocaleDateString(lang === "ne" ? "ne-NP" : undefined)}
-        </span>
+        {skills.length > 0 && (
+          <p className="mt-2 text-sm text-ink-light">
+            <span className="text-ink-muted">{lang === "ne" ? "जाँचिने सीप: " : "Tests: "}</span>
+            {skills.join(", ")}
+            {more > 0 && (lang === "ne" ? ` र अरू ${localizeDigits(more, lang)}` : ` and ${more} more`)}
+          </p>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {fit === "preferred" && (
+            <span className="badge-moss">
+              <Icon name="pin" size={13} />
+              {lang === "ne" ? "तपाईंको शहरमा" : "In your city"}
+            </span>
+          )}
+          {job.ai_scoring && <span className="badge-ochre">{t("aiScored", lang)}</span>}
+          {job.evidence === "photos" && (
+            <span className="badge-muted">
+              <Icon name="camera" size={13} />
+              {lang === "ne" ? "कामको फोटो माग्छ" : "Asks for work photos"}
+            </span>
+          )}
+          {job.evidence === "video" && (
+            <span className="badge-muted">
+              <Icon name="video" size={13} />
+              {lang === "ne" ? "छनौटपछि भिडियो" : "Video if shortlisted"}
+            </span>
+          )}
+          <span className="text-xs text-ink-muted">
+            {lang === "ne" ? `पोस्ट गरिएको ${posted}` : `Posted ${posted}`}
+          </span>
+        </div>
       </div>
-    </div>
+
+      <Link href={`/t/${job.id}`} className="btn-primary w-full sm:w-auto">
+        {t("apply", lang)}
+        <Icon name="arrow-right" size={18} />
+      </Link>
+    </article>
   );
 }

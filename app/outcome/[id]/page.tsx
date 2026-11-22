@@ -94,12 +94,12 @@ export default function OutcomePage() {
     return (
       <>
         <Navbar />
-        <div className="container-main mx-auto max-w-lg py-12">
+        <div className="container-main mx-auto max-w-2xl py-12">
           <div className="card text-center">
             <span className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-ochre-light text-ochre">
               <Icon name="lock" size={22} />
             </span>
-            <h1 className="section-title">
+            <h1 className="page-title">
               {lang === "ne" ? "यो लिंक खोल्न सकिएन" : "This link can't be opened"}
             </h1>
             <p className="mt-2 text-sm text-ink-muted">
@@ -120,7 +120,7 @@ export default function OutcomePage() {
     return (
       <>
         <Navbar />
-        <div className="container-main mx-auto max-w-lg py-12">
+        <div className="container-main mx-auto max-w-2xl py-12">
           <div className="skeleton h-64 rounded-xl" />
         </div>
       </>
@@ -132,7 +132,7 @@ export default function OutcomePage() {
   return (
     <>
       <Navbar />
-      <div className="container-main mx-auto max-w-lg space-y-4 py-8">
+      <div className="container-main mx-auto max-w-2xl space-y-4 py-8">
         <div className="flex justify-end">
           <Segmented
             name="outcome-lang"
@@ -146,25 +146,25 @@ export default function OutcomePage() {
         </div>
 
         <div className="card animate-fade-in text-center">
-          <h1 className="section-title">{t("outcomeTitle", lang)}</h1>
+          <h1 className="page-title">{t("outcomeTitle", lang)}</h1>
           <p className="mt-1 text-sm text-ink-light">
             {data.job.title} · {data.job.employer_name}
           </p>
           <p className="mt-0.5 text-xs text-ink-muted">#{submissionId.slice(0, 4).toUpperCase()}</p>
 
-          <p className="mt-5 text-4xl font-bold text-brand">{n(data.total)}%</p>
+          <p className="mt-5 text-4xl font-bold text-brand-ink">{n(data.total)}%</p>
           <p className="text-xs text-ink-muted">{t("totalScore", lang)}</p>
 
           {data.mcqTotal ? (
             <div className="mt-4 grid grid-cols-2 gap-2 text-left">
               <div className="rounded-lg bg-paper-dark p-3">
-                <p className="text-[11px] text-ink-muted">{lang === "ne" ? "छनोट प्रश्न" : "Choice questions"}</p>
+                <p className="text-xs text-ink-muted">{lang === "ne" ? "छनोट प्रश्न" : "Choice questions"}</p>
                 <p className="text-sm font-semibold">
                   {n(data.mcqCorrect)}/{n(data.mcqTotal)}
                 </p>
               </div>
               <div className="rounded-lg bg-paper-dark p-3">
-                <p className="text-[11px] text-ink-muted">{lang === "ne" ? "लिखित उत्तर" : "Written answers"}</p>
+                <p className="text-xs text-ink-muted">{lang === "ne" ? "लिखित उत्तर" : "Written answers"}</p>
                 <p className="text-sm font-semibold">{n(data.writtenScore)}%</p>
               </div>
             </div>
@@ -245,7 +245,7 @@ export default function OutcomePage() {
             />
           ) : (
             <div className="card flex gap-3 text-sm text-ink-light">
-              <Icon name="video" size={18} className="mt-0.5 text-brand" />
+              <Icon name="video" size={18} className="mt-0.5 text-brand-ink" />
               <p>
                 {lang === "ne"
                   ? "यो काममा छनौट भएका उम्मेदवारसँग एउटा छोटो भिडियो माग्न सकिन्छ। छनौट भएमा यही पेजमा थप्ने ठाउँ देखिन्छ।"
@@ -261,7 +261,7 @@ export default function OutcomePage() {
               checked={data.consent}
               onChange={toggleConsent}
               disabled={toggling}
-              className="mt-1 h-4 w-4 rounded border-rule text-brand focus:ring-brand"
+              className="mt-1 h-4 w-4 rounded border-rule text-brand-ink focus:ring-brand"
             />
             <div>
               <span className="text-sm font-medium">{t("consentLabel", lang)}</span>
