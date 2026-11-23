@@ -8,13 +8,14 @@ import Icon from "@/components/Icon";
 import Segmented from "@/components/Segmented";
 import EvidenceUploader from "@/components/EvidenceUploader";
 import ScoringExplainer from "@/components/ScoringExplainer";
+import ReportButton from "@/components/ReportButton";
 import { x } from "@/lib/i18n-extra";
 import { useLang } from "@/lib/useLang";
 import type { Lang } from "@/lib/types";
 import { t, localizeDigits } from "@/lib/i18n";
 
 type Outcome = {
-  job: { id: string; title: string; employer_name: string; location: string; evidence: "none" | "photos" | "video"; ai_scoring: boolean };
+  job: { id: string; title: string; employer_name: string; employer_id?: string; location: string; evidence: "none" | "photos" | "video"; ai_scoring: boolean };
   total: number;
   writtenScore: number | null;
   mcqScore: number | null;
@@ -270,6 +271,21 @@ export default function OutcomePage() {
               </p>
             </div>
           </label>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rule px-4 py-3">
+          <p className="text-sm text-ink-light">
+            {lang === "ne"
+              ? "रोजगारदाताले पैसा मागे वा अनौठो व्यवहार गरे हामीलाई भन्नुहोस्।"
+              : "If the employer asks for money or behaves strangely, tell us."}
+          </p>
+          <ReportButton
+            jobId={data.job.id}
+            employerId={data.job.employer_id || undefined}
+            about={`${data.job.title} · ${data.job.employer_name}`}
+            lang={lang}
+            variant="button"
+          />
         </div>
 
         <ScoringExplainer

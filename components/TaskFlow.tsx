@@ -7,9 +7,13 @@ import VoiceRecorder from "./VoiceRecorder";
 import McqStep from "./McqStep";
 import Icon from "./Icon";
 import ScoringExplainer from "./ScoringExplainer";
+import ReportButton from "./ReportButton";
+import VerificationBadges from "./VerificationBadges";
+import { EMPLOYMENT_LABEL, formatSalary } from "@/lib/job-format";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/device";
 import { useLang } from "@/lib/useLang";
-import type { Lang, InputMode, Scenario, Criterion, CustomQuestion, PublicMcq, Evidence } from "@/lib/types";
+import type { Lang, InputMode, Scenario, Criterion, CustomQuestion, PublicMcq, Evidence, Job } from "@/lib/types";
+import Link from "next/link";
 import { t, localizeDigits } from "@/lib/i18n";
 import { x } from "@/lib/i18n-extra";
 
@@ -27,6 +31,8 @@ type Props = {
   /** Choice questions (no answer key). Empty on a job with none. */
   mcq?: PublicMcq[];
   evidence?: Evidence;
+  /** Vacancy details from the reviewed job post (salary, hours...). */
+  details?: Pick<Job, "salary_min" | "salary_max" | "salary_period" | "hours" | "employment_type" | "responsibilities" | "location" | "verified" | "employer_id" | "employer_badges">;
 };
 
 export default function TaskFlow({
@@ -40,6 +46,7 @@ export default function TaskFlow({
   aiScoring,
   mcq = [],
   evidence = "none",
+  details,
 }: Props) {
   const [lang, setLang] = useLang();
   const [mode, setMode] = useState<InputMode>("text");
@@ -191,7 +198,61 @@ export default function TaskFlow({
       <div className="space-y-6 animate-fade-in">
         <div className="card">
           <h1 className="page-title">{jobTitle}</h1>
-          <p className="text-sm text-ink-light mt-1">{employerName}</p>
+          <p className="text-base text-ink-light mt-1">
+            {details?.employer_id ? (
+              <Link href={`/employers/${details.employer_id}`} className="underline-offset-4 hover:underline">
+                {employerName}
+              </Link>
+            ) : (
+              employerName
+            )}
+            {details?.location ? ` · ${details.location}` : ""}
+          </p>
+
+          {details && (
+            <div className="mt-4">
+              <VerificationBadges badges={details.employer_badges} jobVerified={details.verified} lang={lang} />
+            </div>
+          )}
+
+          {details && (formatSalary(details, lang) || details.hours || details.responsibilities) && (
+            <dl className="mt-5 divide-y divide-rule border-y border-rule text-base">
+              {formatSalary(details, lang) && (
+                <div className="grid grid-cols-[8rem_1fr] gap-3 py-2.5">
+                  <dt className="text-ink-light">{lang === "ne" ? "तलब" : "Salary"}</dt>
+                  <dd className="font-semibold">{formatSalary(details, lang)}</dd>
+                </div>
+              )}
+              {details.employment_type && (
+                <div className="grid grid-cols-[8rem_1fr] gap-3 py-2.5">
+                  <dt className="text-ink-light">{lang === "ne" ? "प्रकार" : "Type"}</dt>
+                  <dd>{EMPLOYMENT_LABEL[details.employment_type][lang]}</dd>
+                </div>
+              )}
+              {details.hours && (
+                <div className="grid grid-cols-[8rem_1fr] gap-3 py-2.5">
+                  <dt className="text-ink-light">{lang === "ne" ? "कामको समय" : "Hours"}</dt>
+                  <dd>{details.hours}</dd>
+                </div>
+              )}
+              {details.responsibilities && (
+                <div className="grid grid-cols-[8rem_1fr] gap-3 py-2.5">
+                  <dt className="text-ink-light">{lang === "ne" ? "जिम्मेवारी" : "The work"}</dt>
+                  <dd className="whitespace-pre-line">{details.responsibilities}</dd>
+                </div>
+              )}
+            </dl>
+          )}
+
+          <p className="mt-4 flex items-start gap-2 text-sm text-ink">
+            <Icon name="shield" size={18} className="mt-0.5 text-moss" />
+            {lang === "ne"
+              ? "मेरिटम्याचमा आवेदन दिन वा कार्य गर्न कहिल्यै पैसा लाग्दैन। कसैले पैसा मागे रिपोर्ट गर्नुहोस्।"
+              : "Applying and doing the task on MeritMatch is always free. If anyone asks you for money, report it."}
+          </p>
+          <div className="mt-1">
+            <ReportButton jobId={jobId} employerId={details?.employer_id || undefined} about={`${jobTitle} · ${employerName}`} lang={lang} />
+          </div>
 
           <p className="text-sm text-ink mt-4">{t("taskIntro", lang)}</p>
 

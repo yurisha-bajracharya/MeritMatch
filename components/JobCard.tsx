@@ -6,6 +6,9 @@ import type { LocationFit } from "@/lib/places";
 import type { Job, Lang } from "@/lib/types";
 import { t, localizeDigits } from "@/lib/i18n";
 import { TAG_LABELS } from "@/lib/tags";
+import { EMPLOYMENT_LABEL, formatSalary } from "@/lib/job-format";
+import ReportButton from "./ReportButton";
+import VerificationBadges from "./VerificationBadges";
 
 export const CATEGORY_LABELS: Record<string, Record<Lang, string>> = {
   retail: { en: "Retail / Shop", ne: "पसल / रिटेल" },
@@ -36,6 +39,7 @@ export default function JobCard({
   /** How this job's city compares to the viewer's preferred cities. */
   fit?: LocationFit;
 }) {
+  const salary = formatSalary(job, lang);
   const skills = job.tags.slice(0, 4).map((tag) => TAG_LABELS[tag]?.[lang] ?? tag);
   const more = job.tags.length - skills.length;
   const posted = new Date(job.created_at).toLocaleDateString(lang === "ne" ? "ne-NP" : "en-GB", {
@@ -59,11 +63,12 @@ export default function JobCard({
         <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-ink-light">
           <span className="inline-flex items-center gap-1.5">
             <Icon name="building" size={16} className="text-ink-muted" />
-            {job.employer_name}
-            {job.verified && (
-              <span className="inline-flex items-center text-moss" title={t("verified", lang)}>
-                <Icon name="check-circle" size={16} label={t("verified", lang)} />
-              </span>
+            {job.employer_id ? (
+              <Link href={`/employers/${job.employer_id}`} className="underline-offset-4 hover:text-ink hover:underline">
+                {job.employer_name}
+              </Link>
+            ) : (
+              job.employer_name
             )}
           </span>
           {job.location && (
@@ -79,6 +84,15 @@ export default function JobCard({
               : `${job.duration_min}-minute task`}
           </span>
         </p>
+
+        {salary && (
+          <p className="mt-2 text-base font-semibold text-ink">
+            {salary}
+            {job.employment_type && (
+              <span className="font-normal text-ink-light"> · {EMPLOYMENT_LABEL[job.employment_type][lang]}</span>
+            )}
+          </p>
+        )}
 
         {skills.length > 0 && (
           <p className="mt-2 text-sm text-ink-light">
@@ -111,6 +125,11 @@ export default function JobCard({
           <span className="text-xs text-ink-muted">
             {lang === "ne" ? `पोस्ट गरिएको ${posted}` : `Posted ${posted}`}
           </span>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <VerificationBadges badges={job.employer_badges} jobVerified={job.verified} lang={lang} />
+          <ReportButton jobId={job.id} about={`${job.title} · ${job.employer_name}`} lang={lang} />
         </div>
       </div>
 

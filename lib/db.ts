@@ -121,10 +121,12 @@ function addColumn(
   table: string,
   column: string,
   definition: string,
-) {
+): boolean {
   if (!hasColumn(db, table, column)) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    return true;
   }
+  return false;
 }
 
 function migrate(db: Database.Database) {
@@ -151,6 +153,25 @@ function migrate(db: Database.Database) {
 
   // Photos / video proof-of-work requested by the employer.
   addColumn(db, "jobs", "evidence", "TEXT DEFAULT 'none'");
+
+  // ---- Vacancy review (layer 4). review_status is the single source of
+  // truth; the older `verified` column is kept in step for compatibility.
+  if (addColumn(db, "jobs", "review_status", "TEXT DEFAULT 'pending'")) {
+    db.exec("UPDATE jobs SET review_status = 'approved' WHERE verified = 1");
+  }
+  addColumn(db, "jobs", "review_note", "TEXT DEFAULT ''");
+  addColumn(db, "jobs", "reviewed_at", "TEXT DEFAULT ''");
+  addColumn(db, "jobs", "responsibilities", "TEXT DEFAULT ''");
+  addColumn(db, "jobs", "salary_min", "INTEGER");
+  addColumn(db, "jobs", "salary_max", "INTEGER");
+  addColumn(db, "jobs", "salary_period", "TEXT DEFAULT 'month'");
+  addColumn(db, "jobs", "hours", "TEXT DEFAULT ''");
+  addColumn(db, "jobs", "employment_type", "TEXT DEFAULT ''");
+  addColumn(db, "jobs", "no_fee_confirmed", "INTEGER DEFAULT 0");
+
+  // Admin can restrict an employer while a serious report is investigated.
+  addColumn(db, "users", "restricted", "INTEGER DEFAULT 0");
+  addColumn(db, "users", "restricted_reason", "TEXT DEFAULT ''");
 
   // City ids from lib/places.ts, JSON array.
   addColumn(db, "users", "preferred_cities", "TEXT DEFAULT '[]'");
@@ -190,6 +211,83 @@ function migrate(db: Database.Database) {
       reviewed_at TEXT NOT NULL,
       PRIMARY KEY (submission_id, kind)
     );
+
+    -- Employer verification, one row per employer account. Each layer has
+    -- its own status: none | submitted | needs_info | approved | rejected.
+    -- Nothing is approved automatically: a person reviews every document.
+    CREATE TABLE IF NOT EXISTS employer_verifications (
+      employer_id TEXT PRIMARY KEY,
+      business_name TEXT DEFAULT '',
+      contact_name TEXT DEFAULT '',
+      contact_position TEXT DEFAULT '',
+      email TEXT DEFAULT '',
+      authorized INTEGER DEFAULT 0,
+      phone_verified_at TEXT DEFAULT '',
+      otp_hash TEXT DEFAULT '',
+      otp_expires TEXT DEFAULT '',
+      otp_attempts INTEGER DEFAULT 0,
+      business_status TEXT DEFAULT 'none',
+      business_note TEXT DEFAULT '',
+      presence_status TEXT DEFAULT 'none',
+      presence_note TEXT DEFAULT '',
+      manual_note TEXT DEFAULT '',
+      updated_at TEXT NOT NULL
+    );
+
+    -- One row per piece of evidence. Alternatives, not a checklist.
+    CREATE TABLE IF NOT EXISTS verification_evidence (
+      id TEXT PRIMARY KEY,
+      employer_id TEXT NOT NULL,
+      layer TEXT NOT NULL CHECK(layer IN ('business', 'presence')),
+      kind TEXT NOT NULL,
+      value TEXT DEFAULT '',
+      file_path TEXT DEFAULT '',
+      mime TEXT DEFAULT '',
+      bytes INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_evidence_employer ON verification_evidence(employer_id);
+
+    -- Applicant reports. Never shown publicly.
+    CREATE TABLE IF NOT EXISTS reports (
+      id TEXT PRIMARY KEY,
+      ref TEXT UNIQUE NOT NULL,
+      access_token TEXT NOT NULL,
+      reporter_user_id TEXT DEFAULT '',
+      reporter_contact TEXT DEFAULT '',
+      employer_id TEXT DEFAULT '',
+      job_id TEXT DEFAULT '',
+      category TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'new',
+      escalated INTEGER DEFAULT 0,
+      reporter_message TEXT DEFAULT '',
+      internal_note TEXT DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
+
+    CREATE TABLE IF NOT EXISTS report_attachments (
+      id TEXT PRIMARY KEY,
+      report_id TEXT NOT NULL,
+      path TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      bytes INTEGER NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    -- Every admin decision, so reviews can be traced later.
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id TEXT PRIMARY KEY,
+      actor TEXT NOT NULL,
+      action TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      detail TEXT DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_target ON audit_log(target_type, target_id);
 
     -- Which skills the Mapper suggested vs what the person kept. Tags only,
     -- never the text they typed. Used to measure how accurate the Mapper is.

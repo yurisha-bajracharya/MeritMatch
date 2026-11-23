@@ -80,6 +80,11 @@ export default function Navbar() {
         match: (p) => p.startsWith("/employer/dashboard") || p.startsWith("/employer/jobs"),
       },
       { href: "/employer/post", label: t("postJob", lang), match: (p) => p.startsWith("/employer/post") },
+      {
+        href: "/employer/verify",
+        label: lang === "ne" ? "प्रमाणीकरण" : "Verification",
+        match: (p) => p.startsWith("/employer/verify"),
+      },
     );
   }
 

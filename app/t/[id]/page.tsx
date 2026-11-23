@@ -13,8 +13,15 @@ export default function TaskPage() {
 
   useEffect(() => {
     fetch(`/api/jobs/${id}`)
-      .then((r) => {
-        if (!r.ok) throw new Error("Job not found");
+      .then(async (r) => {
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          throw new Error(
+            d.code === "not_open"
+              ? "This job is not open for applications right now. It may be waiting for review or temporarily hidden."
+              : "Job not found",
+          );
+        }
         return r.json();
       })
       .then(setJob)
@@ -26,8 +33,11 @@ export default function TaskPage() {
       <>
         <Navbar />
         <div className="container-main py-12 text-center">
-          <div className="card max-w-md mx-auto">
-            <p className="text-sm text-danger">{error}</p>
+          <div className="empty mx-auto max-w-md">
+            <p className="text-base text-ink">{error}</p>
+            <a href="/jobs" className="btn-secondary btn-sm mt-4">
+              Browse open jobs
+            </a>
           </div>
         </div>
       </>
@@ -60,6 +70,7 @@ export default function TaskPage() {
           aiScoring={job.ai_scoring}
           mcq={job.template?.mcq ?? []}
           evidence={job.evidence ?? "none"}
+          details={job}
         />
       </div>
     </>

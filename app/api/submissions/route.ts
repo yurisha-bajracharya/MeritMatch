@@ -1,3 +1,4 @@
+import { isPublicJob } from "@/lib/verification";
 import { NextResponse } from "next/server";
 import { getDb, newId } from "@/lib/db";
 import { getTemplate } from "@/lib/templates";
@@ -37,6 +38,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }
 
+    // Only reviewed, open vacancies accept applications.
+    if (!isPublicJob(jobRow)) {
+      return NextResponse.json({ error: "This job is not open for applications." }, { status: 409 });
+    }
     const job = rowToJob(jobRow);
     const template = getTemplate(job.category);
 

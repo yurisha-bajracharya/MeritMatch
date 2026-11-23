@@ -127,6 +127,34 @@ addColumn("submissions", "interview_note", "TEXT DEFAULT ''");
 db.exec("CREATE TABLE IF NOT EXISTS unlocks (submission_id TEXT PRIMARY KEY, employer_id TEXT NOT NULL, amount INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)");
 addColumn("notifications", "link", "TEXT DEFAULT ''");
 addColumn("users", "preferred_cities", "TEXT DEFAULT '[]'");
+// Verification and vacancy review (mirrors lib/db.ts)
+const cols = (t) => db.prepare(`PRAGMA table_info(${t})`).all().map((c) => c.name);
+if (!cols("jobs").includes("review_status")) {
+  db.exec("ALTER TABLE jobs ADD COLUMN review_status TEXT DEFAULT 'pending'");
+  db.exec("UPDATE jobs SET review_status = 'approved' WHERE verified = 1");
+}
+addColumn("jobs", "review_note", "TEXT DEFAULT ''");
+addColumn("jobs", "reviewed_at", "TEXT DEFAULT ''");
+addColumn("jobs", "responsibilities", "TEXT DEFAULT ''");
+addColumn("jobs", "salary_min", "INTEGER");
+addColumn("jobs", "salary_max", "INTEGER");
+addColumn("jobs", "salary_period", "TEXT DEFAULT 'month'");
+addColumn("jobs", "hours", "TEXT DEFAULT ''");
+addColumn("jobs", "employment_type", "TEXT DEFAULT ''");
+addColumn("jobs", "no_fee_confirmed", "INTEGER DEFAULT 0");
+addColumn("users", "restricted", "INTEGER DEFAULT 0");
+addColumn("users", "restricted_reason", "TEXT DEFAULT ''");
+db.exec(`CREATE TABLE IF NOT EXISTS employer_verifications (
+  employer_id TEXT PRIMARY KEY, business_name TEXT DEFAULT '', contact_name TEXT DEFAULT '',
+  contact_position TEXT DEFAULT '', email TEXT DEFAULT '', authorized INTEGER DEFAULT 0,
+  phone_verified_at TEXT DEFAULT '', otp_hash TEXT DEFAULT '', otp_expires TEXT DEFAULT '',
+  otp_attempts INTEGER DEFAULT 0, business_status TEXT DEFAULT 'none', business_note TEXT DEFAULT '',
+  presence_status TEXT DEFAULT 'none', presence_note TEXT DEFAULT '', manual_note TEXT DEFAULT '',
+  updated_at TEXT NOT NULL)`);
+db.exec(`CREATE TABLE IF NOT EXISTS verification_evidence (
+  id TEXT PRIMARY KEY, employer_id TEXT NOT NULL, layer TEXT NOT NULL, kind TEXT NOT NULL,
+  value TEXT DEFAULT '', file_path TEXT DEFAULT '', mime TEXT DEFAULT '', bytes INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL)`);
 db.exec(`
   CREATE TABLE IF NOT EXISTS media (
     id TEXT PRIMARY KEY, submission_id TEXT NOT NULL, kind TEXT NOT NULL,
@@ -158,6 +186,16 @@ const employerId = id();
 db.prepare(
   `INSERT OR IGNORE INTO users (id, name, phone, email, role, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 ).run(employerId, "Hari Sharma", "9800000001", "hari@himalmart.com", "employer", new Date().toISOString());
+
+// The demo employer is fully verified so the demo has open jobs. Real
+// employers start at "none" and go through review.
+db.prepare(
+  `INSERT OR IGNORE INTO employer_verifications (employer_id, business_name, contact_name, contact_position, email, authorized, phone_verified_at, business_status, presence_status, updated_at)
+   VALUES (?, ?, ?, ?, ?, 1, ?, 'approved', 'approved', ?)`,
+).run(employerId, "Himal Group (demo)", "Hari Sharma", "Owner", "hari@himalmart.com", new Date().toISOString(), new Date().toISOString());
+db.prepare(
+  `INSERT INTO verification_evidence (id, employer_id, layer, kind, value, created_at) VALUES (?, ?, 'business', 'pan', ?, ?), (?, ?, 'presence', 'maps', ?, ?)`,
+).run(id(), employerId, "PAN 600000000 (demo)", new Date().toISOString(), id(), employerId, "https://maps.google.com/?q=Kathmandu", new Date().toISOString());
 
 // --- Demo jobs ---
 const jobs = [
@@ -220,12 +258,21 @@ const jobs = [
 ];
 
 const insertJob = db.prepare(
-  `INSERT OR IGNORE INTO jobs (id, title, employer_name, employer_id, location, category, tags, duration_min, ai_scoring, evidence, created_at)
-   VALUES (?, ?, ?, ?, ?, ?, ?, 15, 1, ?, ?)`,
+  `INSERT OR IGNORE INTO jobs (id, title, employer_name, employer_id, location, category, tags, duration_min, ai_scoring, evidence, created_at, review_status, verified, salary_min, salary_max, salary_period, hours, employment_type, no_fee_confirmed, responsibilities)
+   VALUES (?, ?, ?, ?, ?, ?, ?, 15, 1, ?, ?, 'approved', 1, ?, ?, 'month', ?, ?, 1, ?)`,
 );
 
+const SALARY = {
+  retail: [16000, 20000], admin: [22000, 28000], office: [20000, 25000], hospitality: [18000, 24000],
+  teaching: [20000, 26000], driving: [18000, 25000], tailoring: [15000, 22000],
+};
 for (const j of jobs) {
-  insertJob.run(j.id, j.title, j.employer_name, j.employer_id, j.location, j.category, j.tags, j.evidence ?? "none", new Date().toISOString());
+  const [lo, hi] = SALARY[j.category] ?? [17000, 22000];
+  insertJob.run(
+    j.id, j.title, j.employer_name, j.employer_id, j.location, j.category, j.tags, j.evidence ?? "none",
+    new Date().toISOString(), lo, hi, "Sunday to Friday, 10 am to 6 pm", "full-time",
+    "Serve customers, keep records and work with the team. Full training given.",
+  );
 }
 
 // --- Demo candidates & submissions for first job ---

@@ -1,3 +1,4 @@
+import { PUBLIC_JOBS_SQL } from "./verification";
 import { getDb, newId } from "./db";
 import { locationFit } from "./places";
 import { matchJobs, resolveTags } from "./tags";
@@ -133,12 +134,12 @@ export function getMatchingJobs(userId: string, limit = 20): Job[] {
   if (allTags.length === 0) {
     // Return recent jobs if no tags
     const rows = db
-      .prepare("SELECT * FROM jobs ORDER BY created_at DESC LIMIT ?")
+      .prepare(`${PUBLIC_JOBS_SQL} ORDER BY j.created_at DESC LIMIT ?`)
       .all(limit) as any[];
     return rows.map(rowToJob);
   }
 
-  const allJobs = (db.prepare("SELECT * FROM jobs ORDER BY created_at DESC").all() as any[]).map(rowToJob);
+  const allJobs = (db.prepare(`${PUBLIC_JOBS_SQL} ORDER BY j.created_at DESC`).all() as any[]).map(rowToJob);
   const matches = matchJobs(allTags, allJobs, [], limit, { cities });
   return matches.map((m) => m.job);
 }

@@ -67,6 +67,12 @@ function JobsPageInner() {
       .catch(() => setLoading(false));
   }, []);
 
+  // Don't default to an empty list: if no job is in the viewer's cities, show all.
+  useEffect(() => {
+    if (loading || cityFilter !== "mine" || jobs.length === 0) return;
+    if (jobs.every((j) => locationFit(j.location, myCities) === "elsewhere")) setCityFilter("");
+  }, [loading, cityFilter, jobs, myCities]);
+
   const filterTags = useMemo(
     () =>
       (tagsParam ?? "")

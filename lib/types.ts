@@ -73,9 +73,33 @@ export type Job = {
   duration_min: number;
   ai_scoring: boolean;
   evidence: Evidence;
+  /** True only when review_status is "approved" (Job Verified). */
   verified: boolean;
   verified_at: string;
   created_at: string;
+  review_status: JobReviewStatus;
+  /** Message from the reviewer to the employer (never shown to applicants). */
+  review_note: string;
+  responsibilities: string;
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_period: SalaryPeriod;
+  hours: string;
+  employment_type: EmploymentType | "";
+  no_fee_confirmed: boolean;
+  /** What MeritMatch has checked about the employer. Filled by the API. */
+  employer_badges?: EmployerBadges;
+};
+
+export type JobReviewStatus = "pending" | "approved" | "needs_info" | "rejected" | "suspended";
+export type SalaryPeriod = "month" | "day" | "hour";
+export const EMPLOYMENT_TYPES = ["full-time", "part-time", "contract", "daily-wage", "internship"] as const;
+export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
+export type LayerStatus = "none" | "submitted" | "needs_info" | "approved" | "rejected";
+export type EmployerBadges = {
+  contact: boolean;
+  documents: boolean;
+  employer: boolean;
 };
 
 export type Gender = "female" | "male" | "other";

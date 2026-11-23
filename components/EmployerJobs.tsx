@@ -6,6 +6,7 @@ import Icon from "./Icon";
 import { x } from "@/lib/i18n-extra";
 import { localizeDigits } from "@/lib/i18n";
 import { useLang } from "@/lib/useLang";
+import { JOB_STATUS } from "./EmployerVerification";
 
 export type EmployerJobRow = {
   id: string;
@@ -15,13 +16,40 @@ export type EmployerJobRow = {
   applicants: number;
   shortlisted: number;
   rejected: number;
+  review_status: string;
+  review_note: string;
+};
+
+export type EmployerVerificationSummary = {
+  contact: boolean;
+  business: string;
+  presence: string;
+  employer: boolean;
+  restricted: boolean;
+};
+
+const STEP_WORD: Record<string, Record<"en" | "ne", string>> = {
+  none: { en: "to do", ne: "बाँकी" },
+  submitted: { en: "in review", ne: "समीक्षामा" },
+  needs_info: { en: "more info needed", ne: "थप जानकारी चाहिन्छ" },
+  approved: { en: "done", ne: "पूरा" },
+  rejected: { en: "not accepted", ne: "स्वीकार भएन" },
 };
 
 /** The recruiter's home: every job they posted, with where each one stands. */
-export default function EmployerJobs({ name, jobs }: { name: string; jobs: EmployerJobRow[] }) {
+export default function EmployerJobs({
+  name,
+  jobs,
+  verification,
+}: {
+  name: string;
+  jobs: EmployerJobRow[];
+  verification: EmployerVerificationSummary;
+}) {
   const [lang] = useLang();
   const [copied, setCopied] = useState<string | null>(null);
   const n = (v: number) => localizeDigits(v, lang);
+  const ne = lang === "ne";
 
   const copy = async (id: string) => {
     try {
@@ -42,7 +70,39 @@ export default function EmployerJobs({ name, jobs }: { name: string; jobs: Emplo
           {x("postFirstJob", lang)}
         </Link>
       </div>
-      <p className="-mt-3 text-xs text-ink-muted">{x("myJobsSub", lang)}</p>
+      <p className="-mt-3 text-sm text-ink-muted">{x("myJobsSub", lang)}</p>
+
+      {/* Verification summary: what applicants see about this business */}
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-rule p-5">
+        <div>
+          <p className="text-base font-semibold">
+            {verification.employer
+              ? ne
+                ? "तपाईंको व्यवसाय प्रमाणित छ"
+                : "Your business is verified"
+              : ne
+                ? "प्रमाणीकरण पूरा गर्नुहोस्"
+                : "Finish verifying your business"}
+          </p>
+          <p className="mt-1 text-sm text-ink-light">
+            {[
+              [ne ? "सम्पर्क" : "Contact", verification.contact ? "approved" : "none"],
+              [ne ? "पहिचान" : "Identity", verification.business],
+              [ne ? "उपस्थिति" : "Presence", verification.presence],
+            ]
+              .map(([k, st]) => `${k}: ${STEP_WORD[st as string]?.[lang] ?? st}`)
+              .join(" · ")}
+          </p>
+          {verification.restricted && (
+            <p className="mt-2 text-sm font-medium text-danger">
+              {ne ? "खाता अस्थायी रूपमा प्रतिबन्धित छ; तपाईंका काम लुकाइएका छन्।" : "Account temporarily restricted; your jobs are hidden."}
+            </p>
+          )}
+        </div>
+        <Link href="/employer/verify" className="btn-secondary btn-sm">
+          {verification.employer ? (ne ? "विवरण हेर्नुहोस्" : "View details") : ne ? "जारी राख्नुहोस्" : "Continue"}
+        </Link>
+      </section>
 
       {jobs.length === 0 ? (
         <div className="card py-12 text-center text-sm text-ink-muted">{x("noJobsYet", lang)}</div>
@@ -51,10 +111,15 @@ export default function EmployerJobs({ name, jobs }: { name: string; jobs: Emplo
           {jobs.map((j) => {
             const pending = Math.max(0, j.applicants - j.shortlisted - j.rejected);
             return (
-              <div key={j.id} className="card !p-4">
+              <div key={j.id} className="card p-4!">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="font-semibold">{j.title}</h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-semibold">{j.title}</h2>
+                      <span className={JOB_STATUS[j.review_status]?.cls ?? "badge-muted"}>
+                        {JOB_STATUS[j.review_status]?.label[lang] ?? j.review_status}
+                      </span>
+                    </div>
                     <p className="text-xs text-ink-muted">
                       {j.location} · {new Date(j.created_at).toLocaleDateString(lang === "ne" ? "ne-NP" : undefined)}
                     </p>
@@ -63,6 +128,12 @@ export default function EmployerJobs({ name, jobs }: { name: string; jobs: Emplo
                     {x("viewApplicants", lang)}
                   </Link>
                 </div>
+                {j.review_note && j.review_status !== "approved" && (
+                  <p className="alert-note mt-3">
+                    <span className="font-semibold">{ne ? "समीक्षकको सन्देश: " : "Reviewer: "}</span>
+                    {j.review_note}
+                  </p>
+                )}
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
                   {[
                     [x("statApplicants", lang), j.applicants],

@@ -41,6 +41,7 @@ export async function GET(
       id: job.id,
       title: job.title,
       employer_name: job.employer_name,
+      employer_id: job.employer_id,
       location: job.location,
       evidence: job.evidence,
       ai_scoring: job.ai_scoring,

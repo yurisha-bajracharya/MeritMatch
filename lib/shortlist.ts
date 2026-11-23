@@ -136,9 +136,18 @@ function rowToJob(row: any): Job {
     duration_min: row.duration_min,
     ai_scoring: Boolean(row.ai_scoring),
     evidence: (["photos", "video"].includes(row.evidence) ? row.evidence : "none") as Evidence,
-    verified: Boolean(row.verified),
-    verified_at: row.verified_at || "",
+    verified: (row.review_status ?? (row.verified ? "approved" : "pending")) === "approved",
+    verified_at: row.reviewed_at || row.verified_at || "",
     created_at: row.created_at,
+    review_status: (row.review_status ?? (row.verified ? "approved" : "pending")) as Job["review_status"],
+    review_note: row.review_note || "",
+    responsibilities: row.responsibilities || "",
+    salary_min: row.salary_min ?? null,
+    salary_max: row.salary_max ?? null,
+    salary_period: (["day", "hour"].includes(row.salary_period) ? row.salary_period : "month") as Job["salary_period"],
+    hours: row.hours || "",
+    employment_type: row.employment_type || "",
+    no_fee_confirmed: Boolean(row.no_fee_confirmed),
   };
 }
 

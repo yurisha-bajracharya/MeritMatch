@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import Segmented from "./Segmented";
 import Icon from "./Icon";
 import { CitySelect } from "./CityPicker";
@@ -11,7 +12,8 @@ import { useLang } from "@/lib/useLang";
 import { x } from "@/lib/i18n-extra";
 
 import type { Category, Evidence, Lang, CustomQuestion } from "@/lib/types";
-import { CATEGORIES } from "@/lib/types";
+import { CATEGORIES, EMPLOYMENT_TYPES, type EmploymentType, type SalaryPeriod } from "@/lib/types";
+import { EMPLOYMENT_LABEL, PERIOD_LABEL } from "@/lib/job-format";
 import { t } from "@/lib/i18n";
 
 const CATEGORY_LABELS: Record<Category, Record<Lang, string>> = {
@@ -45,6 +47,27 @@ export default function PostJobForm() {
   const [result, setResult] = useState<{ id: string; link: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+  // Vacancy details reviewed before the job goes live.
+  const [responsibilities, setResponsibilities] = useState("");
+  const [salaryMin, setSalaryMin] = useState("");
+  const [salaryMax, setSalaryMax] = useState("");
+  const [salaryPeriod, setSalaryPeriod] = useState<SalaryPeriod>("month");
+  const [hours, setHours] = useState("");
+  const [employmentType, setEmploymentType] = useState<EmploymentType | "">("");
+  const [noFee, setNoFee] = useState(false);
+  const [gate, setGate] = useState<"loading" | "ok" | "verify" | "restricted" | "login">("loading");
+
+  useEffect(() => {
+    fetch("/api/employer/verification")
+      .then(async (r) => {
+        if (r.status === 401) return setGate("login");
+        const d = await r.json();
+        if (d.restricted) return setGate("restricted");
+        setGate(d.contact_verified ? "ok" : "verify");
+        if (d.business_name) setEmployerName((n) => n || d.business_name);
+      })
+      .catch(() => setGate("ok"));
+  }, []);
 
   const addQuestion = () => {
     setCustomQuestions((prev) => [
@@ -99,11 +122,22 @@ export default function PostJobForm() {
           duration_min: durationMin,
           ai_scoring: aiScoring,
           evidence,
+          responsibilities,
+          salary_min: salaryMin,
+          salary_max: salaryMax || salaryMin,
+          salary_period: salaryPeriod,
+          hours,
+          employment_type: employmentType,
+          no_fee_confirmed: noFee,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to post");
+      if (!res.ok) {
+        if (data.code === "verify_contact") setGate("verify");
+        if (data.code === "restricted") setGate("restricted");
+        throw new Error(data.error || "Failed to post");
+      }
 
       setResult({
         id: data.id,
@@ -131,9 +165,11 @@ export default function PostJobForm() {
         <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-moss-light text-moss">
           <Icon name="check-circle" size={30} label={x("posted", lang)} />
         </div>
-        <h3 className="section-title">{t("jobPosted", lang)}</h3>
-        <p className="text-sm text-ink-light mt-2">
-          {x("shareLink", lang)}
+        <h3 className="section-title">{lang === "ne" ? "समीक्षाका लागि पठाइयो" : "Sent for review"}</h3>
+        <p className="mx-auto mt-2 max-w-md text-base text-ink-light">
+          {lang === "ne"
+            ? "हरेक नयाँ काम समीक्षापछि मात्र खुला हुन्छ। स्वीकृत भएपछि तपाईंलाई सूचना आउँछ र यो लिंक काम गर्न थाल्छ।"
+            : "Every new job goes live only after review. You will get a notification when it is approved, and then this link will work for candidates."}
         </p>
         <div className="mt-4 flex items-center gap-2 max-w-md mx-auto">
           <input className="input flex-1 text-xs" value={result.link} readOnly />
@@ -155,6 +191,31 @@ export default function PostJobForm() {
     <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
       <div className="card space-y-5">
         <h1 className="page-title">{t("postJob", lang)}</h1>
+
+        {gate === "verify" && (
+          <div className="alert-note">
+            <p className="font-semibold">{lang === "ne" ? "पहिले आफ्नो सम्पर्क प्रमाणित गर्नुहोस्" : "First, verify your contact details"}</p>
+            <p className="mt-1">
+              {lang === "ne"
+                ? "काम पोस्ट गर्न मोबाइल नम्बर (OTP) र सम्पर्क व्यक्तिको विवरण चाहिन्छ। करिब दुई मिनेट लाग्छ।"
+                : "Posting needs a confirmed mobile number (OTP) and the contact person's details. It takes about two minutes."}
+            </p>
+            <Link href="/employer/verify" className="btn-primary btn-sm mt-3">
+              {lang === "ne" ? "प्रमाणीकरण सुरु गर्नुहोस्" : "Start verification"}
+            </Link>
+          </div>
+        )}
+        {gate === "restricted" && (
+          <div className="alert-error">
+            {lang === "ne"
+              ? "समीक्षा चलिरहेको बेला तपाईंको खाता अस्थायी रूपमा प्रतिबन्धित छ।"
+              : "Your account is temporarily restricted while a review is in progress."}{" "}
+            <Link href="/employer/verify" className="underline">
+              {lang === "ne" ? "विवरण" : "Details"}
+            </Link>
+          </div>
+        )}
+        {gate === "login" && <div className="alert-note">{x("errLoginEmployer", lang)}</div>}
 
         <div>
           <label className="label">{t("jobTitle", lang)}</label>
@@ -226,6 +287,107 @@ export default function PostJobForm() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Vacancy details: what applicants need to decide, and what reviewers check */}
+        <div className="space-y-5 border-t border-rule pt-5">
+          <h2 className="text-xl font-semibold">{lang === "ne" ? "कामको विवरण" : "About the job"}</h2>
+          <div>
+            <label className="label" htmlFor="job-resp">{lang === "ne" ? "काम र जिम्मेवारी" : "What the person will do"}</label>
+            <textarea
+              id="job-resp"
+              className="input min-h-[100px]"
+              required
+              value={responsibilities}
+              onChange={(e) => setResponsibilities(e.target.value)}
+              placeholder={lang === "ne" ? "जस्तै: ग्राहकलाई सेवा, सामानको हिसाब, पसल मिलाउने" : "e.g. Serve customers, keep stock records, keep the shop tidy"}
+            />
+          </div>
+
+          <fieldset className="min-w-0">
+            <legend className="label">{lang === "ne" ? "तलब (रुपैयाँ)" : "Salary (rupees)"}</legend>
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:grid-cols-[1fr_auto_1fr_10rem]">
+              <input
+                aria-label={lang === "ne" ? "न्यूनतम" : "Minimum"}
+                className="input"
+                inputMode="numeric"
+                required
+                placeholder={lang === "ne" ? "न्यूनतम" : "From"}
+                value={salaryMin}
+                onChange={(e) => setSalaryMin(e.target.value.replace(/[^\d]/g, ""))}
+              />
+              <span className="text-ink-muted">{lang === "ne" ? "देखि" : "to"}</span>
+              <input
+                aria-label={lang === "ne" ? "अधिकतम" : "Maximum"}
+                className="input"
+                inputMode="numeric"
+                placeholder={lang === "ne" ? "अधिकतम" : "Up to"}
+                value={salaryMax}
+                onChange={(e) => setSalaryMax(e.target.value.replace(/[^\d]/g, ""))}
+              />
+              <select
+                aria-label={lang === "ne" ? "अवधि" : "Per"}
+                className="input col-span-3 sm:col-span-1"
+                value={salaryPeriod}
+                onChange={(e) => setSalaryPeriod(e.target.value as SalaryPeriod)}
+              >
+                {(["month", "day", "hour"] as SalaryPeriod[]).map((p) => (
+                  <option key={p} value={p}>
+                    {PERIOD_LABEL[p][lang]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="hint">
+              {lang === "ne" ? "एउटै रकम भए 'अधिकतम' खाली छोड्नुहोस्। तलब सबै आवेदकले देख्छन्।" : "Same amount? Leave 'Up to' empty. Applicants see the salary."}
+            </p>
+          </fieldset>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="job-type">{lang === "ne" ? "रोजगारीको प्रकार" : "Employment type"}</label>
+              <select
+                id="job-type"
+                className="input"
+                required
+                value={employmentType}
+                onChange={(e) => setEmploymentType(e.target.value as EmploymentType)}
+              >
+                <option value="">{lang === "ne" ? "छान्नुहोस्" : "Choose"}</option>
+                {EMPLOYMENT_TYPES.map((et) => (
+                  <option key={et} value={et}>
+                    {EMPLOYMENT_LABEL[et][lang]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label" htmlFor="job-hours">{lang === "ne" ? "कामको समय" : "Working hours"}</label>
+              <input
+                id="job-hours"
+                className="input"
+                required
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+                placeholder={lang === "ne" ? "जस्तै: आइत–शुक्र, १० देखि ६" : "e.g. Sun to Fri, 10 am to 6 pm"}
+              />
+            </div>
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-rule p-4">
+            <input
+              type="checkbox"
+              required
+              checked={noFee}
+              onChange={(e) => setNoFee(e.target.checked)}
+              className="mt-1 h-5 w-5 shrink-0 accent-[#d92f49]"
+            />
+            <span className="text-base">
+              {lang === "ne"
+                ? "म पुष्टि गर्छु कि आवेदकसँग आवेदन, परीक्षा वा भर्ना शुल्क लिइने छैन, र म यो व्यवसायका लागि काम पोस्ट गर्न अधिकृत छु।"
+                : "I confirm applicants will not be charged any application, assessment or recruitment fee, and I am authorised to post this job for the business."}
+            </span>
+          </label>
         </div>
 
         <div>
@@ -373,8 +535,8 @@ export default function PostJobForm() {
         </div>
       )}
 
-      <button type="submit" disabled={posting} className="btn-primary w-full">
-        {posting ? t("posting", lang) : t("postJobBtn", lang)}
+      <button type="submit" disabled={posting || gate === "verify" || gate === "restricted" || gate === "login"} className="btn-primary w-full">
+        {posting ? t("posting", lang) : lang === "ne" ? "समीक्षाका लागि पठाउनुहोस्" : "Send job for review"}
       </button>
     </form>
   );

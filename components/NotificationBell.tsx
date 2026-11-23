@@ -46,6 +46,17 @@ function textOf(n: NotifData, lang: Lang): { title: string; body: string } {
       body: title ? x("shortlistedBody", lang, { employer, title }) : x("shortlistedMsg", lang),
     };
   }
+  // Review-team messages: the title is a fixed phrase per type, the body is
+  // what the reviewer wrote.
+  const NE_TITLES: Record<string, string> = {
+    verification: "प्रमाणीकरणको अद्यावधिक",
+    job_review: "कामको समीक्षाको अद्यावधिक",
+    admin_message: "मेरिटम्याच समीक्षा टोलीको सन्देश",
+    report_update: "तपाईंको रिपोर्टको अद्यावधिक",
+  };
+  if (lang === "ne" && NE_TITLES[n.type]) {
+    return { title: NE_TITLES[n.type], body: n.message || n.title };
+  }
   return { title: n.title, body: n.message };
 }
 
