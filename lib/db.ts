@@ -175,6 +175,9 @@ function migrate(db: Database.Database) {
 
   // English version of an experience described in Nepali (AI translation).
   addColumn(db, "users", "experience_en", "TEXT DEFAULT ''");
+  // Follow-up answers per described skill (how long, where, what exactly).
+  addColumn(db, "users", "skill_details", "TEXT DEFAULT '[]'");
+
   // Training organisation a candidate chose to share outcomes with (consent).
   addColumn(db, "users", "org_id", "TEXT DEFAULT ''");
   addColumn(db, "users", "org_consent_at", "TEXT DEFAULT ''");
@@ -372,6 +375,51 @@ function migrate(db: Database.Database) {
       reviewed_at TEXT DEFAULT ''
     );
     CREATE INDEX IF NOT EXISTS idx_skill_evidence_user ON skill_evidence(user_id);
+
+    -- Talent pool: people who chose to be findable by verified employers.
+    -- Keyed by phone, like candidates. Leaving deletes the row.
+    CREATE TABLE IF NOT EXISTS talent_pool (
+      phone TEXT PRIMARY KEY,
+      joined_at TEXT NOT NULL,
+      terms_version TEXT NOT NULL DEFAULT 'v1',
+      source TEXT NOT NULL DEFAULT 'application'
+    );
+    -- "Top talent in <skill>": given by an employer during BLIND review only,
+    -- after a task scored at least TOP_TALENT_MIN. Expires after 12 months.
+    CREATE TABLE IF NOT EXISTS talent_tags (
+      id TEXT PRIMARY KEY,
+      phone TEXT NOT NULL,
+      tag TEXT NOT NULL,
+      employer_id TEXT NOT NULL,
+      job_id TEXT NOT NULL,
+      submission_id TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      given_by TEXT NOT NULL DEFAULT 'human',
+      hidden INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      UNIQUE(submission_id, tag)
+    );
+    CREATE INDEX IF NOT EXISTS idx_talent_tags_phone ON talent_tags(phone);
+    -- Invitations from the talent search to a job's work test.
+    CREATE TABLE IF NOT EXISTS talent_invites (
+      id TEXT PRIMARY KEY,
+      employer_id TEXT NOT NULL,
+      job_id TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      message TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      submission_id TEXT NOT NULL DEFAULT '',
+      UNIQUE(job_id, phone)
+    );
+
+    -- An employer's "Formalize your business" self-check and action plan (JSON).
+    CREATE TABLE IF NOT EXISTS formalize_plans (
+      user_id TEXT PRIMARY KEY,
+      data TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
     -- Every admin decision, so reviews can be traced later.
     CREATE TABLE IF NOT EXISTS audit_log (
       id TEXT PRIMARY KEY,

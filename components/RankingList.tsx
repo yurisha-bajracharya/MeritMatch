@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -12,7 +12,12 @@ import { useLang } from "@/lib/useLang";
 import { TAG_LABELS } from "@/lib/tags";
 import type { RankedEntry } from "@/lib/shortlist";
 import type { Bilingual, Evidence } from "@/lib/types";
+import { formatDate } from "@/lib/dates";
+import { frameSkill, hasDetail } from "@/lib/skill-details";
 import { EVIDENCE_STATUS, EVIDENCE_DISCLAIMER } from "@/lib/evidence-labels";
+
+/** Same rule as lib/talent.ts TOP_TALENT_MIN (kept here so this stays a client file). */
+const TOP_MIN = 70;
 
 type JobInfo = {
   salary_min?: number | null;
@@ -71,6 +76,7 @@ export default function RankingList({
   const rejectedCount = entries.filter((e) => e.rejected).length;
   const view = tab ?? (shortlistedCount > 0 ? "shortlisted" : "all");
   const n = (v: number) => localizeDigits(v, lang);
+  const ne = lang === "ne";
 
   const shown = useMemo(
     () =>
@@ -81,6 +87,28 @@ export default function RankingList({
           : entries,
     [entries, view],
   );
+
+  const toggleTop = async (e: RankedEntry, tag: string, on: boolean) => {
+    setBusy(e.submissionId);
+    setError("");
+    try {
+      const res = await fetch(`/api/submissions/${e.submissionId}/top-talent${on ? "" : `?tag=${encodeURIComponent(tag)}`}`, {
+        method: on ? "POST" : "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: on ? JSON.stringify({ tag }) : undefined,
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "save");
+      patch(e.submissionId, {
+        topTalent: on
+          ? [{ tag, employer: "", at: new Date().toISOString(), thisTask: true }, ...e.topTalent]
+          : e.topTalent.filter((t) => !(t.thisTask && t.tag === tag)),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "save");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const toggle = async (e: RankedEntry) => {
     setBusy(e.submissionId);
@@ -281,6 +309,9 @@ export default function RankingList({
                         {x("idVerified", lang)}
                       </button>
                     )}
+                    {entry.invited && (
+                      <span className="badge-muted text-xs">{ne ? "प्रतिभा सूचीबाट निम्त्याइएको" : "Invited from talent pool"}</span>
+                    )}
                     {entry.shortlisted ? (
                       <span className="badge-moss inline-flex items-center gap-1 text-xs">
                         <Icon name="check" size={11} strokeWidth={3} />
@@ -330,8 +361,7 @@ export default function RankingList({
                   {entry.tags.length > 0 ? (
                     <div className="mt-1 flex flex-wrap gap-1.5">
                       {entry.tags.map((tag) => (
-                        <span key={tag} className="badge-moss">
-                          <Icon name="check" size={12} strokeWidth={3} />
+                        <span key={tag} className="badge-muted">
                           {TAG_LABELS[tag]?.[lang] ?? tag}
                         </span>
                       ))}
@@ -341,17 +371,63 @@ export default function RankingList({
                   )}
                 </div>
 
-                {isOwner && entry.track.proven.length > 0 && (
+                {entry.topTalent.length > 0 && (
                   <div className="mt-3">
-                    <p className="text-xs text-ink-muted">{x("skillsEarlier", lang)}</p>
+                    <p className="text-xs text-ink-muted">{ne ? "शीर्ष प्रतिभा (नाम नदेखी, कार्यपछि दिइएको)" : "Top talent (given blind, after a task)"}</p>
                     <div className="mt-1 flex flex-wrap gap-1.5">
-                      {entry.track.proven.map((p) => (
-                        <span key={p.tag} className="badge-moss">
-                          {TAG_LABELS[p.tag]?.[lang] ?? p.tag}
-                          {p.count > 1 ? ` x${n(p.count)}` : ""}
+                      {entry.topTalent.map((tt) => (
+                        <span key={tt.tag + tt.at} className="badge-ochre !whitespace-normal flex-wrap !gap-x-1 !gap-y-0 text-left">
+                          <Icon name="star" size={12} />
+                          {ne ? `शीर्ष प्रतिभा: ${TAG_LABELS[tt.tag]?.ne ?? tt.tag}` : `Top talent in ${TAG_LABELS[tt.tag]?.en ?? tt.tag}`}
+                          <span className="font-normal text-ink-light">
+                            · {tt.thisTask ? (ne ? "तपाईंले, यो कार्यमा" : "by you, this task") : tt.employer} · {formatDate(tt.at, lang, true)}
+                          </span>
                         </span>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {isOwner && (
+                  <div className="mt-3 border-t border-rule pt-3">
+                    {entry.unlocked ? (
+                      <p className="text-xs text-ink-muted">
+                        {ne ? "व्यक्ति चिनिसकेपछि शीर्ष प्रतिभा दिन मिल्दैन, ताकि यो निष्पक्ष रहोस्।" : "Top talent can't be given once you know who the person is, so it stays fair."}
+                      </p>
+                    ) : entry.total < TOP_MIN ? (
+                      <p className="text-xs text-ink-muted">
+                        {ne ? `शीर्ष प्रतिभा दिन कार्य अंक ${n(TOP_MIN)}% वा बढी चाहिन्छ।` : `Top talent needs a task score of ${TOP_MIN}% or more.`}
+                      </p>
+                    ) : entry.topTalentOptions.length > 0 ? (
+                      <>
+                        <p className="text-xs font-semibold text-ink">{ne ? "शीर्ष प्रतिभा भनी चिनो लगाउनुहोस्" : "Mark as top talent in"}</p>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {entry.topTalentOptions.map((tg) => {
+                            const on = entry.topTalent.some((tt) => tt.thisTask && tt.tag === tg);
+                            return (
+                              <button
+                                key={tg}
+                                type="button"
+                                aria-pressed={on}
+                                disabled={busy === entry.submissionId}
+                                onClick={() => toggleTop(entry, tg, !on)}
+                                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${
+                                  on ? "border-ochre bg-ochre-light font-semibold text-ink" : "border-rule text-ink-light hover:border-ink-muted"
+                                }`}
+                              >
+                                <Icon name="star" size={12} />
+                                {TAG_LABELS[tg]?.[lang] ?? tg}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="mt-1 text-[11px] text-ink-muted">
+                          {ne
+                            ? "उनी प्रतिभा सूचीमा भए अरू रोजगारदाताले खोज्दा यो देख्छन्। १२ महिनापछि हट्छ।"
+                            : "If they joined the talent pool, other employers see this when searching. It expires after 12 months."}
+                        </p>
+                      </>
+                    ) : null}
                   </div>
                 )}
 
@@ -365,6 +441,20 @@ export default function RankingList({
                         </span>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {isOwner && entry.skillDetails.some(hasDetail) && (
+                  <div className="mt-3">
+                    <p className="text-xs text-ink-muted">{ne ? "उनले आफ्नो अनुभवबारे भनेको (जाँच नगरिएको)" : "What they told us about their experience (not checked)"}</p>
+                    <ul className="mt-1 space-y-1">
+                      {entry.skillDetails.filter(hasDetail).map((d) => (
+                        <li key={d.tag} className="text-sm text-ink-light">
+                          <span className="font-medium text-ink">{TAG_LABELS[d.tag]?.[lang] ?? d.tag}: </span>
+                          {frameSkill(d, lang)}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
 

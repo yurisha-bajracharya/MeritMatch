@@ -47,6 +47,17 @@ function textOf(n: NotifData, lang: Lang): { title: string; body: string } {
       body: title ? x("shortlistedBody", lang, { employer, title }) : x("shortlistedMsg", lang),
     };
   }
+  if (n.type === "talent_invite") {
+    const [employer, job] = n.title.split("|");
+    return {
+      title: lang === "ne" ? `${employer} ले तपाईंलाई "${job}" को कार्यमा निम्तो दिए` : `${employer} invites you to the task for "${job}"`,
+      body:
+        (n.message ? `"${n.message}" ` : "") +
+        (lang === "ne"
+          ? "करिब ३० मिनेटको कार्य। नगरे पनि केही असर पर्दैन। अन्तर्वार्ता स्वीकार नगरेसम्म नाम र फोन लुकाइन्छ।"
+          : "About 30 minutes. Saying no has no effect. Your name and phone stay hidden until you accept an interview."),
+    };
+  }
   if (n.type === "skill_photo_ok" || n.type === "skill_photo_no") {
     const ok = n.type === "skill_photo_ok";
     return {

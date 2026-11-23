@@ -46,6 +46,7 @@ export async function POST(req: Request) {
           proven_skills: proven,
           preferred_cities: JSON.parse(row.preferred_cities || "[]"),
           experience_text: row.experience_text || "",
+          skill_details: JSON.parse(row.skill_details || "[]"),
           created_at: row.created_at,
         },
       });

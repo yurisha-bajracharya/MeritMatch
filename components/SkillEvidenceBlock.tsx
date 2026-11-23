@@ -81,9 +81,9 @@ export default function SkillEvidenceBlock({
   };
 
   return (
-    <div className="rounded-lg border border-rule p-4">
+    <div className="rounded-lg border border-rule p-3.5 sm:p-4">
       <p className="text-base font-semibold text-ink">{TAG_LABELS[tag]?.[lang] ?? tag}</p>
-      <p className="mt-1 text-base text-ink-light">{prompt.question[lang]}</p>
+      <p className="mt-1 text-[15px] leading-snug text-ink-light sm:text-base">{prompt.question[lang]}</p>
       <p className="mt-1 text-sm text-ink-muted">{prompt.hint[lang]}</p>
 
       {photos.length > 0 && (
@@ -104,7 +104,7 @@ export default function SkillEvidenceBlock({
 
       {active.length < MAX && (
         <div className="mt-3 space-y-2">
-          <label htmlFor={inputId} className="btn-secondary btn-sm w-full cursor-pointer sm:w-auto">
+          <label htmlFor={inputId} className="btn-secondary w-full cursor-pointer !min-h-[48px] sm:w-auto sm:!min-h-[38px] sm:px-3.5 sm:py-1.5">
             <Icon name="camera" size={16} />
             {file ? (ne ? "अर्को फोटो छान्नुहोस्" : "Choose another photo") : ne ? "फोटो खिच्नुहोस् वा छान्नुहोस्" : "Take or choose a photo"}
           </label>

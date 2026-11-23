@@ -233,6 +233,8 @@ export type MatchOptions = {
   cities?: string[];
   /** Drop jobs in cities the person did not choose. */
   onlyPreferred?: boolean;
+  /** Per-skill weight from follow-up answers (experience counts more). */
+  weights?: Record<string, number>;
 };
 
 /** Skill is what qualifies you; location only nudges the order. */
@@ -268,7 +270,8 @@ export function matchJobs(
       // and how much of the person's skill set the job uses.
       const jobCoverage = jobTags.size ? shared.length / jobTags.size : 0;
       const skillCoverage = shared.length / resolvedUser.size;
-      const skill = (jobCoverage + skillCoverage) / 2;
+      const w = shared.length ? shared.reduce((a, t) => a + (opts.weights?.[t] ?? 1), 0) / shared.length : 1;
+      const skill = ((jobCoverage + skillCoverage) / 2) * w;
 
       const fit = locationFit(job.location, cities);
       const score =

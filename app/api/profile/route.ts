@@ -1,3 +1,4 @@
+import { cleanDetails } from "@/lib/skill-details";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSession } from "@/lib/auth";
@@ -27,6 +28,14 @@ export async function POST(req: Request) {
       body.experience_text.slice(0, 2000),
       session.userId,
     );
+  }
+
+  if (Array.isArray(body.skill_details)) {
+    // Merge: answers for these skills replace older ones, others are kept.
+    const incoming = cleanDetails(body.skill_details);
+    const old = cleanDetails(JSON.parse((db.prepare("SELECT skill_details FROM users WHERE id = ?").get(session.userId) as any)?.skill_details || "[]"));
+    const merged = [...old.filter((o) => !incoming.some((i) => i.tag === o.tag)), ...incoming];
+    db.prepare("UPDATE users SET skill_details = ? WHERE id = ?").run(JSON.stringify(merged), session.userId);
   }
 
   if (typeof body.experience_en === "string") {

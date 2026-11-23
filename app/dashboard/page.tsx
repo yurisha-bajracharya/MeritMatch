@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -16,21 +16,14 @@ import IdentityVerify from "@/components/IdentityVerify";
 import MyJobs from "@/components/MyJobs";
 import OrgLink from "@/components/OrgLink";
 import MyWorkPhotos from "@/components/MyWorkPhotos";
+import TalentPoolCard from "@/components/TalentPoolCard";
+import { frameSkill, hasDetail } from "@/lib/skill-details";
 import { cityName, locationFit } from "@/lib/places";
 
 type SubData = { id: string; tags: string[]; category: string };
 
 /** Local strings so lib/i18n.ts does not need editing. */
 const L = {
-  proven: { en: "Proven by your work", ne: "तपाईंको कामले प्रमाणित" },
-  provenSub: {
-    en: "Skills you showed by scoring well on a job's task.",
-    ne: "कुनै कामको कार्यमा राम्रो अंक ल्याएर देखाएका सीप।",
-  },
-  noneProven: {
-    en: "Nothing proven yet. Apply to a job below and do its short task. Good work shows up here.",
-    ne: "अहिलेसम्म केही प्रमाणित भएको छैन। तल कुनै कामका लागि आवेदन दिई सानो कार्य गर्नुहोस्।",
-  },
   claimed: { en: "Skills you described", ne: "तपाईंले वर्णन गरेका सीप" },
   claimedSub: {
     en: "Used to suggest jobs. Employers you apply to see these marked as described, apart from what your tasks proved.",
@@ -182,13 +175,7 @@ export default function DashboardPage() {
         <header>
           <h1 className="page-title">{x("welcomeBack", lang, { name: user?.name?.split(" ")[0] || x("there", lang) })}</h1>
           <p className="section-sub">
-            {proven.length > 0
-              ? ne
-                ? `तपाईंले ${localizeDigits(proven.length, lang)} वटा सीप कार्यबाट प्रमाणित गर्नुभएको छ।`
-                : `You have proven ${proven.length} ${proven.length === 1 ? "skill" : "skills"} through your work.`
-              : ne
-                ? "छोटो कार्य गरेर आफ्नो सीप देखाउनुहोस्। CV चाहिँदैन।"
-                : "Show what you can do with a short task. No CV needed."}
+            {ne ? "छोटो कार्य गरेर आफ्नो सीप देखाउनुहोस्। CV चाहिँदैन।" : "Show what you can do with a short task. No CV needed."}
           </p>
         </header>
 
@@ -263,24 +250,7 @@ export default function DashboardPage() {
                 {ne ? "तपाईंका सीप" : "Your skills"}
               </h2>
 
-              <div className="mt-4 rounded-lg border border-moss/25 bg-moss-light/60 p-5">
-                <p className="flex items-center gap-2 text-base font-semibold text-moss">
-                  <Icon name="check-circle" size={18} />
-                  {s("proven", lang)}
-                </p>
-                <p className="mt-1 text-sm text-ink-light">{s("provenSub", lang)}</p>
-                {proven.length > 0 ? (
-                  <ul className="mt-3 flex flex-wrap gap-2">
-                    {proven.map((skill) => (
-                      <li key={skill} className="rounded-md bg-white px-2.5 py-1 text-sm font-medium text-moss ring-1 ring-moss/25">
-                        {TAG_LABELS[skill]?.[lang] ?? skill}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-3 text-sm text-ink">{s("noneProven", lang)}</p>
-                )}
-              </div>
+              <TalentPoolCard lang={lang} />
 
               <div className="mt-4 rounded-lg border border-dashed border-field/50 p-5">
                 <div className="flex items-start justify-between gap-3">
@@ -300,6 +270,18 @@ export default function DashboardPage() {
                   </ul>
                 ) : (
                   <p className="mt-3 text-sm text-ink-muted">{t("noSkillsYet", lang)}</p>
+                )}
+                {(user?.skill_details ?? []).filter((d) => described.includes(d.tag) && hasDetail(d)).length > 0 && (
+                  <ul className="mt-3 space-y-2 border-t border-rule pt-3">
+                    {(user?.skill_details ?? [])
+                      .filter((d) => described.includes(d.tag) && hasDetail(d))
+                      .map((d) => (
+                        <li key={d.tag} className="text-sm">
+                          <span className="font-semibold text-ink">{TAG_LABELS[d.tag]?.[lang] ?? d.tag}: </span>
+                          <span className="text-ink-light">{frameSkill(d, lang)}</span>
+                        </li>
+                      ))}
+                  </ul>
                 )}
               </div>
 

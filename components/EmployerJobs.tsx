@@ -93,9 +93,17 @@ export default function EmployerJobs({
                 : "Appointment letters, SSF and 30/60/90-day status in one place."}
           </p>
         </div>
-        <Link href="/employer/report" className="btn-secondary btn-sm">
-          {ne ? "औपचारिक रोजगारी प्रतिवेदन" : "Formalisation report"}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/employer/report" className="btn-secondary btn-sm">
+            {ne ? "औपचारिक रोजगारी प्रतिवेदन" : "Formalisation report"}
+          </Link>
+          <Link href="/employer/talent" className="btn-primary btn-sm">
+            {ne ? "प्रतिभा खोज्नुहोस्" : "Find top talent"}
+          </Link>
+          <Link href="/formalize" className="btn-secondary btn-sm">
+            {ne ? "व्यवसाय औपचारिक बनाउनुहोस्" : "Formalize your business"}
+          </Link>
+        </div>
       </section>
 
       {/* Verification summary: what applicants see about this business */}

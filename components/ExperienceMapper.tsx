@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLang } from "@/lib/useLang";
 import type { Job, Lang } from "@/lib/types";
-import { t } from "@/lib/i18n";
+import { t, localizeDigits } from "@/lib/i18n";
 import { TAG_LABELS, matchJobs } from "@/lib/tags";
 import JobCard from "@/components/JobCard";
 import Icon from "@/components/Icon";
 import VoiceRecorder from "@/components/VoiceRecorder";
+import SkillFollowUp from "@/components/SkillFollowUp";
+import { ACTIVITIES, YEARS, detailWeight, hasDetail, type SkillDetail } from "@/lib/skill-details";
 import SkillEvidenceBlock, { type SkillPhoto } from "@/components/SkillEvidenceBlock";
 import { EVIDENCE_DISCLAIMER } from "@/lib/evidence-labels";
 
@@ -32,6 +34,12 @@ const STARTERS: Record<Lang, string[]> = {
     "मैले छिमेकी र ग्राहकहरूका लागि सिलाइ र टेलरिङ गरेँ",
     "मैले ५ जनाको टोली सम्हालेँ र सफ्टवेयर इन्जिनियरिङ गरेँ",
   ],
+};
+
+/** Short labels for the same starters, for phone screens. */
+const STARTER_SHORT: Record<Lang, string[]> = {
+  en: ["Family shop and accounts", "Caring for grandmother", "Sewing and tailoring", "Team lead, software"],
+  ne: ["पसल र हिसाब", "हजुरआमाको हेरचाह", "सिलाइ र टेलरिङ", "टोली र सफ्टवेयर"],
 };
 
 /** Strings used only here, kept local so lib/i18n.ts does not need editing. */
@@ -88,6 +96,7 @@ const L = {
 } as const;
 
 const s = (k: keyof typeof L, lang: Lang) => L[k][lang];
+type MobileTab = "skills" | "details" | "jobs" | "photos";
 
 export default function ExperienceMapper() {
   const [lang] = useLang();
@@ -107,6 +116,17 @@ export default function ExperienceMapper() {
   const [englishMissing, setEnglishMissing] = useState(false);
   const [photos, setPhotos] = useState<SkillPhoto[]>([]);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [mtab, setMtab] = useState<MobileTab>("skills");
+  // Follow-up answers per skill: how long, where, what exactly, with what.
+  const [details, setDetails] = useState<Record<string, SkillDetail>>({});
+  const detailFor = (tag: string): SkillDetail => details[tag] ?? { tag, did: [], tools: [] };
+  const setDetail = (d: SkillDetail) => {
+    setDetails((prev) => ({ ...prev, [d.tag]: d }));
+    setSaved(false);
+  };
+  // Wide screens open the translation by default; phones keep it folded.
+  const [wide, setWide] = useState(false);
+  useEffect(() => setWide(window.matchMedia("(min-width: 640px)").matches), []);
 
   // --- jobs, fetched once, re-ranked locally as skills change ---
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -124,6 +144,8 @@ export default function ExperienceMapper() {
       .then((r) => r.json())
       .then((d) => {
         setMyCities(d?.user?.preferred_cities ?? []);
+        const prev: SkillDetail[] = d?.user?.skill_details ?? [];
+        if (prev.length) setDetails(Object.fromEntries(prev.map((x) => [x.tag, x])));
         if (d?.user?.role === "candidate") {
           setLoggedIn(true);
           loadPhotos();
@@ -145,11 +167,16 @@ export default function ExperienceMapper() {
 
   const kept = useMemo(() => skills.filter((x) => !off.has(x.tag)), [skills, off]);
   const keptTags = useMemo(() => kept.map((x) => x.tag), [kept]);
+  const followTags = useMemo(() => keptTags.filter((tg) => ACTIVITIES[tg]), [keptTags]);
 
   // Recomputed instantly whenever a skill is switched on or off.
   const matches = useMemo(
-    () => matchJobs(keptTags, jobs, [], 12, { cities: myCities }),
-    [keptTags, jobs, myCities],
+    () =>
+      matchJobs(keptTags, jobs, [], 12, {
+        cities: myCities,
+        weights: Object.fromEntries(keptTags.map((tg) => [tg, detailWeight(details[tg])])),
+      }),
+    [keptTags, jobs, myCities, details],
   );
 
   const loadJobs = async () => {
@@ -173,6 +200,7 @@ export default function ExperienceMapper() {
     setSaved(false);
     setSubbed(false);
     setMapped(false);
+    setMtab("skills");
     setEnglish("");
     setEnglishMissing(false);
 
@@ -239,6 +267,7 @@ export default function ExperienceMapper() {
           skills: [...new Set([...(session.user.skills ?? []), ...keptTags])],
           experience_text: text,
           ...(english ? { experience_en: english } : {}),
+          skill_details: keptTags.map((tg) => details[tg]).filter((d): d is SkillDetail => hasDetail(d)),
         }),
       });
       if (!save.ok) throw new Error("save");
@@ -319,7 +348,10 @@ export default function ExperienceMapper() {
         <h1 className="page-title mt-2">
           {ne ? "तपाईंले गरेको कामको मूल्य छ, जागिर नभए पनि।" : "What you have done counts, even if it was never a job."}
         </h1>
-        <p className="section-sub">
+        <p className="mt-2 text-base text-ink-light sm:hidden">
+          {ne ? "के काम गर्नुभयो, लेख्नुहोस् वा बोल्नुहोस्। हामी सीप र मिल्ने काम देखाउँछौं।" : "Write or say what you did. We show your skills and jobs that fit."}
+        </p>
+        <p className="section-sub hidden sm:block">
           {ne
             ? "परिवारको हेरचाह, खेती, पसल, सिलाइ, स्वयंसेवा, जे गर्नुभयो आफ्नै शब्दमा लेख्नुहोस्। हामी त्यसलाई रोजगारदाताले खोज्ने सीपमा बदल्छौं र मिल्ने काम देखाउँछौं।"
             : "Caring for family, farming, a shop, sewing, volunteering: write what you did in your own words. We turn it into skills employers look for, and show jobs that fit."}
@@ -327,13 +359,13 @@ export default function ExperienceMapper() {
       </header>
 
       {/* ---------- input ---------- */}
-      <section className="mt-8 max-w-2xl">
+      <section className="mt-6 max-w-2xl sm:mt-8">
         <label htmlFor="experience" className="label text-base">
           {ne ? "आफ्नै शब्दमा लेख्नुहोस्" : "Tell us in your own words"}
         </label>
         <textarea
           id="experience"
-          className="input min-h-[170px] resize-y !text-lg"
+          className="input min-h-[130px] resize-y !text-lg sm:min-h-[170px]"
           placeholder={
             ne
               ? "जस्तै: मैले तीन वर्ष हजुरआमाको हेरचाह गरेँ र शनिबार काकाको पसलमा सघाएँ।"
@@ -343,34 +375,38 @@ export default function ExperienceMapper() {
           onChange={(e) => setText(e.target.value)}
           aria-describedby="experience-hint"
         />
-        <p id="experience-hint" className="hint">
+        <p id="experience-hint" className="hint hidden sm:block">
           {ne
             ? "नेपाली वा अंग्रेजीमा लेख्नुहोस् वा बोल्नुहोस्। एक दुई वाक्य पुग्छ।"
             : "Write or speak, in Nepali or English. A sentence or two is enough."}
         </p>
 
-        {/* voice input */}
-        <div className="mt-4 rounded-lg border border-rule p-4">
-          <p className="text-sm font-semibold text-ink">{ne ? "लेख्नुको सट्टा बोल्नुहोस्" : "Speak instead of typing"}</p>
-          <p className="mt-0.5 text-sm text-ink-light">{ne ? "कुन भाषामा बोल्नुहुन्छ?" : "Which language will you speak?"}</p>
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="tab-list self-start" role="radiogroup" aria-label={ne ? "बोल्ने भाषा" : "Speaking language"}>
+        {/* voice input: one row on phones (language + big mic button) */}
+        <div className="mt-3 sm:mt-4 sm:rounded-lg sm:border sm:border-rule sm:p-4">
+          <p className="hidden text-sm font-semibold text-ink sm:block">{ne ? "लेख्नुको सट्टा बोल्नुहोस्" : "Speak instead of typing"}</p>
+          <div className="flex items-stretch gap-2 sm:mt-3 sm:items-center sm:gap-3">
+            <div className="tab-list shrink-0" role="radiogroup" aria-label={ne ? "बोल्ने भाषा" : "Speaking language"}>
               {(["ne", "en"] as Lang[]).map((v) => (
                 <button
                   key={v}
                   type="button"
                   role="radio"
                   aria-checked={(speech ?? lang) === v}
-                  className={`tab ${(speech ?? lang) === v ? "tab-active" : ""}`}
+                  className={`tab !px-2.5 ${(speech ?? lang) === v ? "tab-active" : ""}`}
                   onClick={() => setSpeech(v)}
                 >
-                  {v === "ne" ? "नेपाली" : "English"}
+                  {v === "ne" ? "नेपाली" : "EN"}
                 </button>
               ))}
             </div>
-            <VoiceRecorder lang={lang} speechLang={speech ?? lang} onResult={onSpoken} />
+            <VoiceRecorder
+              lang={lang}
+              speechLang={speech ?? lang}
+              onResult={onSpoken}
+              className="flex-1 !min-h-[48px] !text-base sm:flex-none sm:!min-h-[38px] sm:px-3.5 sm:py-1.5 sm:!text-sm"
+            />
           </div>
-          <p className="mt-2 text-xs text-ink-muted">
+          <p className="mt-2 hidden text-xs text-ink-muted sm:block">
             {ne
               ? "बोलेका कुरा माथिको बाकसमा लेखिन्छन्, मिलाउन सक्नुहुन्छ। Chrome वा Edge मा इन्टरनेटसहित चल्छ।"
               : "What you say appears in the box above, and you can fix it. Works in Chrome or Edge with internet."}
@@ -378,9 +414,17 @@ export default function ExperienceMapper() {
         </div>
 
         {text.trim().length === 0 && (
-          <div className="mt-6">
-            <p className="text-sm font-semibold text-ink">{ne ? "वा एउटा उदाहरणबाट सुरु गर्नुहोस्" : "Or start from an example"}</p>
-            <ul className="mt-2 divide-y divide-rule border-y border-rule">
+          <div className="mt-5 sm:mt-6">
+            <p className="text-sm font-semibold text-ink">{ne ? "वा उदाहरण छान्नुहोस्" : "Or pick an example"}</p>
+            {/* phones: short tappable chips */}
+            <div className="mt-2 flex flex-wrap gap-2 sm:hidden">
+              {STARTERS[lang].map((ex, i) => (
+                <button key={ex} type="button" onClick={() => setText(ex)} className="chip !text-sm">
+                  {STARTER_SHORT[lang][i]}
+                </button>
+              ))}
+            </div>
+            <ul className="mt-2 hidden divide-y divide-rule border-y border-rule sm:block">
               {STARTERS[lang].map((ex) => (
                 <li key={ex}>
                   <button
@@ -423,24 +467,50 @@ export default function ExperienceMapper() {
 
       {/* ---------- results ---------- */}
       {mapped && skills.length > 0 && (
-        <div className="mt-12 border-t border-rule pt-10">
+        <div className="mt-8 border-t border-rule pt-6 sm:mt-12 sm:pt-10">
+          {/* phones: one part at a time instead of a very long page */}
+          <div id="result-tabs" className="tab-list sticky top-[69px] z-10 mb-6 scroll-mt-[80px] bg-paper-dark lg:hidden" role="tablist" aria-label={ne ? "नतिजा" : "Results"}>
+            {(
+              [
+                ["skills", ne ? "सीप" : "Skills", keptTags.length],
+                ["details", ne ? "विवरण" : "Details", keptTags.filter((tg) => hasDetail(details[tg])).length],
+                ["jobs", ne ? "काम" : "Jobs", matches.length],
+                ["photos", ne ? "फोटो" : "Photos", photos.filter((p) => p.status !== "rejected" && keptTags.includes(p.tag)).length],
+              ] as [MobileTab, string, number][]
+            ).map(([id, label, count]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={mtab === id}
+                className={`tab ${mtab === id ? "tab-active" : ""}`}
+                onClick={() => {
+                  setMtab(id);
+                  document.getElementById("result-tabs")?.scrollIntoView({ block: "start" });
+                }}
+              >
+                {label}
+                {count > 0 && <span className="ml-1 text-ink-muted">{localizeDigits(String(count), lang)}</span>}
+              </button>
+            ))}
+          </div>
           <div className="grid gap-10 lg:grid-cols-[1fr_1.3fr] lg:gap-14">
             {/* 1 + 2: what you said, and the skills in it */}
-            <section aria-labelledby="skills-found">
-              <p className="eyebrow">{ne ? "तपाईंले लेख्नुभयो" : "You wrote"}</p>
-              <blockquote className="mt-2 border-l-2 border-rule pl-4 font-display text-lg leading-relaxed text-ink">
+            <section aria-labelledby="skills-found" className={mtab === "skills" ? "" : "hidden lg:block"}>
+              <p className="eyebrow hidden sm:block">{ne ? "तपाईंले लेख्नुभयो" : "You wrote"}</p>
+              <blockquote className="mt-2 hidden border-l-2 border-rule pl-4 font-display text-lg leading-relaxed text-ink">
                 {text}
               </blockquote>
               {english && (
-                <div className="mt-4">
-                  <p className="eyebrow">{ne ? "अंग्रेजीमा (रोजगारदाताका लागि)" : "In English (for employers)"}</p>
+                <details className="mt-0 rounded-lg border border-rule p-3 sm:mt-4 sm:rounded-none sm:border-0 sm:p-0" open={wide}>
+                  <summary className="eyebrow cursor-pointer">{ne ? "अंग्रेजीमा (रोजगारदाताका लागि)" : "In English (for employers)"}</summary>
                   <p className="mt-2 border-l-2 border-rule pl-4 text-base leading-relaxed text-ink-light" lang="en">
                     {english}
                   </p>
                   <p className="mt-1 text-xs text-ink-muted">
                     {ne ? "AI ले अनुवाद गरेको। गलत भए माथि मिलाएर फेरि थिच्नुहोस्।" : "Translated by AI. If it is wrong, edit your words and map again."}
                   </p>
-                </div>
+                </details>
               )}
               {englishMissing && (
                 <p className="mt-3 text-sm text-ink-muted">
@@ -450,10 +520,13 @@ export default function ExperienceMapper() {
                 </p>
               )}
 
-              <h2 id="skills-found" className="section-title mt-8">
+              <h2 id="skills-found" className="section-title mt-5 sm:mt-8">
                 {t("skillsFound", lang)}
               </h2>
-              <p className="mt-1 text-sm text-ink-light">{s("tapHint", lang)}</p>
+              <p className="mt-1 text-sm text-ink-light">
+                <span className="sm:hidden">{ne ? "नचाहिएको सीपबाट टिक हटाउनुहोस्।" : "Untick any skill that isn't right."}</span>
+                <span className="hidden sm:inline">{s("tapHint", lang)}</span>
+              </p>
 
               <ul className="mt-5 divide-y divide-rule border-y border-rule">
                 {groups.flatMap(({ key }) =>
@@ -470,16 +543,16 @@ export default function ExperienceMapper() {
                               type="checkbox"
                               checked={on}
                               onChange={() => toggle(sk.tag)}
-                              className="mt-1 h-5 w-5 shrink-0 accent-[#900000]"
+                              className="mt-1 h-5 w-5 shrink-0 accent-[#d92f49]"
                             />
                             <span className="min-w-0 flex-1">
                               <span className="flex flex-wrap items-baseline justify-between gap-x-3">
                                 <span className={`text-base font-semibold ${on ? "text-ink" : "text-ink-muted line-through"}`}>
                                   {TAG_LABELS[sk.tag]?.[lang] ?? sk.tag}
                                 </span>
-                                <span className="text-xs text-ink-muted">{SOURCE_TAG[sk.source]}</span>
+                                <span className="hidden text-xs text-ink-muted sm:inline">{SOURCE_TAG[sk.source]}</span>
                               </span>
-                              {sk.evidence && <span className="mt-0.5 block text-sm text-ink-light">{sk.evidence}</span>}
+                              {sk.evidence && <span className="mt-0.5 hidden text-sm text-ink-light sm:block">{sk.evidence}</span>}
                             </span>
                           </label>
                         </li>
@@ -502,7 +575,23 @@ export default function ExperienceMapper() {
                 </select>
               </div>
 
-              <p className="mt-5 text-sm text-ink-muted">{s("claimNote", lang)}</p>
+              {followTags.length > 0 && (
+                <a
+                  href="#tell-more"
+                  onClick={() => setMtab("details")}
+                  className="mt-5 flex items-center justify-between gap-3 rounded-lg border border-brand/30 bg-brand-light/40 p-4 text-base text-ink"
+                >
+                  <span>
+                    <span className="block font-semibold">{ne ? "अब: थप बताउनुहोस् (२ मिनेट)" : "Next: tell us more (2 minutes)"}</span>
+                    <span className="block text-sm text-ink-light">
+                      {ne ? "कति वर्ष, ठ्याक्कै के गर्नुभयो। राम्रो काम मिलाउन मद्दत गर्छ।" : "How long, and what exactly you did. Gets you better job matches."}
+                    </span>
+                  </span>
+                  <Icon name="arrow-right" size={18} />
+                </a>
+              )}
+
+              <p className="mt-5 hidden text-sm text-ink-muted sm:block">{s("claimNote", lang)}</p>
               <button
                 type="button"
                 onClick={saveToProfile}
@@ -512,7 +601,11 @@ export default function ExperienceMapper() {
                 {doneLabel(saved, t("saveToProfile", lang), s("saved", lang))}
               </button>
               {saved && (
-                <a href="#show-work" className="link mt-3 flex items-center gap-1.5 text-base">
+                <a
+                  href="#show-work"
+                  onClick={() => setMtab("photos")}
+                  className="link mt-3 flex items-center gap-1.5 text-base"
+                >
                   {ne ? "अब: आफ्नो कामका फोटो थप्नुहोस्" : "Next: add photos of your work"}
                   <Icon name="arrow-right" size={16} />
                 </a>
@@ -520,11 +613,11 @@ export default function ExperienceMapper() {
             </section>
 
             {/* 3: where those skills transfer */}
-            <section aria-labelledby="where-fit">
+            <section aria-labelledby="where-fit" className={mtab === "jobs" ? "" : "hidden lg:block"}>
               <h2 id="where-fit" className="section-title">
                 {ne ? "यी सीप कहाँ काम लाग्छन्" : "Where these skills fit"}
               </h2>
-              <p className="mt-1 text-sm text-ink-light">
+              <p className="mt-1 hidden text-sm text-ink-light sm:block">
                 {s("recommendedSub", lang)}
                 {myCities.length > 0 && ` ${s("inCity", lang)}.`}
               </p>
@@ -548,13 +641,27 @@ export default function ExperienceMapper() {
                 ) : (
                   <>
                     <div className="space-y-5">
-                      {matches.map((m) => (
-                        <div key={m.job.id}>
+                      {matches.map((m, i) => (
+                        <div key={m.job.id} className={i >= 4 ? "hidden sm:block" : ""}>
                           <JobCard job={m.job} lang={lang} fit={myCities.length ? m.fit : undefined} />
                           <p className="mt-1.5 px-1 text-sm text-ink-light">
                             <span className="text-ink-muted">{s("matchesOn", lang)}: </span>
                             {m.shared.map((tg) => TAG_LABELS[tg]?.[lang] ?? tg).join(", ")}
                           </p>
+                          {m.shared.some((tg) => hasDetail(details[tg])) && (
+                            <p className="px-1 text-sm text-ink-light">
+                              <span className="text-ink-muted">{ne ? "किनभने तपाईंले: " : "Because you: "}</span>
+                              {m.shared
+                                .filter((tg) => hasDetail(details[tg]))
+                                .map((tg) => {
+                                  const d = details[tg];
+                                  const act = d.did.slice(0, 2).map((k) => ACTIVITIES[tg]?.[k]?.[lang]).filter(Boolean).join(", ");
+                                  return [act, d.years ? `(${YEARS[d.years][lang]})` : ""].filter(Boolean).join(" ");
+                                })
+                                .filter(Boolean)
+                                .join("; ")}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -572,13 +679,56 @@ export default function ExperienceMapper() {
             </section>
           </div>
 
+          {/* 3b: follow-up questions per skill */}
+          {followTags.length > 0 && (
+            <section
+              id="tell-more"
+              aria-labelledby="tell-more-h"
+              className={`scroll-mt-32 lg:mt-12 lg:border-t lg:border-rule lg:pt-10 ${mtab === "details" ? "" : "hidden lg:block"}`}
+            >
+              <h2 id="tell-more-h" className="section-title">
+                {ne ? "आफ्नो सीपबारे थप बताउनुहोस्" : "Tell us more about each skill"}
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm text-ink-light">
+                {ne
+                  ? "\"हिसाब जान्छु\" भन्दा \"२ वर्ष परिवारको पसलमा दैनिक बिक्री र उधारो लेखेँ\" ले धेरै बताउँछ। छान्नुहोस् मात्र, लेख्नु पर्दैन।"
+                  : "\"I know accounting\" says less than \"Recorded daily sales and the credit list for 2 years in a family shop\". Just tap, no typing."}
+              </p>
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                {followTags.map((tg, i) => (
+                  <SkillFollowUp key={tg} tag={tg} lang={lang} value={detailFor(tg)} onChange={setDetail} open={i === 0} />
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-ink-muted">
+                {ne
+                  ? "यी तपाईंले भनेका कुरा हुन्, रोजगारदाताले 'वर्णन गरेको' भनेर देख्छन्। कार्य र फोटोले प्रमाणित गर्छन्।"
+                  : "This is your own description. Employers see it marked as described; tasks and photos are the proof."}
+              </p>
+              <button type="button" onClick={saveToProfile} disabled={saved} className="btn-primary mt-4 w-full sm:w-auto">
+                {doneLabel(saved, t("saveToProfile", lang), s("saved", lang))}
+              </button>
+              {saved && (
+                <button type="button" onClick={() => setMtab("jobs")} className="link mt-3 flex items-center gap-1.5 text-base lg:hidden">
+                  {ne ? "मिल्ने काम हेर्नुहोस्" : "See jobs that fit"}
+                  <Icon name="arrow-right" size={16} />
+                </button>
+              )}
+            </section>
+          )}
+
           {/* 4: back the skills up with photos of real work */}
           {keptTags.length > 0 && (
-            <section aria-labelledby="show-work" className="mt-12 border-t border-rule pt-10">
+            <section
+              aria-labelledby="show-work"
+              className={`scroll-mt-32 lg:mt-12 lg:border-t lg:border-rule lg:pt-10 ${mtab === "photos" ? "" : "hidden lg:block"}`}
+            >
               <h2 id="show-work" className="section-title">
                 {ne ? "आफ्नो काम देखाउनुहोस्" : "Show your work"}
               </h2>
-              <p className="mt-1 max-w-2xl text-sm text-ink-light">
+              <p className="mt-1 text-sm text-ink-light sm:hidden">
+                {ne ? "हरेक सीपका लागि कामको फोटो थप्नुहोस् (ऐच्छिक)। आवेदन दिएका रोजगारदाताले मात्र देख्छन्।" : "Add a photo of your work for each skill (optional). Only employers you apply to see them."}
+              </p>
+              <p className="mt-1 hidden max-w-2xl text-sm text-ink-light sm:block">
                 {ne
                   ? "हरेक सीपका लागि कामको फोटो थप्न सक्नुहुन्छ (ऐच्छिक)। AI ले फोटो सीपसँग मिल्छ कि जाँच्छ। निश्चित नभए मेरिटम्याचको मानिसले हेर्छ। फोटो तपाईंको प्रोफाइलमा र तपाईंले आवेदन दिएका रोजगारदाताले मात्र देख्छन्।"
                   : "Add photos of your work for each skill (optional). AI checks whether the photo fits the skill. If it is not sure, a person at MeritMatch reviews it. Photos show on your profile and only to employers you apply to."}

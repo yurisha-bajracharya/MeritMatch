@@ -152,7 +152,7 @@ function Inner() {
           </table>
         </div>
         <div>
-          <h2 className="section-title">{ne ? "सबैभन्दा धेरै प्रमाणित सीप" : "Most-proven skills"}</h2>
+          <h2 className="section-title">{ne ? "कार्यमा सबैभन्दा धेरै देखिएका सीप" : "Skills shown most in tasks"}</h2>
           <ul className="mt-3 flex flex-wrap gap-2">
             {d.top_skills.map((s) => (
               <li key={s.tag} className="badge-moss !text-sm">

@@ -8,6 +8,7 @@ import { aiWritingFlag } from "@/lib/aidetect";
 import { rowToJob } from "@/lib/shortlist";
 import { combineScores, scoreMcq } from "@/lib/mcq";
 import { randomBytes } from "crypto";
+import { joinPool } from "@/lib/talent";
 import type { Answer, Lang, InputMode, Gender, Region } from "@/lib/types";
 
 export async function POST(req: Request) {
@@ -26,6 +27,10 @@ export async function POST(req: Request) {
       // Browser-reported; advisory signals only (see lib/integrity.ts)
       elapsed_sec,
       paste_chars,
+      // Optional, separate consent: be findable by verified employers.
+      talent_pool = false,
+      // Set when the person came from an employer's talent-pool invitation.
+      invite = "",
     } = body;
 
     if (!job_id) {
@@ -140,6 +145,13 @@ export async function POST(req: Request) {
       accessToken,
       new Date().toISOString(),
     );
+
+    if (talent_pool === true && candidate_phone) joinPool(String(candidate_phone), "application");
+    if (invite && candidate_phone) {
+      db.prepare("UPDATE talent_invites SET submission_id = ? WHERE id = ? AND job_id = ? AND phone = ?").run(
+        subId, String(invite), job_id, String(candidate_phone),
+      );
+    }
 
     return NextResponse.json(
       {

@@ -13,6 +13,8 @@ import { locationFit, type LocationFit } from "./places";
 import { getTemplate } from "./templates";
 import { verifiedIdPhones } from "./identity";
 import { redact } from "./scoring";
+import { topTalentOptions } from "./talent";
+import { cleanDetails } from "./skill-details";
 import type { Bilingual } from "./types";
 
 /** What this person has already shown on OTHER jobs. Anonymous: no employer or job names. */
@@ -65,8 +67,16 @@ export type RankedEntry = {
   /** What the candidate wrote, per question. Shown to the job owner only. */
   answers: { scenarioId: string; text: string }[];
   contact?: { name: string; phone: string };
+  /** "Top talent in <skill>" from any employer (not hidden, not expired). */
+  topTalent: { tag: string; employer: string; at: string; thisTask: boolean }[];
+  /** Skills this employer may mark as Top talent on this task. */
+  topTalentOptions: string[];
+  /** Came from this employer's talent-pool invitation. */
+  invited: boolean;
   /** Photos backing up skills (from the Experience Mapper). Rejected ones are left out. */
   skillEvidence: { id: string; tag: string; caption: string; status: "ai_checked" | "needs_review" | "reviewed" }[];
+  /** Their own follow-up answers per skill (described, not proven). */
+  skillDetails: import("./skill-details").SkillDetail[];
   /** The person's experience in English (AI translated if they wrote Nepali), with contact details removed. */
   experienceEn: string;
 };
@@ -194,10 +204,13 @@ export function getRanking(jobId: string): {
   // never a name or contact detail, so it doesn't break anonymity. It does
   // NOT affect rank: the employer decides how much it matters.
   const userRows = db
-    .prepare("SELECT id, phone, preferred_cities, skills, experience_text, experience_en FROM users WHERE role = 'candidate'")
+    .prepare("SELECT id, phone, preferred_cities, skills, experience_text, experience_en, skill_details FROM users WHERE role = 'candidate'")
     .all() as any[];
   const cityByPhone = new Map<string, string[]>(
     userRows.map((u) => [u.phone, JSON.parse(u.preferred_cities || "[]")]),
+  );
+  const detailsByPhone = new Map<string, RankedEntry["skillDetails"]>(
+    userRows.map((u) => [u.phone, cleanDetails(JSON.parse(u.skill_details || "[]"))]),
   );
   const userIdByPhone = new Map<string, string>(userRows.map((u) => [u.phone, u.id]));
   const experienceByPhone = new Map<string, string>(
@@ -211,6 +224,21 @@ export function getRanking(jobId: string): {
     list.push({ id: e.id, tag: e.tag, caption: redact(e.caption || ""), status: e.status });
     evidenceByUser.set(e.user_id, list);
   }
+  const topByPhone = new Map<string, RankedEntry["topTalent"]>();
+  for (const t of db
+    .prepare(
+      `SELECT t.phone, t.tag, t.created_at AS at, t.submission_id, COALESCE(NULLIF(v.business_name, ''), u.name, '') AS employer
+         FROM talent_tags t LEFT JOIN employer_verifications v ON v.employer_id = t.employer_id LEFT JOIN users u ON u.id = t.employer_id
+        WHERE t.hidden = 0 AND t.expires_at > ? ORDER BY t.created_at DESC`,
+    )
+    .all(new Date().toISOString()) as any[]) {
+    const list = topByPhone.get(t.phone) ?? [];
+    list.push({ tag: t.tag, employer: t.employer, at: t.at, thisTask: false, sub: t.submission_id } as any);
+    topByPhone.set(t.phone, list);
+  }
+  const invitedPhones = new Set<string>(
+    (db.prepare("SELECT phone FROM talent_invites WHERE job_id = ?").all(jobId) as any[]).map((r) => r.phone),
+  );
   const claimedByPhone = new Map<string, string[]>(
     userRows.map((u) => [u.phone, JSON.parse(u.skills || "[]")]),
   );
@@ -322,7 +350,13 @@ export function getRanking(jobId: string): {
       hireId: hireBySub.get(s.id) ?? null,
       suggested: i < cut,
       consent: s.consent,
+      topTalent: c
+        ? (topByPhone.get(c.phone) ?? []).map((t: any) => ({ tag: t.tag, employer: t.employer, at: t.at, thisTask: t.sub === s.id }))
+        : [],
+      topTalentOptions: topTalentOptions(s.tags, job.category),
+      invited: Boolean(c && invitedPhones.has(c.phone)),
       skillEvidence: c ? (evidenceByUser.get(userIdByPhone.get(c.phone) ?? "") ?? []) : [],
+      skillDetails: c ? (detailsByPhone.get(c.phone) ?? []) : [],
       experienceEn: c ? (experienceByPhone.get(c.phone) ?? "") : "",
       flags: [...(s.flags ?? []), ...(similar.get(s.id) ?? [])],
       // Identity is shown only when ALL of these hold: the employer shortlisted

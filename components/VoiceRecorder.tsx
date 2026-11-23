@@ -9,9 +9,10 @@ type Props = {
   onResult: (text: string) => void;
   /** Language being spoken, if different from the screen language. */
   speechLang?: Lang;
+  className?: string;
 };
 
-export default function VoiceRecorder({ lang, onResult, speechLang }: Props) {
+export default function VoiceRecorder({ lang, onResult, speechLang, className = "" }: Props) {
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
   const recogRef = useRef<any>(null);
@@ -61,7 +62,7 @@ export default function VoiceRecorder({ lang, onResult, speechLang }: Props) {
   return (
     <button
       onClick={toggle}
-      className={`btn-sm ${listening ? "btn-danger" : "btn-secondary"} gap-1.5`}
+      className={`${className || "btn-sm"} ${listening ? "btn-danger" : "btn-secondary"} gap-1.5`}
       type="button"
     >
       {listening ? (

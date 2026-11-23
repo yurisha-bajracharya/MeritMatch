@@ -175,3 +175,8 @@ export function rowToUser(row: any): User {
     created_at: row.created_at,
   };
 }
+
+/** Stable anonymous ID for a person in the talent pool (not reversible without the secret). */
+export function talentId(phone: string): string {
+  return "T-" + createHmac("sha256", secret()).update(`talent:${phone}`).digest("hex").slice(0, 6).toUpperCase();
+}

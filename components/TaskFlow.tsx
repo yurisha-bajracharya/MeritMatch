@@ -59,6 +59,8 @@ export default function TaskFlow({
   const [phone, setPhone] = useState("");
   const [gender, setGender] = useState("");
   const [region, setRegion] = useState("");
+  // Separate, optional consent to be findable by verified employers.
+  const [joinPool, setJoinPool] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [submissionId, setSubmissionId] = useState("");
   const [accessToken, setAccessToken] = useState("");
@@ -170,6 +172,8 @@ export default function TaskFlow({
           candidate_gender: gender,
           candidate_region: region,
           elapsed_sec: elapsedSec,
+          talent_pool: joinPool && phone.trim().length > 0,
+          invite: typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("invite") ?? "" : "",
           paste_chars: pasteChars.current,
         }),
       });
@@ -488,6 +492,27 @@ export default function TaskFlow({
               />
             </div>
           </div>
+
+          <label className={`mt-5 flex items-start gap-3 rounded-lg border p-3 ${phone.trim() ? "border-rule" : "border-rule opacity-60"}`}>
+            <input
+              type="checkbox"
+              className="mt-0.5 h-5 w-5 shrink-0 accent-brand"
+              checked={joinPool && phone.trim().length > 0}
+              disabled={!phone.trim()}
+              onChange={(e) => setJoinPool(e.target.checked)}
+            />
+            <span className="text-sm text-ink">
+              <span className="font-semibold">
+                {lang === "ne" ? "मलाई प्रतिभा सूचीमा थप्नुहोस् (ऐच्छिक)" : "Add me to the talent pool (optional)"}
+              </span>
+              <span className="mt-0.5 block text-ink-light">
+                {lang === "ne"
+                  ? "प्रमाणित रोजगारदाताले मेरो सीप र अंक हेरेर कार्यका लागि निम्तो दिन सक्छन्। अन्तर्वार्ता स्वीकार नगरेसम्म नाम र फोन लुकाइन्छ। जुनसुकै बेला हट्न सक्छु।"
+                  : "Verified employers can find my skills and scores and invite me to a task. My name and phone stay hidden until I accept an interview. I can leave anytime."}
+                {!phone.trim() && (lang === "ne" ? " (फोन नम्बर चाहिन्छ)" : " (needs a phone number)")}
+              </span>
+            </span>
+          </label>
 
           {error && (
             <div className="mt-4 p-3 rounded-lg bg-danger-light text-sm text-danger">

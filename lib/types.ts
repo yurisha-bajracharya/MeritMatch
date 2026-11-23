@@ -117,6 +117,7 @@ export type User = {
   skills: string[];
   /** Skills they DEMONSTRATED: tags earned by scoring well on real work tasks. */
   proven_skills?: string[];
+  skill_details?: import("./skill-details").SkillDetail[];
   /** City ids from lib/places.ts, or "anywhere". Drives job ranking and alerts. */
   preferred_cities?: string[];
   experience_text: string;
