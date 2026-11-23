@@ -159,7 +159,7 @@ export default function ReportButton({
                       value={c}
                       checked={category === c}
                       onChange={() => setCategory(c)}
-                      className="h-4 w-4 shrink-0 accent-[#d92f49]"
+                      className="h-4 w-4 shrink-0 accent-[#900000]"
                     />
                     <span className="text-base">{CATEGORY_LABEL[c][lang]}</span>
                   </label>

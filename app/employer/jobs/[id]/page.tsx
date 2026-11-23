@@ -46,6 +46,12 @@ export default async function EmployerJobPage({
           location: job.location,
           ai_scoring: job.ai_scoring,
           evidence: job.evidence,
+          salary_min: job.salary_min,
+          salary_max: job.salary_max,
+          salary_period: job.salary_period,
+          hours: job.hours,
+          employment_type: job.employment_type,
+          responsibilities: job.responsibilities,
         }}
         initial={isOwner ? entries : entries.map((e) => ({ ...e, answers: [] }))}
         questions={isOwner ? questions : []}

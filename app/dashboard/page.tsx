@@ -12,6 +12,9 @@ import { TAG_LABELS, matchJobs } from "@/lib/tags";
 import Link from "next/link";
 import Icon from "@/components/Icon";
 import { CityPicker } from "@/components/CityPicker";
+import IdentityVerify from "@/components/IdentityVerify";
+import MyJobs from "@/components/MyJobs";
+import OrgLink from "@/components/OrgLink";
 import { cityName, locationFit } from "@/lib/places";
 
 type SubData = { id: string; tags: string[]; category: string };
@@ -218,6 +221,8 @@ export default function DashboardPage() {
           </section>
         )}
 
+        <MyJobs lang={lang} />
+
         <div className="mt-10 grid gap-10 lg:grid-cols-[1.7fr_1fr] lg:gap-12">
           {/* Main column: jobs */}
           <section aria-labelledby="matches">
@@ -341,6 +346,10 @@ export default function DashboardPage() {
                 </p>
               )}
             </section>
+
+            <IdentityVerify lang={lang} />
+
+            <OrgLink lang={lang} />
 
             <section aria-labelledby="alerts-h">
               <h2 id="alerts-h" className="text-xl font-semibold text-ink">{t("subscriptions", lang)}</h2>

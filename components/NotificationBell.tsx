@@ -53,6 +53,8 @@ function textOf(n: NotifData, lang: Lang): { title: string; body: string } {
     job_review: "कामको समीक्षाको अद्यावधिक",
     admin_message: "मेरिटम्याच समीक्षा टोलीको सन्देश",
     report_update: "तपाईंको रिपोर्टको अद्यावधिक",
+    hired: "तपाईं नियुक्त हुनुभयो",
+    checkin: "चेक-इन गर्ने समय भयो",
   };
   if (lang === "ne" && NE_TITLES[n.type]) {
     return { title: NE_TITLES[n.type], body: n.message || n.title };

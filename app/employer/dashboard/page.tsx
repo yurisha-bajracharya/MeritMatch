@@ -36,7 +36,21 @@ export default async function EmployerDashboardPage() {
   return (
     <>
       <Navbar />
-      <EmployerJobs name={user.name} jobs={jobs} verification={verification} />
+      <EmployerJobs
+        name={user.name}
+        jobs={jobs}
+        verification={verification}
+        hires={(getDb().prepare("SELECT COUNT(*) AS n FROM hires WHERE employer_id = ?").get(user.id) as { n: number }).n}
+        checkinsDue={
+          (
+            getDb()
+              .prepare(
+                "SELECT COUNT(*) AS n FROM checkins c JOIN hires h ON h.id = c.hire_id WHERE h.employer_id = ? AND c.respondent = 'employer' AND c.answered_at = '' AND c.due_at <= ? AND h.status = 'active'",
+              )
+              .get(user.id, new Date().toISOString()) as { n: number }
+          ).n
+        }
+      />
     </>
   );
 }

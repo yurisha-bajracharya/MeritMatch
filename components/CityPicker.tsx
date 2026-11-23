@@ -41,7 +41,7 @@ export function CityPicker({
           type="checkbox"
           checked={anywhere}
           onChange={() => toggle(ANYWHERE)}
-          className="mt-1 h-5 w-5 shrink-0 accent-[#d92f49]"
+          className="mt-1 h-5 w-5 shrink-0 accent-[#900000]"
         />
         <span>
           <span className="block text-base font-medium text-ink">{cityName(ANYWHERE, lang)}</span>

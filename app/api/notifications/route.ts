@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { getDb } from "@/lib/db";
+import { notifyDueCheckins } from "@/lib/hires";
 import {
   getNotifications,
   getUnreadCount,
@@ -12,6 +14,10 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "Not logged in" }, { status: 401 });
   }
+
+  // Turn any check-ins that have come due into notifications first.
+  const u = getDb().prepare("SELECT phone FROM users WHERE id = ?").get(session.userId) as { phone: string } | undefined;
+  if (u) notifyDueCheckins(session.userId, session.role, u.phone);
 
   const notifications = getNotifications(session.userId);
   const unread = getUnreadCount(session.userId);

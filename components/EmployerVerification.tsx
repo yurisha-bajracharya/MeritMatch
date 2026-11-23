@@ -290,7 +290,7 @@ function ContactStep({
             type="checkbox"
             checked={f.authorized}
             onChange={(e) => setF({ ...f, authorized: e.target.checked })}
-            className="mt-1 h-5 w-5 shrink-0 accent-[#d92f49]"
+            className="mt-1 h-5 w-5 shrink-0 accent-[#900000]"
           />
           <span className="text-base">
             {ne ? "म यो व्यवसायका लागि काम पोस्ट गर्न अधिकृत छु।" : "I am authorised to post jobs for this business."}
@@ -462,7 +462,7 @@ function EvidenceStep({
                   key={o.kind}
                   className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 ${kind === o.kind ? "border-ink" : "border-rule hover:border-field"}`}
                 >
-                  <input type="radio" name={`kind-${layer}`} checked={kind === o.kind} onChange={() => setKind(o.kind)} className="mt-1 h-4 w-4 shrink-0 accent-[#d92f49]" />
+                  <input type="radio" name={`kind-${layer}`} checked={kind === o.kind} onChange={() => setKind(o.kind)} className="mt-1 h-4 w-4 shrink-0 accent-[#900000]" />
                   <span className="text-sm font-medium">{o.label[lang]}</span>
                 </label>
               ))}

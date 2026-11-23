@@ -32,6 +32,7 @@ type Outcome = {
   rejected?: boolean;
   interview?: boolean;
   interviewNote?: string;
+  hireId?: string | null;
   media: { id: string; kind: "photo" | "video"; caption?: string }[];
 };
 
@@ -189,6 +190,18 @@ export default function OutcomePage() {
             <p className="mt-1 text-xs text-ink-muted">
               {x("stillReviewHint", lang)}
             </p>
+          )}
+          {data.hireId && (
+            <a
+              href={`/hire/${data.hireId}?k=${encodeURIComponent(token ?? "")}`}
+              className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-moss/30 bg-moss-light p-3 text-sm text-moss"
+            >
+              <span>
+                <span className="block font-semibold">{lang === "ne" ? "तपाईं नियुक्त हुनुभयो!" : "You are hired!"}</span>
+                {lang === "ne" ? "नियुक्तिपत्र र चेक-इन हेर्नुहोस्" : "See your appointment letter and check-ins"}
+              </span>
+              <Icon name="arrow-right" size={18} />
+            </a>
           )}
           {data.interview && (
             <div className="mt-3 rounded-lg border border-moss/30 bg-moss-light p-3 text-sm text-moss">

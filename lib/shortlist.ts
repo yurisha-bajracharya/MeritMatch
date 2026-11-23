@@ -11,6 +11,7 @@ import type {
 } from "./types";
 import { locationFit, type LocationFit } from "./places";
 import { getTemplate } from "./templates";
+import { verifiedIdPhones } from "./identity";
 import type { Bilingual } from "./types";
 
 /** What this person has already shown on OTHER jobs. Anonymous: no employer or job names. */
@@ -45,6 +46,10 @@ export type RankedEntry = {
   /** Employer paid (or was exempt) to see the contact details. */
   unlocked: boolean;
   track: TrackRecord;
+  /** A reviewer matched a government ID to this person. The ID itself is never shown. */
+  idVerified: boolean;
+  /** Set once the employer marked this person hired (see /hire/[id]). */
+  hireId: string | null;
   /** The top-25% rule's suggestion. Only a hint; never shown to candidates. */
   suggested: boolean;
   consent: boolean;
@@ -232,6 +237,11 @@ export function getRanking(jobId: string): {
     };
   };
 
+  const idPhones = verifiedIdPhones();
+  const hireBySub = new Map<string, string>(
+    (db.prepare("SELECT id, submission_id FROM hires WHERE job_id = ?").all(jobId) as any[]).map((h) => [h.submission_id, h.id]),
+  );
+
   const unlockedIds = new Set<string>(
     (
       db
@@ -291,6 +301,8 @@ export function getRanking(jobId: string): {
       interviewNote: s.interview_note ?? "",
       unlocked: unlockedIds.has(s.id),
       track: trackFor(c?.phone),
+      idVerified: Boolean(c && idPhones.has(c.phone)),
+      hireId: hireBySub.get(s.id) ?? null,
       suggested: i < cut,
       consent: s.consent,
       flags: [...(s.flags ?? []), ...(similar.get(s.id) ?? [])],

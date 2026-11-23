@@ -16,6 +16,14 @@ function SignupPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isLogin = searchParams.get("mode") === "login";
+  // Referral link from a training organisation: /signup?org=CODE. The code
+  // is only remembered here; linking needs the person's consent on the dashboard.
+  const orgCode = searchParams.get("org");
+  if (typeof window !== "undefined" && orgCode) {
+    try {
+      localStorage.setItem("mm_org", orgCode.toUpperCase());
+    } catch {}
+  }
 
   const [lang, setLang] = useLang();
   const [name, setName] = useState("");

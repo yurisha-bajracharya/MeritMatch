@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 405 405" width="405" height="405">
   <defs>
     <linearGradient id="fgrad" x1="0.15" y1="0" x2="0.6" y2="1">
-      <stop offset="0%" stop-color="#F2707C"/>
-      <stop offset="45%" stop-color="#F65F6F"/>
-      <stop offset="100%" stop-color="#F03B50"/>
+      <stop offset="0%" stop-color="#B03030"/>
+      <stop offset="45%" stop-color="#900000"/>
+      <stop offset="100%" stop-color="#7A0000"/>
     </linearGradient>
     <clipPath id="fclip"><circle cx="134" cy="202" r="126"/></clipPath>
   </defs>

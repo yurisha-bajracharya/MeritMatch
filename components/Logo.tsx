@@ -37,9 +37,9 @@ export function LogoMark({
     >
       <defs>
         <linearGradient id="mmGrad" x1="0.15" y1="0" x2="0.6" y2="1">
-          <stop offset="0%" stopColor="#F2707C" />
-          <stop offset="45%" stopColor="#F65F6F" />
-          <stop offset="100%" stopColor="#F03B50" />
+          <stop offset="0%" stopColor="#B03030" />
+          <stop offset="45%" stopColor="#900000" />
+          <stop offset="100%" stopColor="#7A0000" />
         </linearGradient>
         <clipPath id="mmClip">
           <circle cx="134" cy="150" r="126" />

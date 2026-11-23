@@ -380,7 +380,7 @@ export default function PostJobForm() {
               required
               checked={noFee}
               onChange={(e) => setNoFee(e.target.checked)}
-              className="mt-1 h-5 w-5 shrink-0 accent-[#d92f49]"
+              className="mt-1 h-5 w-5 shrink-0 accent-[#900000]"
             />
             <span className="text-base">
               {lang === "ne"

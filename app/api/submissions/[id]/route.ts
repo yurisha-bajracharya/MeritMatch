@@ -66,6 +66,7 @@ export async function GET(
     rejected: sub.rejected === true,
     interview: sub.interview === true,
     interviewNote: sub.interview_note ?? "",
+    hireId: (db.prepare("SELECT id FROM hires WHERE submission_id = ?").get(sub.id) as { id: string } | undefined)?.id ?? null,
     media,
     limits: { maxPhotos: 4, maxVideoSeconds: 90, maxVideoMb: 30 },
   });

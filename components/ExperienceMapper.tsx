@@ -389,7 +389,7 @@ export default function ExperienceMapper() {
                               type="checkbox"
                               checked={on}
                               onChange={() => toggle(sk.tag)}
-                              className="mt-1 h-5 w-5 shrink-0 accent-[#d92f49]"
+                              className="mt-1 h-5 w-5 shrink-0 accent-[#900000]"
                             />
                             <span className="min-w-0 flex-1">
                               <span className="flex flex-wrap items-baseline justify-between gap-x-3">
