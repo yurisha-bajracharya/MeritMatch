@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { TAG_LABELS } from "@/lib/tags";
 import Icon from "./Icon";
 import { CATEGORY_LABEL, REPORT_CATEGORIES, REPORT_STATUSES, STATUS_LABEL, type ReportCategory, type ReportStatus } from "@/lib/reports";
 import { EMPLOYMENT_LABEL, formatSalary } from "@/lib/job-format";
@@ -12,7 +13,7 @@ import type { EmployerBadges, Job } from "@/lib/types";
  * screenshots are only ever loaded through it.
  */
 
-type Tab = "reports" | "jobs" | "employers" | "identity" | "audit";
+type Tab = "reports" | "jobs" | "employers" | "identity" | "skills" | "audit";
 type AuditRow = { id: string; actor: string; action: string; target_type: string; target_id: string; detail: string; created_at: string };
 type Evidence = { id: string; layer: "business" | "presence"; kind: string; value: string; has_file: number; mime: string; created_at: string };
 type EmployerRow = {
@@ -148,6 +149,7 @@ export default function AdminConsole() {
     ["jobs", "Job review"],
     ["employers", "Employers"],
     ["identity", "ID checks"],
+    ["skills", "Skill photos"],
     ["audit", "Audit log"],
   ];
 
@@ -189,6 +191,7 @@ export default function AdminConsole() {
         {tab === "jobs" && <Jobs api={api} done={done} />}
         {tab === "employers" && <Employers api={api} done={done} adminKey={key} />}
         {tab === "identity" && <Identity api={api} done={done} adminKey={key} />}
+        {tab === "skills" && <SkillPhotos api={api} done={done} adminKey={key} />}
         {tab === "audit" && <Audit api={api} />}
       </div>
     </div>
@@ -245,7 +248,7 @@ function PrivateFile({
   label,
   side,
 }: {
-  kind: "evidence" | "report" | "identity";
+  kind: "evidence" | "report" | "identity" | "skill";
   id: string;
   mime: string;
   adminKey: string;
@@ -726,6 +729,90 @@ function Identity({ api, done, adminKey }: { api: Api; done: (m: string) => void
               />
             )}
             <History api={api} type="candidate" id={r.user_id} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ---------------- Skill photos ---------------- */
+
+type SkillRow = {
+  id: string;
+  user_id: string;
+  tag: string;
+  caption: string;
+  status: "ai_checked" | "needs_review" | "reviewed" | "rejected";
+  ai_note: string;
+  review_note: string;
+  created_at: string;
+  mime: string;
+  name: string;
+  experience_text: string;
+  experience_en: string;
+};
+
+const SKILL_STATUS: Record<SkillRow["status"], [string, string]> = {
+  needs_review: ["Waiting for review", "badge-ochre"],
+  ai_checked: ["AI says it fits", "badge-moss"],
+  reviewed: ["Accepted", "badge-moss"],
+  rejected: ["Not accepted", "badge-brand"],
+};
+
+function SkillPhotos({ api, done, adminKey }: { api: Api; done: (m: string) => void; adminKey: string }) {
+  const [rows, setRows] = useState<SkillRow[]>([]);
+  const load = useCallback(() => {
+    api("/api/admin/skill-evidence").then(setRows).catch(() => {});
+  }, [api]);
+  useEffect(() => {
+    load();
+  }, [load]);
+  const act = async (r: SkillRow, action: "accept" | "reject", message: string) => {
+    await api(`/api/admin/skill-evidence/${r.id}`, { action, message });
+    done(action === "accept" ? "Photo accepted" : "Photo not accepted, person told why");
+    load();
+  };
+  return (
+    <div>
+      <p className="text-sm text-ink-muted">
+        Does the photo show work that fits the skill? You cannot know who did the work, so accept a photo when it plausibly fits. Decline anything showing other people&apos;s personal details, children, or nothing related. AI-checked photos can still be declined.
+      </p>
+      <ul className="mt-4 space-y-4">
+        {rows.length === 0 && <li className="empty">No skill photos yet.</li>}
+        {rows.map((r) => (
+          <li key={r.id} className="rounded-lg border border-rule p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-lg font-semibold">{TAG_LABELS[r.tag]?.en ?? r.tag}</p>
+                <p className="text-sm text-ink-light">
+                  {r.name} · sent {when(r.created_at)}
+                </p>
+              </div>
+              <span className={SKILL_STATUS[r.status][1]}>{SKILL_STATUS[r.status][0]}</span>
+            </div>
+            {r.caption && <p className="mt-2 text-sm">Caption: <span className="text-ink">{r.caption}</span></p>}
+            {r.ai_note && <p className="mt-1 text-sm text-ink-light">AI saw: {r.ai_note}</p>}
+            {(r.experience_en || r.experience_text) && (
+              <details className="mt-2 text-sm">
+                <summary className="cursor-pointer text-ink-light">What they wrote about their experience</summary>
+                {r.experience_text && <p className="mt-1">{r.experience_text}</p>}
+                {r.experience_en && r.experience_en !== r.experience_text && <p className="mt-1 text-ink-light">English: {r.experience_en}</p>}
+              </details>
+            )}
+            <div className="mt-3">
+              <PrivateFile kind="skill" id={r.id} mime={r.mime} adminKey={adminKey} label={`${r.tag} photo`} />
+            </div>
+            {r.review_note && <p className="mt-2 text-sm text-ink-light">Last message: {r.review_note}</p>}
+            {r.status !== "rejected" && (
+              <Actions
+                placeholder="Message to the person (needed to decline, so they can try again)"
+                actions={[
+                  ...(r.status !== "reviewed" ? [{ label: "Accept", tone: "primary" as const, onClick: (t: string) => act(r, "accept", t) }] : []),
+                  { label: "Decline", tone: "danger" as const, needsText: true, onClick: (t: string) => act(r, "reject", t) },
+                ]}
+              />
+            )}
           </li>
         ))}
       </ul>

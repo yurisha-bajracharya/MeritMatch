@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLang } from "@/lib/useLang";
 import type { Job, Lang } from "@/lib/types";
 import { t } from "@/lib/i18n";
 import { TAG_LABELS, matchJobs } from "@/lib/tags";
 import JobCard from "@/components/JobCard";
 import Icon from "@/components/Icon";
+import VoiceRecorder from "@/components/VoiceRecorder";
+import SkillEvidenceBlock, { type SkillPhoto } from "@/components/SkillEvidenceBlock";
+import { EVIDENCE_DISCLAIMER } from "@/lib/evidence-labels";
 
 type TranslatedSkill = {
   tag: string;
@@ -75,8 +78,8 @@ const L = {
     ne: "एआई म्यापरमा पुग्न सकिएन, त्यसैले किवर्ड प्रयोग गरियो। एप चलिरहेको टर्मिनलमा कारण देखिन्छ।",
   },
   claimNote: {
-    en: "These are skills you described, not yet proven. They're used only to suggest jobs. You prove them by doing a job's short task, and employers only ever see those results.",
-    ne: "यी तपाईंले वर्णन गरेका सीप हुन्, अझै प्रमाणित भएका छैनन्। यी कामहरू सुझाउन मात्र प्रयोग हुन्छन्। कुनै कामको सानो कार्य गरेर तपाईं प्रमाणित गर्नुहुन्छ, र रोजगारदाताले ती नतिजा मात्र देख्छन्।",
+    en: "These are skills you described, not yet proven. They suggest jobs, and employers you apply to see them marked as described. Photos of your work and a job's short task are how you back them up.",
+    ne: "यी तपाईंले वर्णन गरेका सीप हुन्, अझै प्रमाणित भएका छैनन्। यिनले काम सुझाउँछन्, र तपाईंले आवेदन दिएका रोजगारदाताले यिनलाई 'वर्णन गरेको' भनेर देख्छन्। कामका फोटो र कुनै कामको सानो कार्यले यिनलाई प्रमाणित गर्छन्।",
   },
   loginFirst: {
     en: "Please log in first so we can save this to your profile.",
@@ -98,6 +101,12 @@ export default function ExperienceMapper() {
   const [by, setBy] = useState<string>("");
   const [aiError, setAiError] = useState<string>("");
   const [mapped, setMapped] = useState(false);
+  // Voice: which language the person will speak (can differ from the screen).
+  const [speech, setSpeech] = useState<Lang | null>(null);
+  const [english, setEnglish] = useState("");
+  const [englishMissing, setEnglishMissing] = useState(false);
+  const [photos, setPhotos] = useState<SkillPhoto[]>([]);
+  const [loggedIn, setLoggedIn] = useState(false);
 
   // --- jobs, fetched once, re-ranked locally as skills change ---
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -113,8 +122,25 @@ export default function ExperienceMapper() {
       body: JSON.stringify({ action: "session" }),
     })
       .then((r) => r.json())
-      .then((d) => setMyCities(d?.user?.preferred_cities ?? []))
+      .then((d) => {
+        setMyCities(d?.user?.preferred_cities ?? []);
+        if (d?.user?.role === "candidate") {
+          setLoggedIn(true);
+          loadPhotos();
+        }
+      })
       .catch(() => {});
+  }, []);
+
+  const loadPhotos = () =>
+    fetch("/api/skill-evidence")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setPhotos(Array.isArray(d) ? d : []))
+      .catch(() => {});
+
+  // Spoken words are added to the end of what is already written.
+  const onSpoken = useCallback((said: string) => {
+    setText((prev) => (prev.trim() ? `${prev.trim()} ${said.trim()}` : said.trim()));
   }, []);
 
   const kept = useMemo(() => skills.filter((x) => !off.has(x.tag)), [skills, off]);
@@ -147,6 +173,8 @@ export default function ExperienceMapper() {
     setSaved(false);
     setSubbed(false);
     setMapped(false);
+    setEnglish("");
+    setEnglishMissing(false);
 
     try {
       const res = await fetch("/api/translate", {
@@ -160,6 +188,8 @@ export default function ExperienceMapper() {
       setSkills(data.skills || []);
       setBy(data.by || "");
       setAiError(data.aiError || "");
+      setEnglish(typeof data.english === "string" ? data.english : "");
+      setEnglishMissing(Boolean(data.english_unavailable));
       setMapped(true);
       if ((data.skills || []).length > 0) await loadJobs();
     } catch (err) {
@@ -208,6 +238,7 @@ export default function ExperienceMapper() {
         body: JSON.stringify({
           skills: [...new Set([...(session.user.skills ?? []), ...keptTags])],
           experience_text: text,
+          ...(english ? { experience_en: english } : {}),
         }),
       });
       if (!save.ok) throw new Error("save");
@@ -226,6 +257,8 @@ export default function ExperienceMapper() {
       }).catch(() => {});
 
       setSaved(true);
+      setLoggedIn(true);
+      loadPhotos();
     } catch {
       setError("Failed to save");
     }
@@ -311,8 +344,38 @@ export default function ExperienceMapper() {
           aria-describedby="experience-hint"
         />
         <p id="experience-hint" className="hint">
-          {ne ? "नेपाली वा अंग्रेजीमा लेख्न सक्नुहुन्छ। एक दुई वाक्य पुग्छ।" : "Nepali or English is fine. A sentence or two is enough."}
+          {ne
+            ? "नेपाली वा अंग्रेजीमा लेख्नुहोस् वा बोल्नुहोस्। एक दुई वाक्य पुग्छ।"
+            : "Write or speak, in Nepali or English. A sentence or two is enough."}
         </p>
+
+        {/* voice input */}
+        <div className="mt-4 rounded-lg border border-rule p-4">
+          <p className="text-sm font-semibold text-ink">{ne ? "लेख्नुको सट्टा बोल्नुहोस्" : "Speak instead of typing"}</p>
+          <p className="mt-0.5 text-sm text-ink-light">{ne ? "कुन भाषामा बोल्नुहुन्छ?" : "Which language will you speak?"}</p>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="tab-list self-start" role="radiogroup" aria-label={ne ? "बोल्ने भाषा" : "Speaking language"}>
+              {(["ne", "en"] as Lang[]).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="radio"
+                  aria-checked={(speech ?? lang) === v}
+                  className={`tab ${(speech ?? lang) === v ? "tab-active" : ""}`}
+                  onClick={() => setSpeech(v)}
+                >
+                  {v === "ne" ? "नेपाली" : "English"}
+                </button>
+              ))}
+            </div>
+            <VoiceRecorder lang={lang} speechLang={speech ?? lang} onResult={onSpoken} />
+          </div>
+          <p className="mt-2 text-xs text-ink-muted">
+            {ne
+              ? "बोलेका कुरा माथिको बाकसमा लेखिन्छन्, मिलाउन सक्नुहुन्छ। Chrome वा Edge मा इन्टरनेटसहित चल्छ।"
+              : "What you say appears in the box above, and you can fix it. Works in Chrome or Edge with internet."}
+          </p>
+        </div>
 
         {text.trim().length === 0 && (
           <div className="mt-6">
@@ -368,6 +431,24 @@ export default function ExperienceMapper() {
               <blockquote className="mt-2 border-l-2 border-rule pl-4 font-display text-lg leading-relaxed text-ink">
                 {text}
               </blockquote>
+              {english && (
+                <div className="mt-4">
+                  <p className="eyebrow">{ne ? "अंग्रेजीमा (रोजगारदाताका लागि)" : "In English (for employers)"}</p>
+                  <p className="mt-2 border-l-2 border-rule pl-4 text-base leading-relaxed text-ink-light" lang="en">
+                    {english}
+                  </p>
+                  <p className="mt-1 text-xs text-ink-muted">
+                    {ne ? "AI ले अनुवाद गरेको। गलत भए माथि मिलाएर फेरि थिच्नुहोस्।" : "Translated by AI. If it is wrong, edit your words and map again."}
+                  </p>
+                </div>
+              )}
+              {englishMissing && (
+                <p className="mt-3 text-sm text-ink-muted">
+                  {ne
+                    ? "अहिले अंग्रेजी अनुवाद हुन सकेन। तपाईंका नेपाली शब्द नै सुरक्षित हुन्छन्।"
+                    : "An English translation was not available right now. Your Nepali words are saved as they are."}
+                </p>
+              )}
 
               <h2 id="skills-found" className="section-title mt-8">
                 {t("skillsFound", lang)}
@@ -430,6 +511,12 @@ export default function ExperienceMapper() {
               >
                 {doneLabel(saved, t("saveToProfile", lang), s("saved", lang))}
               </button>
+              {saved && (
+                <a href="#show-work" className="link mt-3 flex items-center gap-1.5 text-base">
+                  {ne ? "अब: आफ्नो कामका फोटो थप्नुहोस्" : "Next: add photos of your work"}
+                  <Icon name="arrow-right" size={16} />
+                </a>
+              )}
             </section>
 
             {/* 3: where those skills transfer */}
@@ -484,6 +571,32 @@ export default function ExperienceMapper() {
               </div>
             </section>
           </div>
+
+          {/* 4: back the skills up with photos of real work */}
+          {keptTags.length > 0 && (
+            <section aria-labelledby="show-work" className="mt-12 border-t border-rule pt-10">
+              <h2 id="show-work" className="section-title">
+                {ne ? "आफ्नो काम देखाउनुहोस्" : "Show your work"}
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm text-ink-light">
+                {ne
+                  ? "हरेक सीपका लागि कामको फोटो थप्न सक्नुहुन्छ (ऐच्छिक)। AI ले फोटो सीपसँग मिल्छ कि जाँच्छ। निश्चित नभए मेरिटम्याचको मानिसले हेर्छ। फोटो तपाईंको प्रोफाइलमा र तपाईंले आवेदन दिएका रोजगारदाताले मात्र देख्छन्।"
+                  : "Add photos of your work for each skill (optional). AI checks whether the photo fits the skill. If it is not sure, a person at MeritMatch reviews it. Photos show on your profile and only to employers you apply to."}
+              </p>
+              <p className="mt-1 max-w-2xl text-xs text-ink-muted">{EVIDENCE_DISCLAIMER[lang]}</p>
+              {!loggedIn ? (
+                <div className="alert-note mt-5 max-w-2xl">
+                  {ne ? "फोटो थप्न पहिले सीप प्रोफाइलमा सुरक्षित गर्नुहोस् (लगइन चाहिन्छ)।" : "Save these skills to your profile first (you need to be logged in) to add photos."}
+                </div>
+              ) : (
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  {keptTags.map((tg) => (
+                    <SkillEvidenceBlock key={tg} tag={tg} lang={lang} photos={photos.filter((p) => p.tag === tg)} onChange={loadPhotos} />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
         </div>
       )}
     </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -12,6 +12,7 @@ import { useLang } from "@/lib/useLang";
 import { TAG_LABELS } from "@/lib/tags";
 import type { RankedEntry } from "@/lib/shortlist";
 import type { Bilingual, Evidence } from "@/lib/types";
+import { EVIDENCE_STATUS, EVIDENCE_DISCLAIMER } from "@/lib/evidence-labels";
 
 type JobInfo = {
   salary_min?: number | null;
@@ -365,6 +366,41 @@ export default function RankingList({
                       ))}
                     </div>
                   </div>
+                )}
+
+                {isOwner && entry.skillEvidence.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs text-ink-muted">{lang === "ne" ? "सीपका लागि कामका फोटो" : "Photos of their work"}</p>
+                    <ul className="mt-1.5 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {entry.skillEvidence.map((ev) => (
+                        <li key={ev.id} className="min-w-0">
+                          <a href={`/api/skill-evidence/file/${ev.id}`} target="_blank" rel="noopener noreferrer" className="block">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={`/api/skill-evidence/file/${ev.id}`}
+                              alt={ev.caption || (TAG_LABELS[ev.tag]?.[lang] ?? ev.tag)}
+                              loading="lazy"
+                              className="aspect-square w-full rounded-md border border-rule object-cover"
+                            />
+                          </a>
+                          <p className="mt-1 truncate text-xs font-medium text-ink">{TAG_LABELS[ev.tag]?.[lang] ?? ev.tag}</p>
+                          <p className={`text-[11px] leading-tight ${ev.status === "needs_review" ? "text-ink-muted" : "text-moss"}`}>
+                            {EVIDENCE_STATUS[ev.status].label[lang]}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-1.5 text-[11px] text-ink-muted">{EVIDENCE_DISCLAIMER[lang]}</p>
+                  </div>
+                )}
+
+                {isOwner && entry.experienceEn && (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-xs text-ink-muted">
+                      {lang === "ne" ? "आफ्नो अनुभव, उहाँकै शब्दमा (अंग्रेजी)" : "Their experience, in their words (English)"}
+                    </summary>
+                    <p className="mt-1 text-sm text-ink-light" lang="en">{entry.experienceEn}</p>
+                  </details>
                 )}
 
                 {isOwner && (

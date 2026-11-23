@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { formatDate } from "@/lib/dates";
 import type { Lang } from "@/lib/types";
 import { t, localizeDigits } from "@/lib/i18n";
 import { x } from "@/lib/i18n-extra";
@@ -44,6 +45,13 @@ function textOf(n: NotifData, lang: Lang): { title: string; body: string } {
     return {
       title: x("shortlistedTitle", lang),
       body: title ? x("shortlistedBody", lang, { employer, title }) : x("shortlistedMsg", lang),
+    };
+  }
+  if (n.type === "skill_photo_ok" || n.type === "skill_photo_no") {
+    const ok = n.type === "skill_photo_ok";
+    return {
+      title: lang === "ne" ? (ok ? "तपाईंको कामको फोटो स्वीकार भयो" : "तपाईंको कामको फोटो स्वीकार भएन") : n.title,
+      body: n.message || (lang === "ne" ? "मेरिटम्याचको टोलीले जाँच्यो।" : "Checked by the MeritMatch team."),
     };
   }
   // Review-team messages: the title is a fixed phrase per type, the body is
@@ -169,7 +177,7 @@ export default function NotificationBell(_props: { lang?: Lang }) {
                   <div className="text-sm font-medium text-ink">{textOf(n, lang).title}</div>
                   <div className="text-sm text-ink-light mt-0.5">{textOf(n, lang).body}</div>
                   <div className="text-xs text-ink-muted mt-1">
-                    {new Date(n.created_at).toLocaleDateString(lang === "ne" ? "ne-NP" : undefined)}
+                    {formatDate(n.created_at, lang, true)}
                   </div>
                 </Link>
               ))

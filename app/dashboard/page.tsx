@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,7 @@ import { CityPicker } from "@/components/CityPicker";
 import IdentityVerify from "@/components/IdentityVerify";
 import MyJobs from "@/components/MyJobs";
 import OrgLink from "@/components/OrgLink";
+import MyWorkPhotos from "@/components/MyWorkPhotos";
 import { cityName, locationFit } from "@/lib/places";
 
 type SubData = { id: string; tags: string[]; category: string };
@@ -32,8 +33,8 @@ const L = {
   },
   claimed: { en: "Skills you described", ne: "तपाईंले वर्णन गरेका सीप" },
   claimedSub: {
-    en: "Used to suggest jobs. Employers never see these, only your task results.",
-    ne: "कामहरू सुझाउन प्रयोग हुन्छ। रोजगारदाताले यी देख्दैनन्, तपाईंको कार्य नतिजा मात्र देख्छन्।",
+    en: "Used to suggest jobs. Employers you apply to see these marked as described, apart from what your tasks proved.",
+    ne: "कामहरू सुझाउन प्रयोग हुन्छ। तपाईंले आवेदन दिएका रोजगारदाताले यी 'वर्णन गरेको' भनेर देख्छन्, कार्यले प्रमाणित गरेको भन्दा छुट्टै।",
   },
   where: { en: "Where you want to work", ne: "तपाईं कहाँ काम गर्न चाहनुहुन्छ" },
   whereSub: {
@@ -301,6 +302,8 @@ export default function DashboardPage() {
                   <p className="mt-3 text-sm text-ink-muted">{t("noSkillsYet", lang)}</p>
                 )}
               </div>
+
+              <MyWorkPhotos tags={described} lang={lang} />
             </section>
 
             <section id="cities" aria-labelledby="cities-h" className="scroll-mt-24">

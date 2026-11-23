@@ -173,6 +173,8 @@ function migrate(db: Database.Database) {
   addColumn(db, "users", "restricted", "INTEGER DEFAULT 0");
   addColumn(db, "users", "restricted_reason", "TEXT DEFAULT ''");
 
+  // English version of an experience described in Nepali (AI translation).
+  addColumn(db, "users", "experience_en", "TEXT DEFAULT ''");
   // Training organisation a candidate chose to share outcomes with (consent).
   addColumn(db, "users", "org_id", "TEXT DEFAULT ''");
   addColumn(db, "users", "org_consent_at", "TEXT DEFAULT ''");
@@ -352,6 +354,24 @@ function migrate(db: Database.Database) {
       created_at TEXT NOT NULL
     );
 
+    -- Photos a candidate adds to back up a skill from the Experience Mapper.
+    -- status: ai_checked (AI says the photo fits the skill) | needs_review
+    -- (AI unsure or unavailable) | reviewed (a person accepted it) | rejected.
+    CREATE TABLE IF NOT EXISTS skill_evidence (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      tag TEXT NOT NULL,
+      path TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      bytes INTEGER NOT NULL,
+      caption TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'needs_review',
+      ai_note TEXT DEFAULT '',
+      review_note TEXT DEFAULT '',
+      created_at TEXT NOT NULL,
+      reviewed_at TEXT DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_skill_evidence_user ON skill_evidence(user_id);
     -- Every admin decision, so reviews can be traced later.
     CREATE TABLE IF NOT EXISTS audit_log (
       id TEXT PRIMARY KEY,

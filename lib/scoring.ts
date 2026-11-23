@@ -279,3 +279,56 @@ export async function scoreAnswers(
     scoredBy,
   };
 }
+
+/**
+ * Ask a model about ONE image (Gemini first, then OpenAI). Returns null when
+ * no key is set. Used only for the optional skill-photo check.
+ */
+export async function askVision(
+  system: string,
+  prompt: string,
+  image: { base64: string; mime: string },
+): Promise<{ text: string; by: "gemini" | "openai" } | null> {
+  if (process.env.GEMINI_API_KEY) {
+    const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: prompt }, { inline_data: { mime_type: image.mime, data: image.base64 } }] }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0 },
+      }),
+      signal: AbortSignal.timeout(25_000),
+    });
+    if (!res.ok) throw new Error(`Gemini vision ${res.status}`);
+    const body = await res.json();
+    return { text: body.candidates?.[0]?.content?.parts?.[0]?.text ?? "", by: "gemini" };
+  }
+  if (process.env.OPENAI_API_KEY) {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: system },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              { type: "image_url", image_url: { url: `data:${image.mime};base64,${image.base64}` } },
+            ],
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(25_000),
+    });
+    if (!res.ok) throw new Error(`OpenAI vision ${res.status}`);
+    const body = await res.json();
+    return { text: body.choices?.[0]?.message?.content ?? "", by: "openai" };
+  }
+  return null;
+}

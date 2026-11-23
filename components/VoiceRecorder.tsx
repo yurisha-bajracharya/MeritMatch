@@ -7,9 +7,11 @@ import { t } from "@/lib/i18n";
 type Props = {
   lang: Lang;
   onResult: (text: string) => void;
+  /** Language being spoken, if different from the screen language. */
+  speechLang?: Lang;
 };
 
-export default function VoiceRecorder({ lang, onResult }: Props) {
+export default function VoiceRecorder({ lang, onResult, speechLang }: Props) {
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
   const recogRef = useRef<any>(null);
@@ -26,7 +28,7 @@ export default function VoiceRecorder({ lang, onResult }: Props) {
     const recog = new SR();
     recog.continuous = true;
     recog.interimResults = false;
-    recog.lang = lang === "ne" ? "ne-NP" : "en-US";
+    recog.lang = (speechLang ?? lang) === "ne" ? "ne-NP" : "en-US";
 
     recog.onresult = (e: any) => {
       const last = e.results[e.results.length - 1];
@@ -37,7 +39,7 @@ export default function VoiceRecorder({ lang, onResult }: Props) {
     recog.onend = () => setListening(false);
 
     recogRef.current = recog;
-  }, [lang, onResult]);
+  }, [lang, speechLang, onResult]);
 
   if (!supported) {
     return (

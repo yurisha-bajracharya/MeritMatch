@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { formatDate } from "@/lib/dates";
 import { useState } from "react";
 import Icon from "./Icon";
 import { x } from "@/lib/i18n-extra";
@@ -146,7 +147,7 @@ export default function EmployerJobs({
                       </span>
                     </div>
                     <p className="text-xs text-ink-muted">
-                      {j.location} · {new Date(j.created_at).toLocaleDateString(lang === "ne" ? "ne-NP" : undefined)}
+                      {j.location} · {formatDate(j.created_at, lang, true)}
                     </p>
                   </div>
                   <Link href={`/employer/jobs/${j.id}`} className="btn-primary btn-sm">

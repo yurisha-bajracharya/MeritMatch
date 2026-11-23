@@ -29,6 +29,10 @@ export async function POST(req: Request) {
     );
   }
 
+  if (typeof body.experience_en === "string") {
+    db.prepare("UPDATE users SET experience_en = ? WHERE id = ?").run(body.experience_en.slice(0, 2000), session.userId);
+  }
+
   const row = db.prepare("SELECT skills, preferred_cities FROM users WHERE id = ?").get(session.userId) as any;
   return NextResponse.json({
     ok: true,
