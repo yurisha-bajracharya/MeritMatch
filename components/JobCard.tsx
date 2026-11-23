@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { formatDate } from "@/lib/dates";
 import Icon from "./Icon";
 import type { LocationFit } from "@/lib/places";
 import type { Job, Lang } from "@/lib/types";
@@ -42,10 +43,7 @@ export default function JobCard({
   const salary = formatSalary(job, lang);
   const skills = job.tags.slice(0, 4).map((tag) => TAG_LABELS[tag]?.[lang] ?? tag);
   const more = job.tags.length - skills.length;
-  const posted = new Date(job.created_at).toLocaleDateString(lang === "ne" ? "ne-NP" : "en-GB", {
-    day: "numeric",
-    month: "short",
-  });
+  const posted = formatDate(job.created_at, lang, true);
 
   return (
     <article

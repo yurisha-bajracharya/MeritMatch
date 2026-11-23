@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { TAG_LABELS } from "@/lib/tags";
 import Icon from "./Icon";
 import { CATEGORY_LABEL, REPORT_CATEGORIES, REPORT_STATUSES, STATUS_LABEL, type ReportCategory, type ReportStatus } from "@/lib/reports";
 import { EMPLOYMENT_LABEL, formatSalary } from "@/lib/job-format";
@@ -12,7 +13,7 @@ import type { EmployerBadges, Job } from "@/lib/types";
  * screenshots are only ever loaded through it.
  */
 
-type Tab = "reports" | "jobs" | "employers" | "audit";
+type Tab = "reports" | "jobs" | "employers" | "identity" | "skills" | "audit";
 type AuditRow = { id: string; actor: string; action: string; target_type: string; target_id: string; detail: string; created_at: string };
 type Evidence = { id: string; layer: "business" | "presence"; kind: string; value: string; has_file: number; mime: string; created_at: string };
 type EmployerRow = {
@@ -147,6 +148,8 @@ export default function AdminConsole() {
     ["reports", "Reports"],
     ["jobs", "Job review"],
     ["employers", "Employers"],
+    ["identity", "ID checks"],
+    ["skills", "Skill photos"],
     ["audit", "Audit log"],
   ];
 
@@ -187,6 +190,8 @@ export default function AdminConsole() {
         {!ready ? null : tab === "reports" && <Reports api={api} done={done} adminKey={key} />}
         {tab === "jobs" && <Jobs api={api} done={done} />}
         {tab === "employers" && <Employers api={api} done={done} adminKey={key} />}
+        {tab === "identity" && <Identity api={api} done={done} adminKey={key} />}
+        {tab === "skills" && <SkillPhotos api={api} done={done} adminKey={key} />}
         {tab === "audit" && <Audit api={api} />}
       </div>
     </div>
@@ -235,10 +240,24 @@ function Actions({
 }
 
 /** Opens a private file through the admin key (img src cannot send headers). */
-function PrivateFile({ kind, id, mime, adminKey, label }: { kind: "evidence" | "report"; id: string; mime: string; adminKey: string; label: string }) {
+function PrivateFile({
+  kind,
+  id,
+  mime,
+  adminKey,
+  label,
+  side,
+}: {
+  kind: "evidence" | "report" | "identity" | "skill";
+  id: string;
+  mime: string;
+  adminKey: string;
+  label: string;
+  side?: "front" | "back";
+}) {
   const [url, setUrl] = useState("");
   const open = async () => {
-    const r = await fetch(`/api/admin/file?kind=${kind}&id=${id}`, { headers: { "x-admin-key": adminKey } });
+    const r = await fetch(`/api/admin/file?kind=${kind}&id=${id}${side ? `&side=${side}` : ""}`, { headers: { "x-admin-key": adminKey } });
     if (!r.ok) return;
     const u = URL.createObjectURL(await r.blob());
     if (mime === "application/pdf") window.open(u, "_blank", "noopener");
@@ -255,8 +274,8 @@ function PrivateFile({ kind, id, mime, adminKey, label }: { kind: "evidence" | "
   );
 }
 
-function History({ api, type, id }: { api: Api; type: "report" | "employer" | "job"; id: string }) {
-  const title = { report: "Report history", employer: "Employer review history", job: "Job review history" }[type];
+function History({ api, type, id }: { api: Api; type: "report" | "employer" | "job" | "candidate"; id: string }) {
+  const title = { report: "Report history", employer: "Employer review history", job: "Job review history", candidate: "ID check history" }[type];
   const [rows, setRows] = useState<AuditRow[] | null>(null);
   return (
     <details
@@ -621,6 +640,183 @@ function Employers({ api, done, adminKey }: { api: Api; done: (m: string) => voi
         </li>
       ))}
     </ul>
+  );
+}
+
+/* ---------------- ID checks ---------------- */
+
+type IdRow = {
+  user_id: string;
+  doc_type: string;
+  name_on_doc: string;
+  status: string;
+  note: string;
+  submitted_at: string;
+  reviewed_at: string;
+  front_mime: string;
+  back_mime: string;
+  has_front: number;
+  has_back: number;
+  account_name: string;
+  phone: string;
+};
+
+const ID_NAMES: Record<string, string> = {
+  citizenship: "Citizenship certificate",
+  nid: "National ID card",
+  passport: "Passport",
+  licence: "Driving licence",
+  voter: "Voter ID card",
+};
+
+function Identity({ api, done, adminKey }: { api: Api; done: (m: string) => void; adminKey: string }) {
+  const [rows, setRows] = useState<IdRow[]>([]);
+  const load = useCallback(() => {
+    api("/api/admin/identity").then(setRows).catch(() => {});
+  }, [api]);
+  useEffect(() => {
+    load();
+  }, [load]);
+  const act = async (r: IdRow, action: string, message: string, m: string) => {
+    await api(`/api/admin/identity/${r.user_id}`, { action, message });
+    done(m);
+    load();
+  };
+
+  return (
+    <div>
+      <p className="text-sm text-ink-muted">
+        Check that the name on the ID matches the account name and that the photo is readable. Approving or declining deletes the photos at once; only the result is kept. Never copy ID numbers anywhere.
+      </p>
+      <ul className="mt-4 space-y-4">
+        {rows.length === 0 && <li className="empty">No ID checks yet.</li>}
+        {rows.map((r) => (
+          <li key={r.user_id} className="rounded-lg border border-rule p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-lg font-semibold">{r.account_name}</p>
+                <p className="text-sm text-ink-light">
+                  {ID_NAMES[r.doc_type] ?? r.doc_type} · {r.phone} · sent {when(r.submitted_at)}
+                </p>
+                {r.name_on_doc && (
+                  <p className="mt-1 text-sm">
+                    Name typed as on the ID: <span className="font-semibold">{r.name_on_doc}</span>
+                    {r.name_on_doc.trim().toLowerCase() !== r.account_name.trim().toLowerCase() && (
+                      <span className="badge-brand ml-2">Differs from account name</span>
+                    )}
+                  </p>
+                )}
+              </div>
+              <span className={STATUS_CLS[r.status] ?? "badge-muted"}>{r.status.replace("_", " ")}</span>
+            </div>
+            {(r.has_front || r.has_back) ? (
+              <div className="mt-3 flex flex-wrap gap-6">
+                {r.has_front ? <PrivateFile kind="identity" id={r.user_id} side="front" mime={r.front_mime} adminKey={adminKey} label="ID front" /> : null}
+                {r.has_back ? <PrivateFile kind="identity" id={r.user_id} side="back" mime={r.back_mime} adminKey={adminKey} label="ID back" /> : null}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-ink-muted">Photos deleted after the decision{r.reviewed_at ? ` (${when(r.reviewed_at)})` : ""}.</p>
+            )}
+            {r.note && <p className="mt-2 text-sm text-ink-light">Last message: {r.note}</p>}
+            {(r.status === "submitted" || r.status === "needs_info") && (
+              <Actions
+                placeholder="Message to the person (needed to ask again or to decline)"
+                actions={[
+                  { label: "Approve: ID verified", tone: "primary", onClick: (t) => act(r, "approve", t, "ID verified, photos deleted") },
+                  { label: "Ask for a clearer photo", needsText: true, onClick: (t) => act(r, "request_info", t, "Request sent") },
+                  { label: "Decline", tone: "danger", needsText: true, onClick: (t) => act(r, "reject", t, "Declined, photos deleted") },
+                ]}
+              />
+            )}
+            <History api={api} type="candidate" id={r.user_id} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ---------------- Skill photos ---------------- */
+
+type SkillRow = {
+  id: string;
+  user_id: string;
+  tag: string;
+  caption: string;
+  status: "ai_checked" | "needs_review" | "reviewed" | "rejected";
+  ai_note: string;
+  review_note: string;
+  created_at: string;
+  mime: string;
+  name: string;
+  experience_text: string;
+  experience_en: string;
+};
+
+const SKILL_STATUS: Record<SkillRow["status"], [string, string]> = {
+  needs_review: ["Waiting for review", "badge-ochre"],
+  ai_checked: ["AI says it fits", "badge-moss"],
+  reviewed: ["Accepted", "badge-moss"],
+  rejected: ["Not accepted", "badge-brand"],
+};
+
+function SkillPhotos({ api, done, adminKey }: { api: Api; done: (m: string) => void; adminKey: string }) {
+  const [rows, setRows] = useState<SkillRow[]>([]);
+  const load = useCallback(() => {
+    api("/api/admin/skill-evidence").then(setRows).catch(() => {});
+  }, [api]);
+  useEffect(() => {
+    load();
+  }, [load]);
+  const act = async (r: SkillRow, action: "accept" | "reject", message: string) => {
+    await api(`/api/admin/skill-evidence/${r.id}`, { action, message });
+    done(action === "accept" ? "Photo accepted" : "Photo not accepted, person told why");
+    load();
+  };
+  return (
+    <div>
+      <p className="text-sm text-ink-muted">
+        Does the photo show work that fits the skill? You cannot know who did the work, so accept a photo when it plausibly fits. Decline anything showing other people&apos;s personal details, children, or nothing related. AI-checked photos can still be declined.
+      </p>
+      <ul className="mt-4 space-y-4">
+        {rows.length === 0 && <li className="empty">No skill photos yet.</li>}
+        {rows.map((r) => (
+          <li key={r.id} className="rounded-lg border border-rule p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-lg font-semibold">{TAG_LABELS[r.tag]?.en ?? r.tag}</p>
+                <p className="text-sm text-ink-light">
+                  {r.name} · sent {when(r.created_at)}
+                </p>
+              </div>
+              <span className={SKILL_STATUS[r.status][1]}>{SKILL_STATUS[r.status][0]}</span>
+            </div>
+            {r.caption && <p className="mt-2 text-sm">Caption: <span className="text-ink">{r.caption}</span></p>}
+            {r.ai_note && <p className="mt-1 text-sm text-ink-light">AI saw: {r.ai_note}</p>}
+            {(r.experience_en || r.experience_text) && (
+              <details className="mt-2 text-sm">
+                <summary className="cursor-pointer text-ink-light">What they wrote about their experience</summary>
+                {r.experience_text && <p className="mt-1">{r.experience_text}</p>}
+                {r.experience_en && r.experience_en !== r.experience_text && <p className="mt-1 text-ink-light">English: {r.experience_en}</p>}
+              </details>
+            )}
+            <div className="mt-3">
+              <PrivateFile kind="skill" id={r.id} mime={r.mime} adminKey={adminKey} label={`${r.tag} photo`} />
+            </div>
+            {r.review_note && <p className="mt-2 text-sm text-ink-light">Last message: {r.review_note}</p>}
+            {r.status !== "rejected" && (
+              <Actions
+                placeholder="Message to the person (needed to decline, so they can try again)"
+                actions={[
+                  ...(r.status !== "reviewed" ? [{ label: "Accept", tone: "primary" as const, onClick: (t: string) => act(r, "accept", t) }] : []),
+                  { label: "Decline", tone: "danger" as const, needsText: true, onClick: (t: string) => act(r, "reject", t) },
+                ]}
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

@@ -11,6 +11,8 @@ import type {
 } from "./types";
 import { locationFit, type LocationFit } from "./places";
 import { getTemplate } from "./templates";
+import { verifiedIdPhones } from "./identity";
+import { redact } from "./scoring";
 import type { Bilingual } from "./types";
 
 /** What this person has already shown on OTHER jobs. Anonymous: no employer or job names. */
@@ -45,6 +47,10 @@ export type RankedEntry = {
   /** Employer paid (or was exempt) to see the contact details. */
   unlocked: boolean;
   track: TrackRecord;
+  /** A reviewer matched a government ID to this person. The ID itself is never shown. */
+  idVerified: boolean;
+  /** Set once the employer marked this person hired (see /hire/[id]). */
+  hireId: string | null;
   /** The top-25% rule's suggestion. Only a hint; never shown to candidates. */
   suggested: boolean;
   consent: boolean;
@@ -59,6 +65,10 @@ export type RankedEntry = {
   /** What the candidate wrote, per question. Shown to the job owner only. */
   answers: { scenarioId: string; text: string }[];
   contact?: { name: string; phone: string };
+  /** Photos backing up skills (from the Experience Mapper). Rejected ones are left out. */
+  skillEvidence: { id: string; tag: string; caption: string; status: "ai_checked" | "needs_review" | "reviewed" }[];
+  /** The person's experience in English (AI translated if they wrote Nepali), with contact details removed. */
+  experienceEn: string;
 };
 
 function parseFlags(raw: unknown): IntegrityFlag[] {
@@ -184,11 +194,23 @@ export function getRanking(jobId: string): {
   // never a name or contact detail, so it doesn't break anonymity. It does
   // NOT affect rank: the employer decides how much it matters.
   const userRows = db
-    .prepare("SELECT phone, preferred_cities, skills FROM users WHERE role = 'candidate'")
+    .prepare("SELECT id, phone, preferred_cities, skills, experience_text, experience_en FROM users WHERE role = 'candidate'")
     .all() as any[];
   const cityByPhone = new Map<string, string[]>(
     userRows.map((u) => [u.phone, JSON.parse(u.preferred_cities || "[]")]),
   );
+  const userIdByPhone = new Map<string, string>(userRows.map((u) => [u.phone, u.id]));
+  const experienceByPhone = new Map<string, string>(
+    userRows.map((u) => [u.phone, redact(String(u.experience_en || u.experience_text || "")).slice(0, 600)]),
+  );
+  const evidenceByUser = new Map<string, RankedEntry["skillEvidence"]>();
+  for (const e of db
+    .prepare("SELECT id, user_id, tag, caption, status FROM skill_evidence WHERE status != 'rejected' ORDER BY created_at")
+    .all() as any[]) {
+    const list = evidenceByUser.get(e.user_id) ?? [];
+    list.push({ id: e.id, tag: e.tag, caption: redact(e.caption || ""), status: e.status });
+    evidenceByUser.set(e.user_id, list);
+  }
   const claimedByPhone = new Map<string, string[]>(
     userRows.map((u) => [u.phone, JSON.parse(u.skills || "[]")]),
   );
@@ -231,6 +253,11 @@ export function getRanking(jobId: string): {
         .map((l) => ({ name: getTemplate(l.category as any).name, total: l.total })),
     };
   };
+
+  const idPhones = verifiedIdPhones();
+  const hireBySub = new Map<string, string>(
+    (db.prepare("SELECT id, submission_id FROM hires WHERE job_id = ?").all(jobId) as any[]).map((h) => [h.submission_id, h.id]),
+  );
 
   const unlockedIds = new Set<string>(
     (
@@ -291,8 +318,12 @@ export function getRanking(jobId: string): {
       interviewNote: s.interview_note ?? "",
       unlocked: unlockedIds.has(s.id),
       track: trackFor(c?.phone),
+      idVerified: Boolean(c && idPhones.has(c.phone)),
+      hireId: hireBySub.get(s.id) ?? null,
       suggested: i < cut,
       consent: s.consent,
+      skillEvidence: c ? (evidenceByUser.get(userIdByPhone.get(c.phone) ?? "") ?? []) : [],
+      experienceEn: c ? (experienceByPhone.get(c.phone) ?? "") : "",
       flags: [...(s.flags ?? []), ...(similar.get(s.id) ?? [])],
       // Identity is shown only when ALL of these hold: the employer shortlisted
       // the person, the person agreed, and the employer unlocked the contact.

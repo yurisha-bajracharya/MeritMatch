@@ -63,17 +63,15 @@ export default function OutcomeView({
         {shortlisted && (
           <Stamp
             size={64}
-            center={t(lang, "shortStamp")}
-            label="SHORTLISTED"
-            tone="moss"
-            tilt={6}
+            ringText="SHORTLISTED"
+            center="check"
           />
         )}
       </header>
 
       <section className="border-t border-rule pt-8">
         <h1 className="font-display text-3xl text-brand">
-          {t(lang, shortlisted ? "outcomeYes" : "outcomeNo")}
+          {t(shortlisted ? "outcomeYes" : "outcomeNo", lang)}
         </h1>
         <p className="mt-2 text-sm text-ink/75">
           {title}, {employer}
@@ -82,13 +80,13 @@ export default function OutcomeView({
 
       <section className="mt-6">
         <PhoneMock time={lang === "ne" ? "अहिले" : "now"}>
-          {t(lang, shortlisted ? "smsYes" : "smsNo", vars)}
+          {t(shortlisted ? "smsYes" : "smsNo", lang, vars)}
         </PhoneMock>
       </section>
 
       {shortlisted && (
         <section className="border-t border-rule mt-8 pt-6">
-          <h2 className="font-semibold">{t(lang, "consentHeading")}</h2>
+          <h2 className="font-semibold">{t("consentHeading", lang)}</h2>
           <button
             type="button"
             role="switch"
@@ -97,7 +95,7 @@ export default function OutcomeView({
             onClick={toggleConsent}
             className="mt-2 flex w-full items-center justify-between gap-4 min-h-12 text-left cursor-pointer disabled:opacity-60"
           >
-            <span>{t(lang, "consentLabel", { employer })}</span>
+            <span>{t("consentLabel", lang, { employer })}</span>
             <span
               className={`relative h-8 w-14 shrink-0 rounded-full border-2 border-brand ${consent ? "bg-brand" : "bg-transparent"}`}
               aria-hidden
@@ -109,16 +107,16 @@ export default function OutcomeView({
           </button>
           <p className="mt-2 text-sm" aria-live="polite">
             {error
-              ? t(lang, "consentError")
-              : t(lang, consent ? "consentOn" : "consentOff", { employer })}
+              ? t("consentError", lang)
+              : t(consent ? "consentOn" : "consentOff", lang, { employer })}
           </p>
         </section>
       )}
 
       <section className="border-t border-rule mt-8 pt-6">
-        <h2 className="font-semibold">{t(lang, "skillsShown")}</h2>
+        <h2 className="font-semibold">{t("skillsShown", lang)}</h2>
         {tags.length === 0 ? (
-          <p className="mt-2 text-sm">{t(lang, "noSkillsYet")}</p>
+          <p className="mt-2 text-sm">{t("noSkillsYet", lang)}</p>
         ) : (
           <ul className="mt-3 flex flex-wrap gap-2">
             {tags.map((tag) => (
@@ -138,12 +136,12 @@ export default function OutcomeView({
           href={`/jobs?s=${submissionId}&lang=${lang}`}
           className="btn btn-primary w-full"
         >
-          {t(lang, "similarCta")}
+          {t("similarCta", lang)}
         </Link>
         <Segmented
-          legend={t(lang, "language")}
+          legend={t("language", lang)}
           value={lang}
-          onChange={setLang}
+          onChange={(value) => setLang(value as Lang)}
           options={[
             { value: "ne", label: "नेपाली" },
             { value: "en", label: "English" },

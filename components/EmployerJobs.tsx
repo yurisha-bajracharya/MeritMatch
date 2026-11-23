@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { formatDate } from "@/lib/dates";
 import { useState } from "react";
 import Icon from "./Icon";
 import { x } from "@/lib/i18n-extra";
@@ -41,10 +42,14 @@ export default function EmployerJobs({
   name,
   jobs,
   verification,
+  hires = 0,
+  checkinsDue = 0,
 }: {
   name: string;
   jobs: EmployerJobRow[];
   verification: EmployerVerificationSummary;
+  hires?: number;
+  checkinsDue?: number;
 }) {
   const [lang] = useLang();
   const [copied, setCopied] = useState<string | null>(null);
@@ -71,6 +76,27 @@ export default function EmployerJobs({
         </Link>
       </div>
       <p className="-mt-3 text-sm text-ink-muted">{x("myJobsSub", lang)}</p>
+
+      {/* Hires and formalisation */}
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-rule p-5">
+        <div>
+          <p className="text-base font-semibold">
+            {ne ? `मेरिटम्याचबाट ${n(hires)} जना नियुक्त` : `${hires} ${hires === 1 ? "person" : "people"} hired through MeritMatch`}
+          </p>
+          <p className="mt-1 text-sm text-ink-light">
+            {checkinsDue > 0
+              ? ne
+                ? `${n(checkinsDue)} वटा चेक-इन बाँकी। हरेकमा एक मिनेट लाग्छ।`
+                : `${checkinsDue} check-in${checkinsDue === 1 ? "" : "s"} due. Each takes a minute.`
+              : ne
+                ? "नियुक्तिपत्र, SSF र ३०/६०/९० दिनको अवस्था एकै ठाउँमा।"
+                : "Appointment letters, SSF and 30/60/90-day status in one place."}
+          </p>
+        </div>
+        <Link href="/employer/report" className="btn-secondary btn-sm">
+          {ne ? "औपचारिक रोजगारी प्रतिवेदन" : "Formalisation report"}
+        </Link>
+      </section>
 
       {/* Verification summary: what applicants see about this business */}
       <section className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-rule p-5">
@@ -111,7 +137,7 @@ export default function EmployerJobs({
           {jobs.map((j) => {
             const pending = Math.max(0, j.applicants - j.shortlisted - j.rejected);
             return (
-              <div key={j.id} className="card p-4!">
+              <div key={j.id} className="card !p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -121,7 +147,7 @@ export default function EmployerJobs({
                       </span>
                     </div>
                     <p className="text-xs text-ink-muted">
-                      {j.location} · {new Date(j.created_at).toLocaleDateString(lang === "ne" ? "ne-NP" : undefined)}
+                      {j.location} · {formatDate(j.created_at, lang, true)}
                     </p>
                   </div>
                   <Link href={`/employer/jobs/${j.id}`} className="btn-primary btn-sm">

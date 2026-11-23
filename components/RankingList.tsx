@@ -12,8 +12,15 @@ import { useLang } from "@/lib/useLang";
 import { TAG_LABELS } from "@/lib/tags";
 import type { RankedEntry } from "@/lib/shortlist";
 import type { Bilingual, Evidence } from "@/lib/types";
+import { EVIDENCE_STATUS, EVIDENCE_DISCLAIMER } from "@/lib/evidence-labels";
 
 type JobInfo = {
+  salary_min?: number | null;
+  salary_max?: number | null;
+  salary_period?: "month" | "day" | "hour";
+  hours?: string;
+  employment_type?: string;
+  responsibilities?: string;
   id: string;
   title: string;
   employer_name: string;
@@ -48,6 +55,16 @@ export default function RankingList({
   const [error, setError] = useState("");
   const [inviting, setInviting] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [idHint, setIdHint] = useState<string | null>(null);
+  const [hiring, setHiring] = useState<string | null>(null);
+  const today = new Date().toISOString().slice(0, 10);
+  const [hireForm, setHireForm] = useState({
+    start_date: today,
+    salary: String(job.salary_max ?? job.salary_min ?? ""),
+    salary_period: job.salary_period ?? "month",
+    employment_type: job.employment_type || "full-time",
+    probation_months: "3",
+  });
   const shortlistedCount = entries.filter((e) => e.shortlisted).length;
   // null = follow the default (shortlisted if any, otherwise everyone)
   const [tab, setTab] = useState<"all" | "shortlisted" | "rejected" | null>(null);
@@ -154,6 +171,26 @@ export default function RankingList({
     }
   };
 
+  const hire = async (e: RankedEntry) => {
+    setBusy(e.submissionId);
+    setError("");
+    try {
+      const res = await fetch(`/api/submissions/${e.submissionId}/hire`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(hireForm),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "save");
+      patch(e.submissionId, { hireId: d.hire_id });
+      setHiring(null);
+    } catch (err) {
+      setError(err instanceof Error && err.message !== "save" ? err.message : x("couldNotSave", lang));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const fitLabel = { preferred: "fitPreferred", anywhere: "fitAnywhere", elsewhere: "fitElsewhere" } as const;
   const w = Math.round(MCQ_WEIGHT * 100);
 
@@ -232,6 +269,18 @@ export default function RankingList({
                   </span>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="font-mono text-sm font-semibold">{entry.label}</span>
+                    {entry.idVerified && (
+                      <button
+                        type="button"
+                        className="badge-moss cursor-help"
+                        title={x("idVerifiedHint", lang)}
+                        aria-label={`${x("idVerified", lang)}. ${x("idVerifiedHint", lang)}`}
+                        onClick={() => setIdHint(idHint === entry.submissionId ? null : entry.submissionId)}
+                      >
+                        <Icon name="check-circle" size={12} />
+                        {x("idVerified", lang)}
+                      </button>
+                    )}
                     {entry.shortlisted ? (
                       <span className="badge-moss inline-flex items-center gap-1 text-xs">
                         <Icon name="check" size={11} strokeWidth={3} />
@@ -266,54 +315,106 @@ export default function RankingList({
                 )}
               </div>
 
+              {idHint === entry.submissionId && (
+                <p className="mt-2 rounded-md border border-moss/20 bg-moss-light/50 p-2 text-xs text-ink">{x("idVerifiedHint", lang)}</p>
+              )}
               <p className="mt-2 text-xs text-ink-muted">{entry.reason}</p>
 
-              {isOwner && (
-                <div className="mt-3 rounded-lg border border-rule p-3">
-                  <p className="text-xs font-semibold text-ink-light">{x("trackTitle", lang)}</p>
-                  {entry.track.tasks === 0 ? (
-                    <p className="mt-1 text-xs text-ink-muted">{x("trackNone", lang)}</p>
+              {/* Skills: what this person has SHOWN (this task, earlier tasks)
+                  kept apart from what they only SAY they have. */}
+              <div className="mt-3 rounded-lg border border-rule p-3">
+                <p className="text-sm font-semibold text-ink">{x("skillsTitle", lang)}</p>
+
+                <div className="mt-2">
+                  <p className="text-xs text-ink-muted">{x("skillsThisTask", lang)}</p>
+                  {entry.tags.length > 0 ? (
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {entry.tags.map((tag) => (
+                        <span key={tag} className="badge-moss">
+                          <Icon name="check" size={12} strokeWidth={3} />
+                          {TAG_LABELS[tag]?.[lang] ?? tag}
+                        </span>
+                      ))}
+                    </div>
                   ) : (
-                    <>
-                      <p className="mt-1 text-xs">
-                        {x("trackSummary", lang, { n: n(entry.track.tasks), avg: n(entry.track.average) })}
-                      </p>
-                      {entry.track.recent.length > 0 && (
-                        <p className="mt-1 text-xs text-ink-muted">
-                          {x("trackRecent", lang)}:{" "}
-                          {entry.track.recent.map((r) => `${r.name[lang]} ${n(r.total)}%`).join(", ")}
-                        </p>
-                      )}
-                    </>
+                    <p className="mt-1 text-xs text-ink-light">{x("skillsNoneYet", lang)}</p>
                   )}
-                  {entry.track.proven.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-xs uppercase tracking-wide text-ink-muted">{x("trackProven", lang)}</p>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {entry.track.proven.map((p) => (
-                          <span key={p.tag} className="badge-moss text-xs">
-                            {TAG_LABELS[p.tag]?.[lang] ?? p.tag}
-                            {p.count > 1 ? ` x${n(p.count)}` : ""}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {entry.track.claimed.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-xs uppercase tracking-wide text-ink-muted">{x("trackClaimed", lang)}</p>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {entry.track.claimed.map((tag) => (
-                          <span key={tag} className="badge-muted text-xs">
-                            {TAG_LABELS[tag]?.[lang] ?? tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <p className="mt-2 text-xs text-ink-muted">{x("trackAnon", lang)}</p>
                 </div>
-              )}
+
+                {isOwner && entry.track.proven.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs text-ink-muted">{x("skillsEarlier", lang)}</p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {entry.track.proven.map((p) => (
+                        <span key={p.tag} className="badge-moss">
+                          {TAG_LABELS[p.tag]?.[lang] ?? p.tag}
+                          {p.count > 1 ? ` x${n(p.count)}` : ""}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {isOwner && entry.track.claimed.some((t) => !entry.tags.includes(t)) && (
+                  <div className="mt-3">
+                    <p className="text-xs text-ink-muted">{x("trackClaimed", lang)}</p>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {entry.track.claimed.filter((t) => !entry.tags.includes(t)).map((tag) => (
+                        <span key={tag} className="badge-muted">
+                          {TAG_LABELS[tag]?.[lang] ?? tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {isOwner && entry.skillEvidence.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs text-ink-muted">{lang === "ne" ? "सीपका लागि कामका फोटो" : "Photos of their work"}</p>
+                    <ul className="mt-1.5 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {entry.skillEvidence.map((ev) => (
+                        <li key={ev.id} className="min-w-0">
+                          <a href={`/api/skill-evidence/file/${ev.id}`} target="_blank" rel="noopener noreferrer" className="block">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={`/api/skill-evidence/file/${ev.id}`}
+                              alt={ev.caption || (TAG_LABELS[ev.tag]?.[lang] ?? ev.tag)}
+                              loading="lazy"
+                              className="aspect-square w-full rounded-md border border-rule object-cover"
+                            />
+                          </a>
+                          <p className="mt-1 truncate text-xs font-medium text-ink">{TAG_LABELS[ev.tag]?.[lang] ?? ev.tag}</p>
+                          <p className={`text-[11px] leading-tight ${ev.status === "needs_review" ? "text-ink-muted" : "text-moss"}`}>
+                            {EVIDENCE_STATUS[ev.status].label[lang]}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-1.5 text-[11px] text-ink-muted">{EVIDENCE_DISCLAIMER[lang]}</p>
+                  </div>
+                )}
+
+                {isOwner && entry.experienceEn && (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-xs text-ink-muted">
+                      {lang === "ne" ? "आफ्नो अनुभव, उहाँकै शब्दमा (अंग्रेजी)" : "Their experience, in their words (English)"}
+                    </summary>
+                    <p className="mt-1 text-sm text-ink-light" lang="en">{entry.experienceEn}</p>
+                  </details>
+                )}
+
+                {isOwner && (
+                  <p className="mt-3 border-t border-rule pt-2 text-xs text-ink-light">
+                    <span className="font-semibold">{x("trackTitle", lang)}: </span>
+                    {entry.track.tasks === 0
+                      ? x("trackNone", lang)
+                      : x("trackSummary", lang, { n: n(entry.track.tasks), avg: n(entry.track.average) })}
+                    {entry.track.recent.length > 0 &&
+                      ` (${entry.track.recent.map((r) => `${r.name[lang]} ${n(r.total)}%`).join(", ")})`}
+                    <span className="block text-ink-muted">{x("trackAnon", lang)}</span>
+                  </p>
+                )}
+              </div>
 
               {entry.flags.length === 0 && isOwner && (
                 <p className="mt-3 flex items-center gap-1.5 text-xs text-moss">
@@ -370,16 +471,6 @@ export default function RankingList({
                 ))}
               </div>
 
-              {entry.tags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {entry.tags.map((tag) => (
-                    <span key={tag} className="badge-brand text-xs">
-                      {TAG_LABELS[tag]?.[lang] ?? tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
               {isOwner && (
                 <EvidenceReview submissionId={entry.submissionId} media={entry.media} reviews={entry.reviews} />
               )}
@@ -402,6 +493,53 @@ export default function RankingList({
                 <div className="mt-3 rounded bg-moss-light p-2 text-xs text-moss">
                   <span className="font-semibold">{x("identityRevealed", lang)}:</span> {entry.contact.name} ·{" "}
                   {entry.contact.phone}
+                  {isOwner && entry.hireId && (
+                    <a href={`/hire/${entry.hireId}`} className="ml-2 font-semibold underline">
+                      {lang === "ne" ? "नियुक्ति र चेक-इन हेर्नुहोस्" : "Hired: view job record"}
+                    </a>
+                  )}
+                  {isOwner && !entry.hireId && entry.shortlisted && hiring !== entry.submissionId && (
+                    <button type="button" onClick={() => setHiring(entry.submissionId)} className="btn-primary btn-sm mt-2 block">
+                      {lang === "ne" ? "नियुक्त गरियो भनी चिनो लगाउनुहोस्" : "Mark as hired"}
+                    </button>
+                  )}
+                  {isOwner && hiring === entry.submissionId && (
+                    <div className="mt-3 grid gap-3 rounded-md border border-rule bg-white p-3 text-ink sm:grid-cols-2">
+                      <div>
+                        <label className="label" htmlFor={`hs-${entry.submissionId}`}>{lang === "ne" ? "सुरु मिति" : "Start date"}</label>
+                        <input id={`hs-${entry.submissionId}`} type="date" className="input" value={hireForm.start_date} onChange={(ev) => setHireForm({ ...hireForm, start_date: ev.target.value })} />
+                      </div>
+                      <div>
+                        <label className="label" htmlFor={`hp-${entry.submissionId}`}>{lang === "ne" ? "परीक्षणकाल (महिना)" : "Probation (months)"}</label>
+                        <input id={`hp-${entry.submissionId}`} type="number" min={0} max={12} className="input" value={hireForm.probation_months} onChange={(ev) => setHireForm({ ...hireForm, probation_months: ev.target.value })} />
+                      </div>
+                      <div>
+                        <label className="label" htmlFor={`hm-${entry.submissionId}`}>{lang === "ne" ? "तय भएको तलब (रु)" : "Agreed salary (Rs)"}</label>
+                        <input id={`hm-${entry.submissionId}`} inputMode="numeric" className="input" value={hireForm.salary} onChange={(ev) => setHireForm({ ...hireForm, salary: ev.target.value.replace(/[^\d]/g, "") })} />
+                      </div>
+                      <div>
+                        <label className="label" htmlFor={`hper-${entry.submissionId}`}>{lang === "ne" ? "अवधि" : "Per"}</label>
+                        <select id={`hper-${entry.submissionId}`} className="input" value={hireForm.salary_period} onChange={(ev) => setHireForm({ ...hireForm, salary_period: ev.target.value as "month" | "day" | "hour" })}>
+                          <option value="month">{lang === "ne" ? "महिना" : "month"}</option>
+                          <option value="day">{lang === "ne" ? "दिन" : "day"}</option>
+                          <option value="hour">{lang === "ne" ? "घण्टा" : "hour"}</option>
+                        </select>
+                      </div>
+                      <p className="hint sm:col-span-2">
+                        {lang === "ne"
+                          ? "न्यूनतम पारिश्रमिक (२०८२ साउनदेखि): मासिक रु १९,५५०, दैनिक रु ७५४। नियुक्तिपत्रको मस्यौदा स्वतः बन्छ र ३०/६०/९० दिनका चेक-इन सुरु हुन्छन्।"
+                          : "Legal minimum (from 17 July 2025): Rs 19,550 a month, Rs 754 a day. An appointment letter is drafted for you and 30/60/90-day check-ins begin."}
+                      </p>
+                      <div className="flex gap-2 sm:col-span-2">
+                        <button type="button" className="btn-primary btn-sm" disabled={busy === entry.submissionId} onClick={() => hire(entry)}>
+                          {lang === "ne" ? "नियुक्ति पक्का गर्नुहोस्" : "Confirm hire"}
+                        </button>
+                        <button type="button" className="btn-ghost btn-sm" onClick={() => setHiring(null)}>
+                          {lang === "ne" ? "रद्द" : "Cancel"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : entry.shortlisted && entry.consent && isOwner ? (
                 <div className="mt-3 rounded bg-paper-dark p-2 text-xs">

@@ -173,6 +173,13 @@ function migrate(db: Database.Database) {
   addColumn(db, "users", "restricted", "INTEGER DEFAULT 0");
   addColumn(db, "users", "restricted_reason", "TEXT DEFAULT ''");
 
+  // English version of an experience described in Nepali (AI translation).
+  addColumn(db, "users", "experience_en", "TEXT DEFAULT ''");
+
+  // Training organisation a candidate chose to share outcomes with (consent).
+  addColumn(db, "users", "org_id", "TEXT DEFAULT ''");
+  addColumn(db, "users", "org_consent_at", "TEXT DEFAULT ''");
+
   // City ids from lib/places.ts, JSON array.
   addColumn(db, "users", "preferred_cities", "TEXT DEFAULT '[]'");
 
@@ -276,6 +283,96 @@ function migrate(db: Database.Database) {
       bytes INTEGER NOT NULL,
       created_at TEXT NOT NULL
     );
+
+    -- Optional ID check for candidates (citizenship, NID, passport...).
+    -- The images are deleted as soon as a reviewer decides; only the result
+    -- and the document TYPE are kept.
+    CREATE TABLE IF NOT EXISTS identity_verifications (
+      user_id TEXT PRIMARY KEY,
+      doc_type TEXT NOT NULL,
+      name_on_doc TEXT DEFAULT '',
+      front_path TEXT DEFAULT '',
+      front_mime TEXT DEFAULT '',
+      back_path TEXT DEFAULT '',
+      back_mime TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'submitted',
+      note TEXT DEFAULT '',
+      submitted_at TEXT NOT NULL,
+      reviewed_at TEXT DEFAULT ''
+    );
+
+    -- A hire made through MeritMatch: the start of a formal job record.
+    CREATE TABLE IF NOT EXISTS hires (
+      id TEXT PRIMARY KEY,
+      submission_id TEXT UNIQUE NOT NULL,
+      job_id TEXT NOT NULL,
+      employer_id TEXT NOT NULL,
+      worker_phone TEXT NOT NULL,
+      position TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      salary INTEGER NOT NULL,
+      salary_period TEXT NOT NULL DEFAULT 'month',
+      employment_type TEXT DEFAULT '',
+      hours TEXT DEFAULT '',
+      probation_months INTEGER DEFAULT 0,
+      duties TEXT DEFAULT '',
+      letter_issued_at TEXT DEFAULT '',
+      letter_confirmed_at TEXT DEFAULT '',
+      ssf_reported_at TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'active',
+      ended_at TEXT DEFAULT '',
+      end_reason TEXT DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_hires_employer ON hires(employer_id);
+    CREATE INDEX IF NOT EXISTS idx_hires_phone ON hires(worker_phone);
+
+    -- 30/60/90-day check-ins. One row per hire, day and side.
+    CREATE TABLE IF NOT EXISTS checkins (
+      id TEXT PRIMARY KEY,
+      hire_id TEXT NOT NULL,
+      day INTEGER NOT NULL,
+      respondent TEXT NOT NULL CHECK(respondent IN ('worker', 'employer')),
+      due_at TEXT NOT NULL,
+      notified_at TEXT DEFAULT '',
+      answered_at TEXT DEFAULT '',
+      still_employed INTEGER,
+      has_letter INTEGER,
+      ssf INTEGER,
+      paid_on_time INTEGER,
+      rating INTEGER,
+      note TEXT DEFAULT '',
+      UNIQUE(hire_id, day, respondent)
+    );
+
+    -- Training / capacity-building organisations (e.g. nonprofits).
+    CREATE TABLE IF NOT EXISTS organizations (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'nonprofit',
+      code TEXT UNIQUE NOT NULL,
+      access_key TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    -- Photos a candidate adds to back up a skill from the Experience Mapper.
+    -- status: ai_checked (AI says the photo fits the skill) | needs_review
+    -- (AI unsure or unavailable) | reviewed (a person accepted it) | rejected.
+    CREATE TABLE IF NOT EXISTS skill_evidence (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      tag TEXT NOT NULL,
+      path TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      bytes INTEGER NOT NULL,
+      caption TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'needs_review',
+      ai_note TEXT DEFAULT '',
+      review_note TEXT DEFAULT '',
+      created_at TEXT NOT NULL,
+      reviewed_at TEXT DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_skill_evidence_user ON skill_evidence(user_id);
 
     -- Every admin decision, so reviews can be traced later.
     CREATE TABLE IF NOT EXISTS audit_log (
